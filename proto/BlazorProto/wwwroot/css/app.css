@@ -138,6 +138,30 @@ body {
 
 #stage { min-height: 100vh; }
 
+/* Boot — on screen while blazor.webassembly.js fetches the runtime. Blazor writes
+   --blazor-load-percentage on <html> as each asset lands, so the bar is determinate. */
+.boot {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+.boot-bar {
+  width: 160px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.boot-fill {
+  display: block;
+  height: 100%;
+  width: var(--blazor-load-percentage, 0%);
+  background: var(--accent);
+  transition: width 150ms var(--ease);
+}
+
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
