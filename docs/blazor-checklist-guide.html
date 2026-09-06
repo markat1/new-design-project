@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<title>Onboarding-checklisten i Blazor</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm 22mm 18mm; }
+  * { box-sizing: border-box; }
+  html { font-size: 10.5pt; }
+  body {
+    margin: 0; color: #09090b; background: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .cover { min-height: 60vh; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 6mm; border-bottom: 1px solid #e4e4e7; margin-bottom: 8mm; page-break-after: always; }
+  .cover .kicker { font-size: 9pt; letter-spacing: .08em; text-transform: uppercase; color: #a1a1aa; margin-bottom: 4mm; }
+  .cover h1 { font-size: 26pt; line-height: 1.15; margin: 0 0 4mm; letter-spacing: -0.01em; }
+  .cover p { font-size: 11.5pt; color: #52525b; max-width: 60ch; margin: 0 0 2mm; }
+  .cover .meta { font-size: 9pt; color: #a1a1aa; margin-top: 8mm; }
+  h2 { font-size: 16pt; margin: 10mm 0 3mm; letter-spacing: -0.01em; page-break-after: avoid; }
+  h2 .n { color: #4f46e5; margin-right: 3mm; }
+  h3 { font-size: 11.5pt; margin: 7mm 0 2mm; page-break-after: avoid; }
+  h3 .step { display: inline-block; min-width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 999px; background: #4f46e5; color: #fff; font-size: 9pt; font-weight: 600; margin-right: 6px; vertical-align: 1px; }
+  p { margin: 0 0 2.5mm; }
+  p.why { color: #52525b; border-left: 2px solid #e4e4e7; padding-left: 3mm; margin: 2mm 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 5mm; }
+  li { margin-bottom: 1mm; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 9pt; background: #f4f4f5; padding: 1px 4px; border-radius: 3px; }
+  pre { font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 8.4pt; line-height: 1.45; background: #fbfbfc; border: 1px solid #e4e4e7; border-radius: 6px; padding: 3mm 3.5mm; margin: 2mm 0 4mm; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  pre .file { display: block; color: #a1a1aa; margin-bottom: 1.5mm; font-size: 8pt; }
+  .del { color: #b91c1c; } .add { color: #15803d; }
+  table { border-collapse: collapse; width: 100%; font-size: 9.5pt; margin: 2mm 0 4mm; page-break-inside: avoid; }
+  th, td { text-align: left; padding: 1.8mm 2.5mm; border-bottom: 1px solid #e4e4e7; vertical-align: top; }
+  th { font-weight: 600; color: #52525b; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .05em; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .callout { background: #eef2ff; border-radius: 6px; padding: 3mm 4mm; margin: 3mm 0 4mm; color: #3730a3; page-break-inside: avoid; }
+  .callout.warn { background: #fef2f2; color: #991b1b; }
+  .callout b { font-weight: 600; }
+  .check { list-style: none; padding-left: 0; }
+  .check li::before { content: "☐"; margin-right: 6px; color: #a1a1aa; }
+  .part { page-break-before: always; }
+  .tree { columns: 2; column-gap: 8mm; }
+  .small { font-size: 9pt; color: #52525b; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="kicker">Trin-for-trin</div>
+  <h1>Onboarding-checklisten i Blazor<br>— fra tom mappe til hostet app</h1>
+  <p>Sådan laver du et nyt, rent Blazor WebAssembly-projekt der kun indeholder Checklist-varianten, kører det lokalt, og publicerer en hurtig Release-version du kan dele.</p>
+  <p class="small">Hvert trin i denne guide er udført og verificeret på den kode der ligger i <code>proto/BlazorProto</code> (commit <code>fdbb995</code>). Følger du dem i rækkefølge, ender du med det samme resultat — og det færdige projekt ligger som reference i <code>OnboardingChecklist/</code> i repoet.</p>
+  <div class="meta">new-design-project · september 2026 · .NET 8</div>
+</section>
+
+<h2><span class="n">0</span>Før du starter</h2>
+<ul>
+  <li><b>.NET 8 SDK.</b> Tjek med <code>dotnet --version</code> — du skal se <code>8.x</code>. Guiden er testet på 8.0.130.</li>
+  <li><b>Kildekoden.</b> Vi kopierer filer fra den eksisterende prototype. I kommandoerne nedenfor står <code>$SRC</code> for stien til den:
+    <pre><code>SRC=~/dev/emil-kowalski/new-design-project/proto/BlazorProto</code></pre></li>
+  <li><b>En terminal.</b> Alt her er kommandolinje + en teksteditor. Ingen Visual Studio nødvendig.</li>
+</ul>
+<p class="why">Hvorfor et nyt projekt og ikke bare slette de to andre varianter? Fordi prototype-harnesset (picker, tastaturnavigation, variant-skift, <code>?v=N</code> i URL'en) er filtret ind i <code>Proto.razor</code>, <code>Picker.razor</code>, <code>picker.js</code> og en tredjedel af CSS'en. Det er hurtigere og renere at starte fra nul og hente præcis de filer checklisten bruger.</p>
+
+<h2 class="part"><span class="n">1</span>Byg projektet</h2>
+
+<h3><span class="step">1</span>Opret et tomt Blazor WASM-projekt</h3>
+<pre><code>dotnet new blazorwasm -e -o OnboardingChecklist
+cd OnboardingChecklist</code></pre>
+<p><code>-e</code> betyder <i>empty</i>: ingen Bootstrap, ingen eksempelsider. Templaten laver stadig en router, et layout og en Home-side, som vi ikke skal bruge — slet dem sammen med dens CSS og index.html:</p>
+<pre><code>rm -rf App.razor Pages Layout wwwroot/css wwwroot/index.html
+mkdir -p Model Components wwwroot/css wwwroot/js</code></pre>
+<p class="why">Appen er én side uden navigation, så en <code>Router</code> og et <code>MainLayout</code> er kun støj. Root-komponenten monteres direkte i <code>Program.cs</code> (trin 3).</p>
+
+<h3><span class="step">2</span>Slå kulturdata fra i <code>.csproj</code></h3>
+<p>Åbn <code>OnboardingChecklist.csproj</code> og tilføj to linjer i <code>&lt;PropertyGroup&gt;</code>, lige efter <code>&lt;ImplicitUsings&gt;</code>:</p>
+<pre><code><span class="file">OnboardingChecklist.csproj</span>&lt;PropertyGroup&gt;
+  &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
+  &lt;Nullable&gt;enable&lt;/Nullable&gt;
+  &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
+<span class="add">  &lt;InvariantGlobalization&gt;true&lt;/InvariantGlobalization&gt;
+  &lt;BlazorEnableTimeZoneSupport&gt;false&lt;/BlazorEnableTimeZoneSupport&gt;</span>
+&lt;/PropertyGroup&gt;</code></pre>
+<p class="why">Appen formaterer ingen datoer eller tal efter kultur. Uden de to linjer sender Blazor ~2,5 MB ICU- og tidszonedata med i hvert load, som aldrig bliver brugt.</p>
+
+<h3><span class="step">3</span>Erstat <code>Program.cs</code></h3>
+<pre><code><span class="file">Program.cs</span>using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using OnboardingChecklist;
+using OnboardingChecklist.Model;
+
+var builder = WebAssemblyHostBuilder.CreateDefault(args);
+
+// Single page, no router: Onboarding is the root component.
+builder.RootComponents.Add&lt;Onboarding&gt;("#app");
+
+// Singleton so answers survive re-renders.
+builder.Services.AddSingleton&lt;OnboardingState&gt;();
+
+await builder.Build().RunAsync();</code></pre>
+
+<h3><span class="step">4</span>Erstat <code>_Imports.razor</code></h3>
+<pre><code><span class="file">_Imports.razor</span>@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using OnboardingChecklist
+@using OnboardingChecklist.Model
+@using OnboardingChecklist.Components</code></pre>
+<p class="why">Filen gælder for alle <code>.razor</code>-filer i projektet, så komponenterne kan referere til <code>OnboardingState</code>, <code>Content</code>, <code>Icons</code> osv. uden egne <code>@using</code>-linjer.</p>
+
+<h3><span class="step">5</span>Kopiér datamodellen</h3>
+<pre><code>cp $SRC/Model/Content.cs $SRC/Model/OnboardingState.cs Model/</code></pre>
+<p>I begge filer: skift første linje fra <code>namespace BlazorProto.Model;</code> til <code>namespace OnboardingChecklist.Model;</code>.</p>
+<p>I <code>Model/OnboardingState.cs</code> skal de felter der kun fandtes for pickeren og de to andre varianter væk. Find blokken <i>picker + per-variant navigation</i> og slet de markerede linjer:</p>
+<pre><code><span class="file">Model/OnboardingState.cs</span><span class="del">    public int ActiveVariant { get; set; }
+    public int MountCounter { get; set; }
+
+    public int StepperIndex { get; set; }
+    public bool StepperDone { get; set; }
+
+    public int ConvoIndex { get; set; }
+    public bool ConvoDone { get; set; }
+</span>
+    public string ChecklistKey { get; set; } = "name";
+    public bool ChecklistDone { get; set; }</code></pre>
+<p>Og nederst i <code>ResetFlow()</code>:</p>
+<pre><code>    public void ResetFlow()
+    {
+        Errors.Clear();
+<span class="del">        StepperIndex = 0; StepperDone = false;
+        ConvoIndex = 0; ConvoDone = false;</span>
+        ChecklistKey = "name"; ChecklistDone = false;
+    }</code></pre>
+<p class="why"><code>Content.cs</code> er alt indholdet — de fire opgaver, rollelisten, notifikationsvalgene, workspace-navnet. <code>OnboardingState.cs</code> er svarene, valideringen og de afledte værdier (hvor mange er færdige, hvad mangler). Begge er ren C# uden Blazor-afhængigheder, så de flytter med uændret.</p>
+
+<h3><span class="step">6</span>Kopiér de delte komponenter</h3>
+<pre><code>cp $SRC/Components/Icons.cs $SRC/Components/Recap.razor $SRC/Components/Fields.razor Components/</code></pre>
+<ul>
+  <li><code>Icons.cs</code>: skift namespace til <code>OnboardingChecklist.Components</code>.</li>
+  <li><code>Recap.razor</code>: ingen ændringer.</li>
+  <li><code>Fields.razor</code>: én ændring. Feltfokus går gennem et lille JS-kald, og funktionen skifter navn fra picker-objektet til vores eget:</li>
+</ul>
+<pre><code><span class="file">Components/Fields.razor</span><span class="del">    public ValueTask FocusFirstAsync() => JS.InvokeVoidAsync("protoPicker.focusFirst", root);</span>
+<span class="add">    public ValueTask FocusFirstAsync() => JS.InvokeVoidAsync("app.focusFirst", root);</span></code></pre>
+<p class="why"><code>Fields</code> renderer felterne for én opgave ad gangen (navn, rolle, invitationer, notifikationer) og var delt mellem Stepper og Checklist. Kommentaren øverst i filen om Stepper kan du slette — den passer ikke længere.</p>
+
+<h3><span class="step">7</span>Kopiér checklisten som root-komponent</h3>
+<pre><code>cp $SRC/Variants/Checklist.razor Onboarding.razor</code></pre>
+<p>Ingen ændringer i indholdet. Filnavnet bliver klassenavnet, så <code>Onboarding.razor</code> giver komponenten <code>Onboarding</code> — den som <code>Program.cs</code> monterer i <code>#app</code>.</p>
+
+<h3><span class="step">8</span>Lav <code>wwwroot</code></h3>
+<p><b>JavaScript.</b> Én funktion, otte linjer — resten af picker.js var harness:</p>
+<pre><code><span class="file">wwwroot/js/app.js</span>// Blazor's FocusAsync() needs an ElementReference per field; one helper that
+// finds the first input in a container is far less ceremony.
+window.app = {
+  focusFirst(container) {
+    if (!container) return;
+    const el = container.querySelector('input:not([type=hidden]), textarea');
+    (el || container).focus();
+  },
+};</code></pre>
+
+<p><b>index.html.</b> Skriv filen sådan (boot-baren udfyldes af Blazor via <code>--blazor-load-percentage</code>, og fejl-elementet er skjult indtil der sker en rigtig fejl — begge dele styles i CSS'en):</p>
+<pre><code><span class="file">wwwroot/index.html</span>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="utf-8" /&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0" /&gt;
+    &lt;title&gt;Onboarding&lt;/title&gt;
+    &lt;base href="/" /&gt;
+    &lt;link rel="stylesheet" href="css/app.css" /&gt;
+    &lt;link rel="icon" type="image/png" href="favicon.png" /&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div id="app"&gt;
+        &lt;div class="boot" role="status" aria-label="Loading"&gt;
+            &lt;div class="boot-bar"&gt;&lt;span class="boot-fill"&gt;&lt;/span&gt;&lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div id="blazor-error-ui"&gt;
+        An unhandled error has occurred.
+        &lt;a href="" class="reload"&gt;Reload&lt;/a&gt;
+        &lt;a class="dismiss"&gt;🗙&lt;/a&gt;
+    &lt;/div&gt;
+
+    &lt;script src="js/app.js"&gt;&lt;/script&gt;
+    &lt;script src="_framework/blazor.webassembly.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>Kopiér også <code>favicon.png</code> fra <code>$SRC/wwwroot/</code>.</p>
+
+<p><b>CSS.</b> <code>$SRC/wwwroot/css/app.css</code> er delt op i fem sektioner med tydelige bannere (<code>/* ==== NAVN ==== */</code>). Lav en ny <code>wwwroot/css/app.css</code> med disse tre dele, i denne rækkefølge:</p>
+<table>
+  <tr><th>Tag med</th><th>Fra … til</th><th>Hvorfor</th></tr>
+  <tr><td><b>MATERIALS</b></td><td>Banneret <code>MATERIALS</code> til og med <code>@media (forced-colors: active) { … }</code></td><td>Tokens, base, knapper, felter, boot-bar, fejl-bjælke</td></tr>
+  <tr><td><b>Tick + recap</b></td><td>Fra <code>.v1-tick {</code> til og med <code>.recap span { … }</code> (inkl. <code>@keyframes pop</code>)</td><td>Bruges på "You're all set"-skærmen</td></tr>
+  <tr><td><b>VARIANT 3 — CHECKLIST</b></td><td>Banneret til filens slutning</td><td>Selve checklisten</td></tr>
+</table>
+<p><b>Udelad:</b> <code>PICKER</code> (øverst), resten af <code>VARIANT 1 — STEPPER</code> og hele <code>VARIANT 2 — CONVERSATIONAL</code>. Resultatet er ca. 530 linjer mod 934.</p>
+<p class="small">Klassenavnene <code>v3-*</code> og <code>v1-tick</code> stammer fra prototypen. De virker som de er; omdøb dem først når appen kører.</p>
+
+<h3><span class="step">9</span>Kør den</h3>
+<pre><code>dotnet run</code></pre>
+<p>Terminalen skriver <code>Now listening on: http://localhost:XXXX</code> — åbn den adresse. Du skal se:</p>
+<ul class="check">
+  <li>En tynd lilla bar i midten under load, som fylder op (ikke tekst)</li>
+  <li>"Finish setting up" med rail til venstre (2 of 4 complete, 50 %) og panelet "What's your name?" til højre</li>
+  <li>Klik <b>Save and continue</b> → panelet skifter til "What do you do?"</li>
+  <li>Vælg en rolle, gem, klik <b>Finish setup</b> → "You're all set, Bart." med recap</li>
+  <li>Ingen tekst nederst på siden, ingen scrollbar</li>
+</ul>
+<p>Får du gammel visning efter en ændring: hard reload (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>). Blazor cacher runtime-filerne aggressivt.</p>
+
+<h3><span class="step">10</span>Hvis noget fejler</h3>
+<table>
+  <tr><th>Symptom</th><th>Årsag</th><th>Løsning</th></tr>
+  <tr><td><code>The type or namespace name 'BlazorProto' could not be found</code></td><td>Et namespace blev ikke skiftet</td><td>Søg efter <code>BlazorProto</code> i alle filer; skift til <code>OnboardingChecklist</code></td></tr>
+  <tr><td><code>'OnboardingState' does not contain a definition for 'StepperIndex'</code></td><td>Du slettede et felt der stadig bruges</td><td>Du har kopieret en anden variant end <code>Checklist.razor</code></td></tr>
+  <tr><td>Fejl i konsollen: <code>Could not find 'protoPicker.focusFirst'</code></td><td>Trin 6, JS-navnet</td><td>Ret til <code>app.focusFirst</code> i Fields.razor</td></tr>
+  <tr><td>Appen loader men er ustylet</td><td>index.html peger på forkert CSS, eller CSS'en mangler MATERIALS</td><td>Tjek <code>&lt;link href="css/app.css"&gt;</code> og at <code>:root {</code> findes i filen</td></tr>
+  <tr><td>"An unhandled error has occurred" nederst, men appen virker</td><td>CSS-reglen for <code>#blazor-error-ui</code> mangler</td><td>Den ligger i MATERIALS — sektion ikke kopieret helt</td></tr>
+</table>
+
+<h2 class="part"><span class="n">2</span>Publish og host</h2>
+<p><code>dotnet run</code> er et Debug-build: 193 separate <code>.wasm</code>-filer, 8,5 MB, ingen trimming. Det er fint til udvikling og forkert til alt andet. En Release-publish trimmer klassebiblioteket ned til det der faktisk bruges og komprimerer det.</p>
+
+<h3><span class="step">1</span>Publicér</h3>
+<pre><code>dotnet publish -c Release -o publish</code></pre>
+<p>Tager 10–20 sekunder. Det der skal på nettet ligger i <b><code>publish/wwwroot/</code></b> — alt andet i <code>publish/</code> kan ignoreres.</p>
+<table>
+  <tr><th></th><th>Filer</th><th>Requests</th><th>Overført</th><th>Load (localhost)</th></tr>
+  <tr><td>Debug (<code>dotnet run</code>)</td><td class="num">193 wasm</td><td class="num">202</td><td class="num">8,5 MB</td><td class="num">1,1 s</td></tr>
+  <tr><td>Release publish, brotli</td><td class="num">30 wasm</td><td class="num">38</td><td class="num">1,8 MB</td><td class="num">0,5 s</td></tr>
+</table>
+<p class="small">Målt på prototypen med de to csproj-flag fra trin 2. Ved 4 Mbit tager Debug-versionen 19 s og publish-versionen ca. 4 s — forskellen er størst for dem der ikke sidder på din maskine.</p>
+<p>Ved siden af hver <code>.wasm</code> ligger en <code>.br</code> (brotli) og en <code>.gz</code>. En server der kender dem, sender den komprimerede udgave og sparer 70 %. En server der ikke gør, sender <code>.wasm</code> ukomprimeret (ca. 5,5 MB) — det virker stadig.</p>
+
+<h3><span class="step">2</span>Test det lokalt</h3>
+<pre><code>python3 -m http.server 8080 -d publish/wwwroot</code></pre>
+<p>Åbn <code>http://localhost:8080</code>. Python-serveren sender ukomprimeret, men det er 38 requests i stedet for 202, så det er stadig markant hurtigere end <code>dotnet run</code>. Stop med <kbd>Ctrl</kbd>+<kbd>C</kbd>.</p>
+
+<h3><span class="step">3</span>Læg det online</h3>
+<p><b>Netlify Drop</b> — hurtigst når du bare vil vise det til nogen:</p>
+<ol>
+  <li>Gå til <code>app.netlify.com/drop</code></li>
+  <li>Træk mappen <code>publish/wwwroot</code> ind i browservinduet</li>
+  <li>Du får en URL med det samme. Netlify komprimerer selv, så du får brotli-hastigheden uden opsætning.</li>
+</ol>
+<p><b>GitHub Pages</b> — hvis det skal ligge ved siden af koden:</p>
+<div class="callout warn"><b>Bemærk:</b> GitHub Pages er kun tilgængeligt for private repos med GitHub Pro. Med en gratis konto skal repoet være offentligt.</div>
+<ol>
+  <li>Lav en tom fil <code>publish/wwwroot/.nojekyll</code>. Uden den ignorerer Pages mappen <code>_framework/</code>, fordi den starter med underscore.</li>
+  <li>Sitet bliver serveret fra <code>https://&lt;bruger&gt;.github.io/&lt;repo&gt;/</code>, så ret <code>&lt;base href="/" /&gt;</code> i <code>publish/wwwroot/index.html</code> til <code>&lt;base href="/&lt;repo&gt;/" /&gt;</code>.</li>
+  <li>Push indholdet af <code>publish/wwwroot</code> til en <code>gh-pages</code>-branch (eller en <code>docs/</code>-mappe på main), og peg repoets <i>Settings → Pages</i> på den.</li>
+</ol>
+<p class="small">GitHub Pages sender ikke <code>.br</code>-filerne selv, så load er ~5,5 MB ukomprimeret. Stadig 38 requests og trimmet — helt brugbart.</p>
+
+<h3><span class="step">4</span>Valgfrit: mindre runtime</h3>
+<pre><code>sudo dotnet workload install wasm-tools</code></pre>
+<p>Med denne workload relinker publish selve .NET-runtimen (<code>dotnet.native.wasm</code>, den største enkelte fil på 2,8 MB) og fjerner det appen ikke bruger. Du behøver ikke ændre noget i projektet — næste <code>dotnet publish</code> bruger den automatisk. Kræver sudo, fordi SDK'en ligger i <code>/usr/lib/dotnet</code>.</p>
+
+<h2 class="part"><span class="n">A</span>Appendiks: filerne i det færdige projekt</h2>
+<div class="tree"><pre><code>OnboardingChecklist/
+├── OnboardingChecklist.csproj   ← trin 2
+├── Program.cs                   ← trin 3
+├── _Imports.razor               ← trin 4
+├── Onboarding.razor             ← trin 7 (= Checklist.razor)
+├── Model/
+│   ├── Content.cs               ← trin 5
+│   └── OnboardingState.cs       ← trin 5, trimmet
+├── Components/
+│   ├── Fields.razor             ← trin 6, én linje rettet
+│   ├── Icons.cs                 ← trin 6
+│   └── Recap.razor              ← trin 6
+├── Properties/
+│   └── launchSettings.json      (fra templaten)
+└── wwwroot/
+    ├── index.html               ← trin 8
+    ├── favicon.png
+    ├── css/app.css              ← trin 8, tre sektioner
+    └── js/app.js                ← trin 8</code></pre></div>
+<p class="small">Filer fra prototypen der <i>ikke</i> skal med: <code>Proto.razor</code>, <code>Components/Picker.razor</code>, <code>Variants/Stepper.razor</code>, <code>Variants/Conversational.razor</code>, <code>wwwroot/js/picker.js</code>.</p>
+
+</body>
+</html>

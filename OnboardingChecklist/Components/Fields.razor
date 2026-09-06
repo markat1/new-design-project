@@ -1,0 +1,161 @@
+@inject OnboardingState S
+@inject IJSRuntime JS
+
+<div class="f-fields" @ref="root" @onkeydown="RootKey">
+
+    @if (TaskKey == "name")
+    {
+        <div class="f-group">
+            <label class="f-label" for="f-name">Full name</label>
+            <input class="f-input" id="f-name" type="text" autocomplete="name"
+                   @bind="S.Name" @bind:event="oninput" @bind:after="NotifyChanged"
+                   aria-invalid="@Invalid("name")"
+                   aria-describedby="@(S.Errors.ContainsKey("name") ? "f-name-err" : null)" />
+            @if (S.Errors.TryGetValue("name", out var nameErr))
+            {
+                <p class="f-err" id="f-name-err">@Icons.Warn @nameErr</p>
+            }
+        </div>
+        <div class="f-group">
+            <label class="f-label" for="f-pref">Preferred name <span class="f-opt">— optional</span></label>
+            <input class="f-input" id="f-pref" type="text" placeholder="What should we call you?"
+                   @bind="S.Preferred" @bind:event="oninput" @bind:after="NotifyChanged" />
+            <p class="f-help">Used in greetings and email subject lines.</p>
+        </div>
+    }
+
+    else if (TaskKey == "role")
+    {
+        <fieldset class="f-fieldset">
+            <legend class="sr-only">Your role</legend>
+            @foreach (var r in Content.Roles)
+            {
+                var role = r;
+                <label class="f-radio">
+                    <input type="radio" name="role" value="@role"
+                           checked="@(S.Role == role)"
+                           @onchange="() => PickRole(role)" />
+                    <span>@role</span>
+                </label>
+            }
+        </fieldset>
+        @if (S.Errors.TryGetValue("role", out var roleErr))
+        {
+            <p class="f-err">@Icons.Warn @roleErr</p>
+        }
+    }
+
+    else if (TaskKey == "invites")
+    {
+        <div class="f-group">
+            <label class="f-label" for="f-mail">Email address</label>
+            <div class="f-row">
+                <input class="f-input" id="f-mail" type="email" autocomplete="off"
+                       placeholder="teammate@@company.com"
+                       @bind="mailDraft" @bind:event="oninput"
+                       @onkeydown="MailKey" @onkeydown:stopPropagation="true"
+                       aria-invalid="@Invalid("mail")"
+                       aria-describedby="@(S.Errors.ContainsKey("mail") ? "f-mail-err" : null)" />
+                <button type="button" class="btn btn-outline" data-act="add"
+                        @onclick="Add" @onkeydown:stopPropagation="true">Add</button>
+            </div>
+            @if (S.Errors.TryGetValue("mail", out var mailErr))
+            {
+                <p class="f-err" id="f-mail-err">@Icons.Warn @mailErr</p>
+            }
+        </div>
+
+        @if (S.Invites.Count > 0)
+        {
+            <ul class="f-chips" aria-label="Pending invitations">
+                @foreach (var m in S.Invites)
+                {
+                    var mail = m;
+                    <li class="f-chip" @key="mail">
+                        <span class="f-chip-mail" title="@mail">@mail</span>
+                        <button type="button" class="f-chip-x" data-act="remove" aria-label="Remove @mail"
+                                @onclick="() => Remove(mail)" @onkeydown:stopPropagation="true">@Icons.X</button>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="f-empty">No invites yet.<br />You can add teammates any time from Settings → Members.</p>
+        }
+    }
+
+    else if (TaskKey == "prefs")
+    {
+        <div class="f-switches">
+            @foreach (var p in Content.Prefs)
+            {
+                var pref = p;
+                <label class="f-switch">
+                    <input type="checkbox" checked="@S.Prefs[pref.Key]"
+                           @onchange="e => TogglePref(pref.Key, e.Value is bool b && b)" />
+                    <span class="f-track" aria-hidden="true"><span class="f-knob"></span></span>
+                    <span>
+                        <span class="f-sw-title">@pref.Title</span>
+                        <span class="f-sw-desc">@pref.Desc</span>
+                    </span>
+                </label>
+            }
+        </div>
+    }
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string TaskKey { get; set; } = "";
+
+    /// Raised when the answer changed, so a parent showing a summary
+    /// (the Checklist rail) can repaint.
+    [Parameter] public EventCallback Changed { get; set; }
+
+    /// Enter pressed in a field — the email box handles its own Enter instead.
+    [Parameter] public EventCallback Submit { get; set; }
+
+    private ElementReference root;
+    private string mailDraft = "";
+
+    private string? Invalid(string key) => S.Errors.ContainsKey(key) ? "true" : null;
+
+    // @bind:after wants an Action/Func<Task>, not an EventCallback
+    private Task NotifyChanged() => Changed.InvokeAsync();
+
+    public ValueTask FocusFirstAsync() => JS.InvokeVoidAsync("app.focusFirst", root);
+
+    private async Task PickRole(string role)
+    {
+        S.Role = role;
+        S.Errors.Remove("role");
+        // No manual re-render plumbing: Blazor diffs, so the radio the user is
+        // standing on keeps focus and its arrow-key navigation still works.
+        await Changed.InvokeAsync();
+    }
+
+    private async Task TogglePref(string key, bool on)
+    {
+        S.Prefs[key] = on;
+        S.TouchedPrefs = true;
+        await Changed.InvokeAsync();
+    }
+
+    private async Task Add()
+    {
+        if (S.AddInvite(mailDraft)) mailDraft = "";
+        await Changed.InvokeAsync();
+    }
+
+    private async Task Remove(string mail)
+    {
+        S.RemoveInvite(mail);
+        await Changed.InvokeAsync();
+    }
+
+    private Task MailKey(KeyboardEventArgs e) => e.Key == "Enter" ? Add() : Task.CompletedTask;
+
+    private Task RootKey(KeyboardEventArgs e) =>
+        e.Key == "Enter" ? Submit.InvokeAsync() : Task.CompletedTask;
+}
