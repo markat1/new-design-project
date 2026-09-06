@@ -509,6 +509,12 @@ body {
   padding-top: 18px;
   border-top: 1px solid var(--line);
 }
+.v3-panel-f-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
 .v3-saved {
   display: inline-flex;
   align-items: center;

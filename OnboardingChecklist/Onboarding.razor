@@ -90,17 +90,26 @@
                         <Fields TaskKey="@Task.Key" Changed="StateHasChanged" Submit="() => Commit(false)" @ref="fields" />
                     </div>
                     <div class="v3-panel-f">
-                        <button type="button" class="btn btn-primary" data-act="save" @onclick="() => Commit(false)">
-                            @(NextIncomplete is not null ? "Save and continue" : "Save")
-                        </button>
-                        @if (!Task.Required)
+                        @* Back is hidden on the first task rather than disabled: a control
+                           that can never do anything shouldn't be on screen. The right-hand
+                           group is anchored with margin-left:auto so the primary never moves. *@
+                        @if (Prev is { } prev)
                         {
-                            <button type="button" class="btn btn-ghost" data-act="skip" @onclick="() => Commit(true)">Skip this</button>
+                            <button type="button" class="btn btn-ghost" data-act="back" @onclick="() => Open(prev.Key)">@Icons.ArrowL Back</button>
                         }
-                        @if (justSaved == Task.Key)
-                        {
-                            <span class="v3-saved">@Icons.TickSm Saved</span>
-                        }
+                        <div class="v3-panel-f-end">
+                            @if (justSaved == Task.Key)
+                            {
+                                <span class="v3-saved">@Icons.TickSm Saved</span>
+                            }
+                            @if (!Task.Required)
+                            {
+                                <button type="button" class="btn btn-ghost" data-act="skip" @onclick="() => Commit(true)">Skip this</button>
+                            }
+                            <button type="button" class="btn btn-primary" data-act="save" @onclick="() => Commit(false)">
+                                @(Next is not null ? "Save and continue" : "Save and finish")
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -125,8 +134,10 @@
     private int Pct => (int)Math.Round(S.DoneCount / (double)Content.Tasks.Length * 100);
     private double Fraction => S.DoneCount / (double)Content.Tasks.Length;
 
-    private TaskDef? NextIncomplete =>
-        Content.Tasks.FirstOrDefault(t => t.Key != S.ChecklistKey && !S.IsDone(t.Key));
+    // Linear neighbours. The rail still allows any order; Back/Next walk the list.
+    private int Index => Content.IndexOf(S.ChecklistKey);
+    private TaskDef? Prev => Index > 0 ? Content.Tasks[Index - 1] : null;
+    private TaskDef? Next => Index < Content.Tasks.Length - 1 ? Content.Tasks[Index + 1] : null;
 
     protected override void OnInitialized() =>
         prevDone = Content.Tasks.Where(t => S.IsDone(t.Key)).Select(t => t.Key).ToHashSet();
@@ -165,12 +176,17 @@
         S.MarkVisited(key);
         justSaved = key;
 
-        var next = Content.Tasks.FirstOrDefault(t => t.Key != key && !S.IsDone(t.Key));
-        if (next is not null)
+        // Next task in order, done or not. On the last one, saving is finishing —
+        // Finish() walks back to a blocking step if a required answer is missing.
+        if (Next is { } next)
         {
             S.ChecklistKey = next.Key;
             justSaved = null;
             focusNext = true;
+        }
+        else
+        {
+            Finish();
         }
     }
 
