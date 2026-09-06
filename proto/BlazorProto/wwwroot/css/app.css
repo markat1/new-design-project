@@ -162,6 +162,33 @@ body {
   transition: width 150ms var(--ease);
 }
 
+/* Blazor flips this to display:block only on an unhandled exception. Until then
+   it must not exist in the flow — unstyled it sat below the fold as raw text. */
+#blazor-error-ui {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2147483646; /* under the picker */
+  padding: 12px 20px;
+  background: var(--danger-soft);
+  border-top: 1px solid #fecaca;
+  color: var(--danger);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+#blazor-error-ui a {
+  color: inherit;
+  margin-left: 12px;
+}
+
+#blazor-error-ui .dismiss {
+  float: right;
+  cursor: pointer;
+}
+
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
