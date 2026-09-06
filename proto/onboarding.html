@@ -1,0 +1,1871 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onboarding — prototype</title>
+<style>
+/* ============================================================
+   PICKER — verbatim from PICKER.md. Do not restyle.
+   ============================================================ */
+.proto-picker {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.82);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 8px 24px rgba(0, 0, 0, 0.24),
+    0 2px 6px rgba(0, 0, 0, 0.12);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.proto-picker-highlight {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  will-change: transform;
+}
+
+.proto-picker[data-ready] .proto-picker-highlight {
+  transition:
+    transform 250ms cubic-bezier(0.23, 1, 0.32, 1),
+    width 250ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proto-picker[data-ready] .proto-picker-highlight { transition: none; }
+}
+
+.proto-picker-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  cursor: pointer;
+  transition: color 150ms ease-out;
+}
+
+.proto-picker-item:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.proto-picker-item:active {
+  transform: scale(0.97);
+}
+
+.proto-picker-item:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+
+.proto-picker-item[data-active] {
+  color: #fff;
+}
+
+.proto-picker-divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.proto-picker-replay {
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.proto-picker[data-position="top"] {
+  bottom: auto;
+  top: 24px;
+}
+
+/* ============================================================
+   MATERIALS — restrained default (no project to borrow from)
+   ============================================================ */
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --ink-1: #09090b;
+  --ink-2: #52525b;
+  --ink-3: #a1a1aa;
+
+  --line: #e4e4e7;
+  --line-2: #d4d4d8;
+
+  --surface: #ffffff;
+  --canvas: #fafafa;
+  --sunk: #fbfbfc;
+
+  --accent: #4f46e5;
+  --accent-2: #4338ca;
+  --accent-soft: #eef2ff;
+
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --ok: #15803d;
+
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  color: var(--ink-1);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#stage { min-height: 100vh; }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- shared controls (used by Stepper + Checklist) ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 90ms ease;
+}
+.btn:active { transform: scale(0.985); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-2); }
+
+.btn-ghost { background: transparent; color: var(--ink-2); }
+.btn-ghost:hover { background: #f4f4f5; color: var(--ink-1); }
+
+.btn-outline { background: var(--surface); border-color: var(--line-2); color: var(--ink-1); }
+.btn-outline:hover { background: #fafafa; }
+
+/* not-ready state — muted, but genuinely enabled: activating it walks you to
+   the step that's blocking, and its accessible description says what's left */
+.btn[data-notready] {
+  background: #e9e9ec;
+  border-color: transparent;
+  color: #9b9ba3;
+}
+.btn[data-notready]:hover { background: #e0e0e4; color: var(--ink-2); }
+
+.f-group + .f-group { margin-top: 16px; }
+
+.f-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-1);
+  margin-bottom: 6px;
+}
+.f-opt { color: var(--ink-3); font-weight: 400; }
+
+.f-input {
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--ink-1);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  padding: 9px 11px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.f-input::placeholder { color: var(--ink-3); }
+.f-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.f-input[aria-invalid="true"] { border-color: var(--danger); }
+.f-input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px var(--danger-soft); }
+
+.f-help { font-size: 12.5px; line-height: 1.5; color: var(--ink-3); margin: 6px 0 0; }
+.f-err {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--danger);
+  margin: 6px 0 0;
+}
+.f-err svg { flex: none; }
+
+.f-row { display: flex; gap: 8px; align-items: flex-start; }
+.f-row .f-input { min-width: 0; }
+.f-row .btn { flex: none; height: 40px; }
+
+.f-fieldset { border: 0; margin: 0; padding: 0; }
+
+.f-radio {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.f-radio + .f-radio { margin-top: 8px; }
+.f-radio:hover { background: #fafafa; }
+.f-radio input {
+  flex: none;
+  width: 16px; height: 16px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+.f-radio span { font-size: 14.5px; line-height: 1.4; color: var(--ink-1); }
+.f-radio:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.f-radio:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.f-chips { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.f-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--sunk);
+}
+.f-chip-mail {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.f-chip-x {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px; height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.f-chip-x:hover { background: #f0f0f1; color: var(--ink-1); }
+.f-chip-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.f-empty {
+  margin-top: 12px;
+  padding: 20px 16px;
+  border: 1px dashed var(--line-2);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.f-switch {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 13px 0;
+  cursor: pointer;
+}
+.f-switch + .f-switch { border-top: 1px solid var(--line); }
+.f-switch input { position: absolute; width: 1px; height: 1px; opacity: 0; margin: 0; }
+.f-track {
+  position: relative;
+  flex: none;
+  width: 36px; height: 21px;
+  margin-top: 1px;
+  border-radius: 999px;
+  background: var(--line-2);
+  transition: background-color 180ms var(--ease);
+}
+.f-knob {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+  transition: transform 180ms var(--ease);
+}
+.f-switch input:checked + .f-track { background: var(--accent); }
+.f-switch input:checked + .f-track .f-knob { transform: translateX(15px); }
+.f-switch:has(input:focus-visible) .f-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.f-sw-title { display: block; font-size: 14px; font-weight: 500; color: var(--ink-1); }
+.f-sw-desc { display: block; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); margin-top: 3px; }
+
+@media (forced-colors: active) {
+  .f-input:focus, .btn:focus-visible { outline: 2px solid Highlight; }
+  .f-track { border: 1px solid CanvasText; }
+}
+
+/* ============================================================
+   VARIANT 1 — STEPPER
+   ============================================================ */
+.v1-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 40px 20px 116px;
+  background: var(--canvas);
+}
+.v1-card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px -16px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+}
+.v1-head { padding: 22px 24px 0; }
+.v1-rail { display: flex; gap: 6px; }
+.v1-seg {
+  flex: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.v1-seg i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 420ms var(--ease);
+}
+.v1-count {
+  margin: 16px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.v1-title {
+  margin: 7px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.012em;
+  color: var(--ink-1);
+}
+.v1-sub { margin: 7px 0 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.v1-body { padding: 20px 24px 24px; min-height: 244px; }
+.v1-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--sunk);
+}
+.v1-fwd { animation: v1In 240ms var(--ease) both; }
+.v1-back { animation: v1InBack 240ms var(--ease) both; }
+@keyframes v1In { from { opacity: 0; transform: translateX(10px); } }
+@keyframes v1InBack { from { opacity: 0; transform: translateX(-10px); } }
+
+.v1-done { padding: 32px 24px 28px; text-align: center; }
+.v1-tick {
+  width: 44px; height: 44px;
+  margin: 0 auto 16px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  animation: pop 340ms var(--ease) both;
+}
+@keyframes pop { from { opacity: 0; transform: scale(0.82); } }
+.v1-done h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.012em; }
+.v1-done p { margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+
+.recap {
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.recap li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 14px;
+  font-size: 13px;
+  background: var(--sunk);
+}
+.recap li + li { border-top: 1px solid var(--line); }
+.recap b { flex: none; width: 92px; font-weight: 500; color: var(--ink-3); }
+.recap span { min-width: 0; color: var(--ink-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ============================================================
+   VARIANT 2 — CONVERSATIONAL
+   ============================================================ */
+.v2-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+.v2-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--line);
+  z-index: 5;
+}
+.v2-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 520ms var(--ease);
+}
+.v2-col {
+  flex: 1;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 72px 24px 124px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.v2-log { margin: 0 0 30px; padding: 0; list-style: none; }
+.v2-log li + li { margin-top: 2px; }
+.v2-log button {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 8px;
+  margin-left: -8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink-3);
+  transition: background-color 120ms ease;
+}
+.v2-log button:hover { background: #f6f6f7; }
+.v2-log button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.v2-log .v2-log-q { flex: none; width: 116px; }
+.v2-log .v2-log-a {
+  min-width: 0;
+  color: var(--ink-1);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v2-log .v2-log-edit { flex: none; opacity: 0; color: var(--accent); transition: opacity 120ms ease; }
+.v2-log button:hover .v2-log-edit,
+.v2-log button:focus-visible .v2-log-edit { opacity: 1; }
+
+.v2-step { animation: v2In 380ms var(--ease) both; }
+.v2-step:focus { outline: none; }
+@keyframes v2In { from { opacity: 0; transform: translateY(14px); } }
+
+.v2-num {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.v2-q {
+  margin: 12px 0 0;
+  font-size: clamp(28px, 4.6vw, 40px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
+  color: var(--ink-1);
+}
+.v2-help { margin: 14px 0 0; font-size: 16px; line-height: 1.55; color: var(--ink-2); max-width: 46ch; }
+
+.v2-field { margin-top: 30px; }
+.v2-input {
+  width: 100%;
+  font: inherit;
+  font-size: clamp(20px, 2.6vw, 26px);
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--ink-1);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--line-2);
+  border-radius: 0;
+  padding: 8px 0;
+  caret-color: var(--accent);
+  transition: border-color 160ms ease;
+}
+.v2-input::placeholder { color: #c9c9ce; }
+.v2-input:focus { outline: none; border-bottom-color: var(--accent); }
+.v2-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 3px; }
+.v2-input[aria-invalid="true"] { border-bottom-color: var(--danger); }
+
+.v2-sub-field { margin-top: 22px; }
+.v2-sub-label { display: block; font-size: 13px; font-weight: 500; color: var(--ink-2); margin-bottom: 7px; }
+.v2-input-sm { font-size: 17px; }
+
+.v2-opts { margin-top: 26px; display: flex; flex-direction: column; gap: 8px; }
+.v2-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.35;
+  text-align: left;
+  color: var(--ink-1);
+  cursor: pointer;
+  transition: border-color 130ms ease, background-color 130ms ease;
+}
+.v2-opt:hover { background: #fafafa; }
+.v2-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.v2-opt[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.v2-key {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px; height: 22px;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.v2-opt[aria-pressed="true"] .v2-key { border-color: var(--accent); background: var(--accent); color: #fff; }
+
+.v2-actions { margin-top: 32px; display: flex; align-items: center; gap: 14px; }
+.v2-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 90ms ease;
+}
+.v2-cta:hover { background: var(--accent-2); }
+.v2-cta:active { transform: scale(0.985); }
+.v2-cta:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.v2-cta kbd {
+  font: inherit;
+  font-size: 12px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.18);
+}
+.v2-skip {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink-3);
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 7px;
+  transition: color 130ms ease, background-color 130ms ease;
+}
+.v2-skip:hover { color: var(--ink-1); background: #f6f6f7; }
+.v2-skip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.v2-hint { margin: 16px 0 0; font-size: 13px; color: var(--ink-3); }
+.v2-err {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 0;
+  font-size: 14px;
+  color: var(--danger);
+}
+
+.v2-list { margin: 24px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
+.v2-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 10px 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--sunk);
+}
+.v2-list .f-chip-mail { font-size: 15px; }
+.v2-empty {
+  margin-top: 24px;
+  padding: 26px 18px;
+  border: 1px dashed var(--line-2);
+  border-radius: 12px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+.v2-switches { margin-top: 26px; }
+.v2-switches .f-sw-title { font-size: 16px; }
+.v2-switches .f-sw-desc { font-size: 13.5px; }
+.v2-switches .f-switch { padding: 16px 0; }
+
+.v2-done h2 {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 44px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.v2-done p { margin: 16px 0 0; font-size: 17px; line-height: 1.55; color: var(--ink-2); }
+.v2-done .recap { max-width: 460px; }
+
+/* ============================================================
+   VARIANT 3 — CHECKLIST (master–detail)
+   ============================================================ */
+.v3-wrap { min-height: 100vh; padding: 52px 24px 124px; background: var(--canvas); }
+.v3-shell { max-width: 940px; margin: 0 auto; }
+.v3-eyebrow {
+  display: block;
+  max-width: 380px;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v3-h1 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+.v3-lede { margin: 8px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); max-width: 56ch; }
+
+.v3-grid {
+  display: grid;
+  grid-template-columns: 296px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  margin-top: 30px;
+}
+@media (max-width: 880px) { .v3-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.v3-rail {
+  position: sticky;
+  top: 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 6px;
+}
+@media (max-width: 880px) { .v3-rail { position: static; } }
+
+.v3-meter { padding: 14px 12px 15px; }
+.v3-meter-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.v3-meter-n { font-size: 13px; font-weight: 500; color: var(--ink-1); font-variant-numeric: tabular-nums; }
+.v3-meter-pct { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.v3-meter-bar { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.v3-meter-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transition: transform 480ms var(--ease);
+}
+
+.v3-tasks { padding: 0 4px 4px; }
+.v3-task {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  padding: 9px 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 130ms ease;
+}
+.v3-task:hover { background: #f6f6f7; }
+.v3-task:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+.v3-task[data-active] { background: var(--accent-soft); }
+.v3-task[data-nudge] { animation: nudge 480ms var(--ease) both; }
+@keyframes nudge {
+  0%, 100% { transform: translateX(0); }
+  22% { transform: translateX(-4px); }
+  55% { transform: translateX(3px); }
+  80% { transform: translateX(-1px); }
+}
+.v3-dot {
+  width: 18px; height: 18px;
+  margin-top: 1px;
+  display: grid; place-items: center;
+  border: 1.5px solid var(--line-2);
+  border-radius: 50%;
+  background: var(--surface);
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+.v3-dot[data-done] { background: var(--accent); border-color: var(--accent); }
+.v3-dot svg { display: block; }
+.v3-dot svg path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.v3-dot[data-new] svg path {
+  stroke-dasharray: 14;
+  stroke-dashoffset: 14;
+  animation: draw 300ms var(--ease) 40ms forwards;
+}
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.v3-task-t {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-1);
+}
+.v3-task[data-active] .v3-task-t { color: var(--accent-2); }
+.v3-pill {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: #f0f0f1;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+.v3-task-s {
+  display: block;
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v3-task-s[data-unset] { color: #c0c0c6; }
+
+.v3-finish { padding: 6px 10px 10px; }
+.v3-finish .btn { width: 100%; }
+.v3-finish-note { margin: 8px 2px 0; font-size: 12px; line-height: 1.45; color: var(--ink-3); text-align: center; }
+
+.v3-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 28px 28px 22px;
+  min-height: 392px;
+  display: flex;
+  flex-direction: column;
+  animation: v3In 220ms var(--ease) both;
+}
+@keyframes v3In { from { opacity: 0; transform: translateY(7px); } }
+.v3-panel-h { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.v3-panel-s { margin: 7px 0 20px; font-size: 14px; line-height: 1.55; color: var(--ink-2); max-width: 54ch; }
+.v3-panel-body { flex: 1; }
+.v3-panel-f {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.v3-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--ok);
+  animation: pop 300ms var(--ease) both;
+}
+
+.v3-done {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 40px 32px 34px;
+  text-align: center;
+  max-width: 480px;
+  margin: 60px auto 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px -16px rgba(0, 0, 0, 0.16);
+}
+.v3-done h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.015em; }
+.v3-done p { margin: 9px 0 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+</style>
+</head>
+<body>
+
+<main id="stage"></main>
+
+<nav class="proto-picker" aria-label="Prototype variants">
+  <span class="proto-picker-highlight" aria-hidden="true"></span>
+  <button class="proto-picker-item" data-active aria-current="true">Stepper</button>
+  <button class="proto-picker-item">Conversational</button>
+  <button class="proto-picker-item">Checklist</button>
+  <span class="proto-picker-divider" aria-hidden="true"></span>
+  <button class="proto-picker-item proto-picker-replay" aria-label="Replay animation (R)">&#8635;</button>
+</nav>
+
+<script>
+/* ============================================================
+   SHARED STATE + CONTENT
+   Worst content by default: a long real name, a long role label,
+   a long email address, a long workspace name.
+   ============================================================ */
+
+const WORKSPACE = 'Featherstonehaugh-Villanueva International Systems';
+
+const S = {
+  data: {
+    name: 'Bartholomew Featherstonehaugh-Villanueva',
+    preferred: 'Bart',
+    role: null,
+    invites: [
+      'bartholomew.featherstonehaugh-villanueva@internationalsystems-engineering.co.uk',
+      'dev@acme.io'
+    ],
+    prefs: { digest: true, mentions: true, updates: false }
+  },
+  touched: { invites: true, prefs: false },
+  errors: {}
+};
+
+const ROLES = [
+  'Founder or executive',
+  'Engineering manager / technical lead (individual contributor hybrid)',
+  'Software engineer',
+  'Designer',
+  'Product manager',
+  'Operations, finance, or something else'
+];
+
+const PREFS = [
+  {
+    key: 'digest',
+    title: 'Weekly digest',
+    desc: 'A Monday morning summary of everything that changed in ' + WORKSPACE + ' while you were away.'
+  },
+  {
+    key: 'mentions',
+    title: 'Mentions and replies',
+    desc: 'Email me the moment somebody @-mentions me in a thread, or replies to a comment I left.'
+  },
+  {
+    key: 'updates',
+    title: 'Product updates',
+    desc: 'Occasional notes about new features. Never more than once a month, and never shared with anyone.'
+  }
+];
+
+const TASKS = [
+  {
+    key: 'name',
+    label: 'Your name',
+    required: true,
+    title: "What's your name?",
+    sub: 'This is how you appear to teammates in mentions, comments, and the member list.',
+    q: "First, what's your name?",
+    help: 'This is how you appear to teammates in mentions and comments.'
+  },
+  {
+    key: 'role',
+    label: 'Your role',
+    required: true,
+    title: 'What do you do?',
+    sub: "We'll use this to pick your default views and your first project template.",
+    q: 'What do you do here?',
+    help: "It sets your default views and your first project template. You can change it later."
+  },
+  {
+    key: 'invites',
+    label: 'Invite your team',
+    required: false,
+    title: 'Invite your team',
+    sub: 'Setup goes faster with someone to compare notes with. You can always do this later.',
+    q: 'Who else should be here?',
+    help: 'Setup goes faster with someone to compare notes with — but this can wait.'
+  },
+  {
+    key: 'prefs',
+    label: 'Notifications',
+    required: false,
+    title: 'How should we reach you?',
+    sub: 'All of this is editable later under Settings → Notifications.',
+    q: 'How should we reach you?',
+    help: 'All of it is editable later under Settings → Notifications.'
+  }
+];
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function firstName() {
+  const p = (S.data.preferred || '').trim();
+  if (p) return p;
+  const n = (S.data.name || '').trim();
+  return n ? n.split(/\s+/)[0] : 'there';
+}
+
+function isDone(key) {
+  if (key === 'name') return S.data.name.trim().length > 0;
+  if (key === 'role') return !!S.data.role;
+  if (key === 'invites') return S.touched.invites;
+  if (key === 'prefs') return S.touched.prefs;
+  return false;
+}
+
+function doneCount() {
+  return TASKS.filter(function (t) { return isDone(t.key); }).length;
+}
+
+function requiredLeft() {
+  return TASKS.filter(function (t) { return t.required && !isDone(t.key); });
+}
+
+function summaryOf(key) {
+  if (key === 'name') return S.data.name.trim() || null;
+  if (key === 'role') return S.data.role || null;
+  if (key === 'invites') {
+    const n = S.data.invites.length;
+    if (!S.touched.invites) return null;
+    if (n === 0) return 'Skipped for now';
+    return n === 1 ? '1 invite' : n + ' invites';
+  }
+  if (key === 'prefs') {
+    if (!S.touched.prefs) return null;
+    const on = PREFS.filter(function (p) { return S.data.prefs[p.key]; }).length;
+    return on === 0 ? 'All email off' : on + ' of 3 email types on';
+  }
+  return null;
+}
+
+/* validate a step; returns true when it may be left */
+function validate(key) {
+  S.errors = {};
+  if (key === 'name' && !S.data.name.trim()) {
+    S.errors.name = 'We need something to call you.';
+    return false;
+  }
+  if (key === 'role' && !S.data.role) {
+    S.errors.role = 'Pick the closest one — nothing here is binding.';
+    return false;
+  }
+  return true;
+}
+
+function addInvite(raw) {
+  const v = String(raw || '').trim().toLowerCase();
+  if (!v) { S.errors.mail = 'Type an email address first.'; return false; }
+  if (!EMAIL_RE.test(v)) { S.errors.mail = '"' + v + '" is not an email address.'; return false; }
+  if (S.data.invites.indexOf(v) !== -1) { S.errors.mail = 'That teammate is already on the list.'; return false; }
+  S.data.invites.push(v);
+  S.touched.invites = true;
+  delete S.errors.mail;
+  return true;
+}
+
+/* ---------- icons ---------- */
+const icoWarn = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 15 14H1L8 1.6Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v3.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.6" r="0.85" fill="currentColor"/></svg>';
+const icoX = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+const icoCheckBig = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const icoCheckSm = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.4l3 3 6-6"/></svg>';
+const icoArrowL = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const icoTickSm = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.4l3.2 3.2L13 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/* ---------- shared field markup (Stepper + Checklist) ---------- */
+
+function fieldsHTML(key) {
+  if (key === 'name') {
+    return '' +
+      '<div class="f-group">' +
+        '<label class="f-label" for="f-name">Full name</label>' +
+        '<input class="f-input" id="f-name" type="text" autocomplete="name" value="' + esc(S.data.name) + '"' +
+          (S.errors.name ? ' aria-invalid="true" aria-describedby="f-name-err"' : '') + '>' +
+        (S.errors.name ? '<p class="f-err" id="f-name-err">' + icoWarn + esc(S.errors.name) + '</p>' : '') +
+      '</div>' +
+      '<div class="f-group">' +
+        '<label class="f-label" for="f-pref">Preferred name <span class="f-opt">— optional</span></label>' +
+        '<input class="f-input" id="f-pref" type="text" placeholder="What should we call you?" value="' + esc(S.data.preferred) + '">' +
+        '<p class="f-help">Used in greetings and email subject lines.</p>' +
+      '</div>';
+  }
+
+  if (key === 'role') {
+    return '' +
+      '<fieldset class="f-fieldset">' +
+        '<legend class="sr-only">Your role</legend>' +
+        ROLES.map(function (r, i) {
+          return '<label class="f-radio"><input type="radio" name="role" value="' + esc(r) + '"' +
+            (S.data.role === r ? ' checked' : '') + '><span>' + esc(r) + '</span></label>';
+        }).join('') +
+      '</fieldset>' +
+      (S.errors.role ? '<p class="f-err">' + icoWarn + esc(S.errors.role) + '</p>' : '');
+  }
+
+  if (key === 'invites') {
+    const list = S.data.invites.length
+      ? '<ul class="f-chips" aria-label="Pending invitations">' + S.data.invites.map(function (m) {
+          return '<li class="f-chip"><span class="f-chip-mail" title="' + esc(m) + '">' + esc(m) + '</span>' +
+            '<button type="button" class="f-chip-x" data-act="remove" data-mail="' + esc(m) + '" aria-label="Remove ' + esc(m) + '">' + icoX + '</button></li>';
+        }).join('') + '</ul>'
+      : '<p class="f-empty">No invites yet.<br>You can add teammates any time from Settings → Members.</p>';
+
+    return '' +
+      '<div class="f-group">' +
+        '<label class="f-label" for="f-mail">Email address</label>' +
+        '<div class="f-row">' +
+          '<input class="f-input" id="f-mail" type="email" autocomplete="off" placeholder="teammate@company.com"' +
+            (S.errors.mail ? ' aria-invalid="true" aria-describedby="f-mail-err"' : '') + '>' +
+          '<button type="button" class="btn btn-outline" data-act="add">Add</button>' +
+        '</div>' +
+        (S.errors.mail ? '<p class="f-err" id="f-mail-err">' + icoWarn + esc(S.errors.mail) + '</p>' : '') +
+      '</div>' +
+      list;
+  }
+
+  if (key === 'prefs') {
+    return '<div class="f-switches">' + PREFS.map(function (p) {
+      return '<label class="f-switch"><input type="checkbox" data-pref="' + p.key + '"' +
+        (S.data.prefs[p.key] ? ' checked' : '') + '>' +
+        '<span class="f-track" aria-hidden="true"><span class="f-knob"></span></span>' +
+        '<span><span class="f-sw-title">' + esc(p.title) + '</span><span class="f-sw-desc">' + esc(p.desc) + '</span></span></label>';
+    }).join('') + '</div>';
+  }
+  return '';
+}
+
+/* shared listeners for the markup above; `after` re-renders the owning region */
+function wireFields(root, after) {
+  const name = root.querySelector('#f-name');
+  if (name) name.addEventListener('input', function () { S.data.name = name.value; });
+
+  const pref = root.querySelector('#f-pref');
+  if (pref) pref.addEventListener('input', function () { S.data.preferred = pref.value; });
+
+  root.querySelectorAll('input[name="role"]').forEach(function (el) {
+    el.addEventListener('change', function () {
+      S.data.role = el.value;
+      delete S.errors.role;
+      // patch the error away in place — re-rendering would break the radio
+      // group's native arrow-key navigation by destroying the focused input
+      const err = root.querySelector('.f-err');
+      if (err) err.remove();
+      after({ silent: true });
+    });
+  });
+
+  const mail = root.querySelector('#f-mail');
+  const addBtn = root.querySelector('[data-act="add"]');
+  function doAdd() {
+    if (addInvite(mail.value)) { mail.value = ''; }
+    after({ focus: '#f-mail' });
+  }
+  if (addBtn) addBtn.addEventListener('click', doAdd);
+  if (mail) mail.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+  });
+
+  root.querySelectorAll('[data-act="remove"]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      S.data.invites = S.data.invites.filter(function (m) { return m !== el.dataset.mail; });
+      S.touched.invites = true;
+      after({ focus: '#f-mail' });
+    });
+  });
+
+  root.querySelectorAll('[data-pref]').forEach(function (el) {
+    el.addEventListener('change', function () {
+      S.data.prefs[el.dataset.pref] = el.checked;
+      S.touched.prefs = true;
+      after({ silent: true });
+    });
+  });
+}
+
+function recapHTML() {
+  const inv = S.data.invites.length;
+  return '<ul class="recap">' +
+    '<li><b>Name</b><span title="' + esc(S.data.name) + '">' + esc(S.data.name || '—') + '</span></li>' +
+    '<li><b>Role</b><span title="' + esc(S.data.role || '') + '">' + esc(S.data.role || 'Not set') + '</span></li>' +
+    '<li><b>Invites</b><span>' + (inv ? inv + ' sent' : 'None') + '</span></li>' +
+    '<li><b>Email</b><span>' + esc(summaryOf('prefs') || 'Defaults kept') + '</span></li>' +
+  '</ul>';
+}
+
+/* ============================================================
+   VARIANT 1 — STEPPER
+   ============================================================ */
+const nav = { v1: 0, v2: 0, v3: 'name' };
+const finished = { v1: false, v2: false, v3: false };
+
+const Stepper = {
+  render: function () {
+    return '' +
+      '<div class="v1-wrap">' +
+        '<section class="v1-card" aria-labelledby="v1-title">' +
+          '<div class="v1-head">' +
+            '<div class="v1-rail" role="presentation">' +
+              TASKS.map(function () { return '<span class="v1-seg"><i></i></span>'; }).join('') +
+            '</div>' +
+            '<p class="v1-count" id="v1-count" aria-live="polite"></p>' +
+            '<h1 class="v1-title" id="v1-title"></h1>' +
+            '<p class="v1-sub" id="v1-sub"></p>' +
+          '</div>' +
+          '<div class="v1-body" id="v1-body"></div>' +
+          '<div class="v1-foot">' +
+            '<button type="button" class="btn btn-ghost" id="v1-back">Back</button>' +
+            '<button type="button" class="btn btn-primary" id="v1-next">Continue</button>' +
+          '</div>' +
+        '</section>' +
+      '</div>';
+  },
+
+  wire: function (stage) {
+    const card = stage.querySelector('.v1-card');
+    const segs = [].slice.call(stage.querySelectorAll('.v1-seg i'));
+    const count = stage.querySelector('#v1-count');
+    const title = stage.querySelector('#v1-title');
+    const sub = stage.querySelector('#v1-sub');
+    const body = stage.querySelector('#v1-body');
+    const back = stage.querySelector('#v1-back');
+    const next = stage.querySelector('#v1-next');
+
+    function paintChrome() {
+      const step = nav.v1;
+      segs.forEach(function (el, i) { el.style.transform = 'scaleX(' + (i <= step ? 1 : 0) + ')'; });
+      count.textContent = 'Step ' + (step + 1) + ' of ' + TASKS.length;
+      title.textContent = TASKS[step].title;
+      sub.textContent = TASKS[step].sub;
+      back.style.visibility = step === 0 ? 'hidden' : 'visible';
+      next.textContent = step === TASKS.length - 1 ? 'Finish setup' : 'Continue';
+    }
+
+    function paintBody(dir, opts) {
+      opts = opts || {};
+      body.innerHTML = fieldsHTML(TASKS[nav.v1].key);
+      wireFields(body, function (o) {
+        o = o || {};
+        if (o.silent) return; // nothing outside the body reflects this change
+        paintBody(0, o);
+      });
+
+      if (dir !== 0) {
+        body.classList.remove('v1-fwd', 'v1-back');
+        void body.offsetWidth;
+        body.classList.add(dir < 0 ? 'v1-back' : 'v1-fwd');
+      }
+
+      if (opts.focus) {
+        const t = body.querySelector(opts.focus);
+        if (t) t.focus();
+      } else if (opts.autofocus) {
+        const t = body.querySelector('input:not([type=radio]), input[type=radio]:checked, input[type=radio]');
+        if (t) t.focus();
+      }
+    }
+
+    function go(delta, opts) {
+      if (delta > 0 && !validate(TASKS[nav.v1].key)) {
+        paintBody(0);
+        const bad = body.querySelector('[aria-invalid="true"], input[name="role"]');
+        if (bad) bad.focus();
+        return;
+      }
+      S.errors = {};
+      if (delta > 0) {
+        const key = TASKS[nav.v1].key;
+        if (key === 'invites') S.touched.invites = true;
+        if (key === 'prefs') S.touched.prefs = true;
+      }
+      const target = nav.v1 + delta;
+      if (target < 0) return;
+      if (target >= TASKS.length) { finished.v1 = true; done(); return; }
+      nav.v1 = target;
+      paintChrome();
+      paintBody(delta, { autofocus: (opts && opts.autofocus) !== false });
+    }
+
+    function done() {
+      card.innerHTML = '' +
+        '<div class="v1-done">' +
+          '<div class="v1-tick">' + icoCheckBig + '</div>' +
+          '<h2>You\'re all set, ' + esc(firstName()) + '.</h2>' +
+          '<p>' + esc(WORKSPACE) + ' is ready when you are.</p>' +
+          recapHTML() +
+          '<div style="display:flex;gap:10px;justify-content:center;margin-top:24px">' +
+            '<button type="button" class="btn btn-outline" data-act="restart">Start over</button>' +
+            '<button type="button" class="btn btn-primary">Open workspace</button>' +
+          '</div>' +
+        '</div>';
+      card.querySelector('[data-act="restart"]').addEventListener('click', function () {
+        finished.v1 = false; nav.v1 = 0; S.errors = {};
+        mount(current);
+      });
+    }
+
+    back.addEventListener('click', function () { go(-1); });
+    next.addEventListener('click', function () { go(1); });
+
+    body.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'email') {
+        e.preventDefault();
+        go(1);
+      }
+    });
+
+    if (finished.v1) { done(); return; }
+    paintChrome();
+    paintBody(0);
+  }
+};
+
+/* ============================================================
+   VARIANT 2 — CONVERSATIONAL
+   ============================================================ */
+const Conversational = {
+  render: function () {
+    return '' +
+      '<div class="v2-wrap">' +
+        '<div class="v2-bar" role="presentation"><i id="v2-fill"></i></div>' +
+        '<div class="v2-col" id="v2-col"></div>' +
+      '</div>';
+  },
+
+  wire: function (stage) {
+    const col = stage.querySelector('#v2-col');
+    const fill = stage.querySelector('#v2-fill');
+
+    function logHTML() {
+      const rows = [];
+      for (let i = 0; i < nav.v2; i++) {
+        const t = TASKS[i];
+        const val = summaryOf(t.key) ||
+          (t.key === 'invites' ? 'Skipped' : t.key === 'prefs' ? 'Defaults kept' : '—');
+        rows.push(
+          '<li><button type="button" data-jump="' + i + '">' +
+            '<span class="v2-log-q">' + esc(t.label) + '</span>' +
+            '<span class="v2-log-a" title="' + esc(val) + '">' + esc(val) + '</span>' +
+            '<span class="v2-log-edit">Edit</span>' +
+          '</button></li>'
+        );
+      }
+      return rows.length ? '<ul class="v2-log">' + rows.join('') + '</ul>' : '';
+    }
+
+    function fieldHTML(key) {
+      if (key === 'name') {
+        return '' +
+          '<div class="v2-field">' +
+            '<label class="sr-only" for="v2-name">Full name</label>' +
+            '<input class="v2-input" id="v2-name" type="text" autocomplete="name" placeholder="Type your name"' +
+              ' value="' + esc(S.data.name) + '"' + (S.errors.name ? ' aria-invalid="true"' : '') + '>' +
+            (S.errors.name ? '<p class="v2-err">' + icoWarn + esc(S.errors.name) + '</p>' : '') +
+            '<div class="v2-sub-field">' +
+              '<label class="v2-sub-label" for="v2-pref">And what should we call you?</label>' +
+              '<input class="v2-input v2-input-sm" id="v2-pref" type="text" placeholder="Optional" value="' + esc(S.data.preferred) + '">' +
+            '</div>' +
+          '</div>';
+      }
+
+      if (key === 'role') {
+        return '' +
+          '<div class="v2-opts" role="group" aria-label="Your role">' +
+            ROLES.map(function (r, i) {
+              const letter = String.fromCharCode(65 + i);
+              return '<button type="button" class="v2-opt" data-role="' + esc(r) + '" aria-pressed="' +
+                (S.data.role === r ? 'true' : 'false') + '">' +
+                '<span class="v2-key" aria-hidden="true">' + letter + '</span>' +
+                '<span>' + esc(r) + '</span></button>';
+            }).join('') +
+          '</div>' +
+          (S.errors.role ? '<p class="v2-err">' + icoWarn + esc(S.errors.role) + '</p>' : '');
+      }
+
+      if (key === 'invites') {
+        const list = S.data.invites.length
+          ? '<ul class="v2-list" aria-label="Pending invitations">' + S.data.invites.map(function (m) {
+              return '<li><span class="f-chip-mail" title="' + esc(m) + '">' + esc(m) + '</span>' +
+                '<button type="button" class="f-chip-x" data-act="remove" data-mail="' + esc(m) + '" aria-label="Remove ' + esc(m) + '">' + icoX + '</button></li>';
+            }).join('') + '</ul>'
+          : '<p class="v2-empty">Nobody yet.<br>You can invite people later from Settings → Members.</p>';
+
+        return '' +
+          '<div class="v2-field">' +
+            '<label class="sr-only" for="v2-mail">Teammate email address</label>' +
+            '<input class="v2-input" id="v2-mail" type="email" autocomplete="off" placeholder="teammate@company.com"' +
+              (S.errors.mail ? ' aria-invalid="true"' : '') + '>' +
+            (S.errors.mail ? '<p class="v2-err">' + icoWarn + esc(S.errors.mail) + '</p>' : '') +
+            list +
+          '</div>';
+      }
+
+      if (key === 'prefs') {
+        return '<div class="v2-switches">' + PREFS.map(function (p) {
+          return '<label class="f-switch"><input type="checkbox" data-pref="' + p.key + '"' +
+            (S.data.prefs[p.key] ? ' checked' : '') + '>' +
+            '<span class="f-track" aria-hidden="true"><span class="f-knob"></span></span>' +
+            '<span><span class="f-sw-title">' + esc(p.title) + '</span><span class="f-sw-desc">' + esc(p.desc) + '</span></span></label>';
+        }).join('') + '</div>';
+      }
+      return '';
+    }
+
+    function hintFor(key) {
+      if (key === 'role') return 'Press a letter key to choose, then Enter.';
+      if (key === 'invites') return 'Type an email and press Enter to add them.';
+      if (key === 'prefs') return 'Toggle what you want, then press Enter.';
+      return 'Press Enter to continue.';
+    }
+
+    function paint(opts) {
+      opts = opts || {};
+      const t = TASKS[nav.v2];
+      const num = String(nav.v2 + 1).padStart(2, '0') + ' / ' + String(TASKS.length).padStart(2, '0');
+      const last = nav.v2 === TASKS.length - 1;
+
+      fill.style.transform = 'scaleX(' + ((nav.v2 + 1) / (TASKS.length + 1)) + ')';
+
+      col.innerHTML =
+        logHTML() +
+        '<div class="v2-step" id="v2-step" tabindex="-1">' +
+          '<p class="v2-num">' + num + '</p>' +
+          '<h1 class="v2-q">' + esc(t.q) + '</h1>' +
+          '<p class="v2-help">' + esc(t.help) + '</p>' +
+          fieldHTML(t.key) +
+          '<div class="v2-actions">' +
+            '<button type="button" class="v2-cta" id="v2-next">' + (last ? 'Finish setup' : 'Continue') + ' <kbd>&#9166;</kbd></button>' +
+            (t.required ? '' : '<button type="button" class="v2-skip" id="v2-skip">Skip this</button>') +
+            (nav.v2 > 0 ? '<button type="button" class="v2-skip" id="v2-back" aria-label="Back to previous question">' + icoArrowL + ' Back</button>' : '') +
+          '</div>' +
+          '<p class="v2-hint">' + esc(hintFor(t.key)) + '</p>' +
+        '</div>';
+
+      wireStep();
+
+      if (opts.focus) {
+        const el = col.querySelector(opts.focus);
+        if (el) el.focus();
+      } else if (opts.autofocus) {
+        // no text field on the role step — park focus on the question itself so
+        // it gets announced and the letter keys still land
+        const el = col.querySelector('.v2-input') || col.querySelector('#v2-step');
+        if (el) el.focus();
+      }
+    }
+
+    function wireStep() {
+      col.querySelectorAll('[data-jump]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          nav.v2 = parseInt(b.dataset.jump, 10);
+          S.errors = {};
+          paint({ autofocus: true });
+        });
+      });
+
+      const nameEl = col.querySelector('#v2-name');
+      if (nameEl) nameEl.addEventListener('input', function () { S.data.name = nameEl.value; });
+      const prefEl = col.querySelector('#v2-pref');
+      if (prefEl) prefEl.addEventListener('input', function () { S.data.preferred = prefEl.value; });
+
+      col.querySelectorAll('[data-role]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          S.data.role = b.dataset.role;
+          delete S.errors.role;
+          paint({});
+        });
+      });
+
+      const mailEl = col.querySelector('#v2-mail');
+      function doAdd() {
+        if (addInvite(mailEl.value)) mailEl.value = '';
+        paint({ focus: '#v2-mail' });
+      }
+      if (mailEl) mailEl.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        if (mailEl.value.trim()) doAdd();
+        else go(1);
+      });
+
+      col.querySelectorAll('[data-act="remove"]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          S.data.invites = S.data.invites.filter(function (m) { return m !== b.dataset.mail; });
+          S.touched.invites = true;
+          paint({ focus: '#v2-mail' });
+        });
+      });
+
+      col.querySelectorAll('[data-pref]').forEach(function (el) {
+        el.addEventListener('change', function () {
+          S.data.prefs[el.dataset.pref] = el.checked;
+          S.touched.prefs = true;
+        });
+      });
+
+      // Enter advances from any field except the email one, which adds first
+      col.querySelectorAll('.v2-step input').forEach(function (el) {
+        if (el.id === 'v2-mail') return;
+        el.addEventListener('keydown', function (e) {
+          if (e.key !== 'Enter') return;
+          e.preventDefault();
+          go(1);
+        });
+      });
+
+      const next = col.querySelector('#v2-next');
+      if (next) next.addEventListener('click', function () { go(1); });
+      const skip = col.querySelector('#v2-skip');
+      if (skip) skip.addEventListener('click', function () { go(1, true); });
+      const back = col.querySelector('#v2-back');
+      if (back) back.addEventListener('click', function () { nav.v2--; S.errors = {}; paint({ autofocus: true }); });
+    }
+
+    function go(delta, skipped) {
+      if (delta > 0 && !skipped && !validate(TASKS[nav.v2].key)) {
+        paint({});
+        const bad = col.querySelector('[aria-invalid="true"]') || col.querySelector('.v2-opt');
+        if (bad) bad.focus();
+        return;
+      }
+      S.errors = {};
+      const key = TASKS[nav.v2].key;
+      if (key === 'invites') S.touched.invites = true;
+      if (key === 'prefs') S.touched.prefs = true;
+
+      if (nav.v2 + delta >= TASKS.length) { finished.v2 = true; done(); return; }
+      nav.v2 += delta;
+      paint({ autofocus: true });
+    }
+
+    function done() {
+      fill.style.transform = 'scaleX(1)';
+      col.innerHTML =
+        '<div class="v2-step v2-done">' +
+          '<p class="v2-num">DONE</p>' +
+          '<h2>You\'re all set, ' + esc(firstName()) + '.</h2>' +
+          '<p>' + esc(WORKSPACE) + ' is ready. Here\'s what we saved.</p>' +
+          recapHTML() +
+          '<div class="v2-actions">' +
+            '<button type="button" class="v2-cta">Open workspace</button>' +
+            '<button type="button" class="v2-skip" data-act="restart">Start over</button>' +
+          '</div>' +
+        '</div>';
+      col.querySelector('[data-act="restart"]').addEventListener('click', function () {
+        finished.v2 = false; nav.v2 = 0; S.errors = {};
+        mount(current);
+      });
+    }
+
+    /* letter-key selection for the role step; never uses 1–N or R, so the picker keeps its keys */
+    this._onKey = function (e) {
+      if (finished.v2) return;
+      const tag = e.target.tagName;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || e.target.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      // a focused button already fires its own click on Enter — don't double-advance
+      if (e.key === 'Enter') {
+        if (tag === 'BUTTON' || tag === 'A') return;
+        e.preventDefault();
+        go(1);
+        return;
+      }
+      if (TASKS[nav.v2].key !== 'role') return;
+      const idx = e.key.toUpperCase().charCodeAt(0) - 65;
+      if (e.key.length === 1 && idx >= 0 && idx < ROLES.length) {
+        S.data.role = ROLES[idx];
+        delete S.errors.role;
+        paint({});
+      }
+    };
+    document.addEventListener('keydown', this._onKey);
+
+    if (finished.v2) { done(); return; }
+    paint({});
+  },
+
+  unwire: function () {
+    if (this._onKey) document.removeEventListener('keydown', this._onKey);
+    this._onKey = null;
+  }
+};
+
+/* ============================================================
+   VARIANT 3 — CHECKLIST (master–detail)
+   ============================================================ */
+const Checklist = {
+  render: function () {
+    return '' +
+      '<div class="v3-wrap">' +
+        '<div class="v3-shell" id="v3-shell"></div>' +
+      '</div>';
+  },
+
+  wire: function (stage) {
+    const shell = stage.querySelector('#v3-shell');
+    let prevDone = new Set(TASKS.filter(function (t) { return isDone(t.key); }).map(function (t) { return t.key; }));
+    let justSaved = null;
+    let nudge = null;
+
+    function railHTML() {
+      const n = doneCount();
+      const pct = Math.round((n / TASKS.length) * 100);
+      const left = requiredLeft();
+
+      return '' +
+        '<aside class="v3-rail" aria-label="Setup checklist">' +
+          '<div class="v3-meter">' +
+            '<div class="v3-meter-top">' +
+              '<span class="v3-meter-n">' + n + ' of ' + TASKS.length + ' complete</span>' +
+              '<span class="v3-meter-pct">' + pct + '%</span>' +
+            '</div>' +
+            '<div class="v3-meter-bar"><i style="transform:scaleX(' + (n / TASKS.length) + ')"></i></div>' +
+          '</div>' +
+          '<div class="v3-tasks">' +
+            TASKS.map(function (t) {
+              const done = isDone(t.key);
+              const isNew = done && !prevDone.has(t.key);
+              const sum = summaryOf(t.key);
+              return '<button type="button" class="v3-task" data-task="' + t.key + '"' +
+                (nav.v3 === t.key ? ' data-active aria-current="true"' : '') +
+                (nudge === t.key ? ' data-nudge' : '') + '>' +
+                '<span class="v3-dot"' + (done ? ' data-done' : '') + (isNew ? ' data-new' : '') + '>' +
+                  (done ? icoCheckSm : '') +
+                '</span>' +
+                '<span>' +
+                  '<span class="v3-task-t">' + esc(t.label) +
+                    (t.required ? '' : '<span class="v3-pill">Optional</span>') +
+                  '</span>' +
+                  '<span class="v3-task-s"' + (sum ? ' title="' + esc(sum) + '"' : ' data-unset') + '>' +
+                    esc(sum || 'Not set yet') +
+                  '</span>' +
+                '</span>' +
+              '</button>';
+            }).join('') +
+          '</div>' +
+          '<div class="v3-finish">' +
+            '<button type="button" class="btn btn-primary" id="v3-finish"' +
+              (left.length ? ' data-notready aria-describedby="v3-finish-note"' : '') + '>Finish setup</button>' +
+            '<p class="v3-finish-note" id="v3-finish-note">' +
+              (left.length
+                ? esc(left.length + ' required step' + (left.length > 1 ? 's' : '') + ' left')
+                : 'Everything required is done') +
+            '</p>' +
+          '</div>' +
+        '</aside>';
+    }
+
+    function panelHTML() {
+      const t = TASKS.filter(function (x) { return x.key === nav.v3; })[0];
+      const idx = TASKS.indexOf(t);
+      const nextIncomplete = TASKS.filter(function (x, i) { return i !== idx && !isDone(x.key); })[0];
+
+      return '' +
+        '<section class="v3-panel" aria-labelledby="v3-panel-h">' +
+          '<h2 class="v3-panel-h" id="v3-panel-h">' + esc(t.title) + '</h2>' +
+          '<p class="v3-panel-s">' + esc(t.sub) + '</p>' +
+          '<div class="v3-panel-body" id="v3-panel-body">' + fieldsHTML(t.key) + '</div>' +
+          '<div class="v3-panel-f">' +
+            '<button type="button" class="btn btn-primary" data-act="save">' +
+              (nextIncomplete ? 'Save and continue' : 'Save') +
+            '</button>' +
+            (t.required ? '' : '<button type="button" class="btn btn-ghost" data-act="skip">Skip this</button>') +
+            (justSaved === t.key ? '<span class="v3-saved">' + icoTickSm + ' Saved</span>' : '') +
+          '</div>' +
+        '</section>';
+    }
+
+    function paint(opts) {
+      opts = opts || {};
+      shell.innerHTML =
+        '<span class="v3-eyebrow" title="' + esc(WORKSPACE) + '">' + esc(WORKSPACE) + '</span>' +
+        '<h1 class="v3-h1">Finish setting up</h1>' +
+        '<p class="v3-lede">Four things, in any order. The two optional ones can wait — you can finish as soon as your name and role are in.</p>' +
+        '<div class="v3-grid">' + railHTML() + panelHTML() + '</div>';
+
+      prevDone = new Set(TASKS.filter(function (t) { return isDone(t.key); }).map(function (t) { return t.key; }));
+      nudge = null;
+      wirePanel();
+
+      if (opts.focus) {
+        const el = shell.querySelector(opts.focus);
+        if (el) el.focus();
+      } else if (opts.autofocus) {
+        const el = shell.querySelector('.v3-panel-body input:not([type=radio]), .v3-panel-body input');
+        if (el) el.focus();
+      }
+    }
+
+    function bindRail() {
+      shell.querySelectorAll('[data-task]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          nav.v3 = b.dataset.task;
+          justSaved = null;
+          S.errors = {};
+          paint({ autofocus: true });
+        });
+      });
+
+      shell.querySelector('#v3-finish').addEventListener('click', function () {
+        const left = requiredLeft();
+        if (left.length) {
+          // never a dead end: send them to the first thing standing in the way
+          nav.v3 = left[0].key;
+          nudge = left[0].key;
+          S.errors = {};
+          validate(left[0].key);
+          paint({ autofocus: true });
+          return;
+        }
+        finished.v3 = true;
+        done();
+      });
+    }
+
+    function wirePanel() {
+      bindRail();
+
+      const body = shell.querySelector('#v3-panel-body');
+      wireFields(body, function (o) {
+        o = o || {};
+        if (o.silent) { paintRailOnly(); return; }
+        paint(o);
+      });
+
+      const save = shell.querySelector('[data-act="save"]');
+      if (save) save.addEventListener('click', function () { commit(false); });
+      const skip = shell.querySelector('[data-act="skip"]');
+      if (skip) skip.addEventListener('click', function () { commit(true); });
+
+      body.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'email') {
+          e.preventDefault();
+          commit(false);
+        }
+      });
+    }
+
+    /* a toggle or a radio changes the rail summary, but re-rendering the whole
+       shell would destroy the control the user is still standing on — so swap
+       the rail only and leave the panel (and its focus) untouched */
+    function paintRailOnly() {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = railHTML();
+      shell.querySelector('.v3-rail').replaceWith(tmp.firstElementChild);
+      prevDone = new Set(TASKS.filter(function (t) { return isDone(t.key); }).map(function (t) { return t.key; }));
+      bindRail();
+    }
+
+    function commit(skipped) {
+      const key = nav.v3;
+      if (!skipped && !validate(key)) {
+        paint({});
+        const bad = shell.querySelector('[aria-invalid="true"], input[name="role"]');
+        if (bad) bad.focus();
+        return;
+      }
+      S.errors = {};
+      if (key === 'invites') S.touched.invites = true;
+      if (key === 'prefs') S.touched.prefs = true;
+      justSaved = key;
+
+      const idx = TASKS.map(function (t) { return t.key; }).indexOf(key);
+      const nextIncomplete = TASKS.filter(function (t, i) { return i !== idx && !isDone(t.key); })[0];
+      if (nextIncomplete) { nav.v3 = nextIncomplete.key; justSaved = null; }
+      paint({ autofocus: !!nextIncomplete });
+    }
+
+    function done() {
+      shell.innerHTML =
+        '<div class="v3-done">' +
+          '<div class="v1-tick" style="margin-inline:auto">' + icoCheckBig + '</div>' +
+          '<h2>You\'re all set, ' + esc(firstName()) + '.</h2>' +
+          '<p>' + esc(WORKSPACE) + ' is ready when you are.</p>' +
+          recapHTML() +
+          '<div style="display:flex;gap:10px;justify-content:center;margin-top:24px">' +
+            '<button type="button" class="btn btn-outline" data-act="restart">Start over</button>' +
+            '<button type="button" class="btn btn-primary">Open workspace</button>' +
+          '</div>' +
+        '</div>';
+      shell.querySelector('[data-act="restart"]').addEventListener('click', function () {
+        finished.v3 = false; nav.v3 = 'name'; S.errors = {};
+        mount(current);
+      });
+    }
+
+    if (finished.v3) { done(); return; }
+    paint({});
+  }
+};
+
+/* ============================================================
+   PICKER WIRING — behavior contract from PICKER.md.
+   Adapted only so variants can attach listeners (render + wire)
+   and detach document-level ones (unwire).
+   ============================================================ */
+const variants = [Stepper, Conversational, Checklist];
+
+const stage = document.getElementById('stage');
+const picker = document.querySelector('.proto-picker');
+const highlight = picker.querySelector('.proto-picker-highlight');
+const items = [].slice.call(picker.querySelectorAll('.proto-picker-item:not(.proto-picker-replay)'));
+const replay = picker.querySelector('.proto-picker-replay');
+let current = 0;
+
+function moveHighlight() {
+  const el = items[current];
+  highlight.style.width = el.offsetWidth + 'px';
+  highlight.style.transform = 'translateX(' + el.offsetLeft + 'px)';
+}
+
+function mount(i) {
+  variants.forEach(function (v) { if (v.unwire) v.unwire(); });
+  stage.innerHTML = '';
+  // Clear first, render next frame, so entrance animations re-run.
+  requestAnimationFrame(function () {
+    stage.innerHTML = variants[i].render();
+    variants[i].wire(stage);
+  });
+}
+
+function setActive(i) {
+  if (i < 0 || i >= variants.length) return;
+  current = i;
+  items.forEach(function (el, j) {
+    el.toggleAttribute('data-active', j === i);
+    if (j === i) el.setAttribute('aria-current', 'true');
+    else el.removeAttribute('aria-current');
+  });
+  moveHighlight();
+  try {
+    const url = new URL(location);
+    url.searchParams.set('v', i + 1);
+    history.replaceState(null, '', url);
+  } catch (e) { /* file:// can refuse replaceState — selection just won't persist */ }
+  mount(i);
+}
+
+items.forEach(function (el, i) { el.addEventListener('click', function () { setActive(i); }); });
+replay.addEventListener('click', function () { mount(current); });
+window.addEventListener('resize', moveHighlight);
+
+document.addEventListener('keydown', function (e) {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const num = parseInt(e.key, 10);
+  if (num >= 1 && num <= variants.length) setActive(num - 1);
+  else if (e.key === 'ArrowRight') setActive((current + 1) % variants.length);
+  else if (e.key === 'ArrowLeft') setActive((current - 1 + variants.length) % variants.length);
+  else if (e.key === 'r' || e.key === 'R') mount(current);
+});
+
+setActive((parseInt(new URLSearchParams(location.search).get('v'), 10) || 1) - 1);
+// Enable the slide only after first paint, so load doesn't animate.
+requestAnimationFrame(function () {
+  requestAnimationFrame(function () { picker.setAttribute('data-ready', ''); });
+});
+</script>
+</body>
+</html>

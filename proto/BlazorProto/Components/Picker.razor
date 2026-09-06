@@ -1,0 +1,75 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* Markup and styles are verbatim from PICKER.md; only the rendering syntax changes. *@
+<nav class="proto-picker" aria-label="Prototype variants" @ref="nav">
+    <span class="proto-picker-highlight" aria-hidden="true"></span>
+    @for (var i = 0; i < Names.Length; i++)
+    {
+        var idx = i;
+        <button class="proto-picker-item"
+                data-active="@(Active == idx ? "" : null)"
+                aria-current="@(Active == idx ? "true" : null)"
+                @onclick="() => Select(idx)">@Names[idx]</button>
+    }
+    <span class="proto-picker-divider" aria-hidden="true"></span>
+    <button class="proto-picker-item proto-picker-replay"
+            aria-label="Replay animation (R)"
+            @onclick="() => Replayed.InvokeAsync()">&#8635;</button>
+</nav>
+
+@code {
+    [Parameter, EditorRequired] public string[] Names { get; set; } = [];
+    [Parameter] public int Active { get; set; }
+    [Parameter] public EventCallback<int> ActiveChanged { get; set; }
+    [Parameter] public EventCallback Replayed { get; set; }
+
+    private ElementReference nav;
+    private DotNetObjectReference<Picker>? self;
+    private int painted = -1;
+
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (first)
+        {
+            self = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("protoPicker.init", nav, self);
+        }
+
+        // The highlight slides between items; the variant swap stays instant.
+        if (painted != Active)
+        {
+            painted = Active;
+            await JS.InvokeVoidAsync("protoPicker.move", Active);
+        }
+    }
+
+    private Task Select(int i) => ActiveChanged.InvokeAsync(i);
+
+    [JSInvokable]
+    public async Task HandleKey(string key)
+    {
+        if (int.TryParse(key, out var n) && n >= 1 && n <= Names.Length)
+        {
+            await Select(n - 1);
+        }
+        else if (key == "ArrowRight")
+        {
+            await Select((Active + 1) % Names.Length);
+        }
+        else if (key == "ArrowLeft")
+        {
+            await Select((Active - 1 + Names.Length) % Names.Length);
+        }
+        else if (key is "r" or "R")
+        {
+            await Replayed.InvokeAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await JS.InvokeVoidAsync("protoPicker.dispose"); } catch (JSDisconnectedException) { }
+        self?.Dispose();
+    }
+}

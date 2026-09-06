@@ -1,0 +1,60 @@
+@inject OnboardingState S
+@inject NavigationManager Nav
+
+@* Changing the key disposes and recreates the variant, so entrance animations
+   re-run — this is what the vanilla harness needed a clear-then-rAF hack for. *@
+<main @key="MountKey">
+    @if (S.ActiveVariant == 0)
+    {
+        <Stepper />
+    }
+    else if (S.ActiveVariant == 1)
+    {
+        <Conversational />
+    }
+    else
+    {
+        <Checklist />
+    }
+</main>
+
+<Picker Names="@Names" Active="S.ActiveVariant" ActiveChanged="SetActive" Replayed="Replay" />
+
+@code {
+    private static readonly string[] Names = ["Stepper", "Conversational", "Checklist"];
+
+    private string MountKey => $"{S.ActiveVariant}-{S.MountCounter}";
+
+    protected override void OnInitialized()
+    {
+        // Selection persists across reload via ?v=N, falling back to variant 1.
+        var query = new Uri(Nav.Uri).Query;
+        foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = pair.Split('=', 2);
+            if (kv.Length == 2 && kv[0] == "v" && int.TryParse(kv[1], out var n)
+                && n >= 1 && n <= Names.Length)
+            {
+                S.ActiveVariant = n - 1;
+            }
+        }
+    }
+
+    private void SetActive(int index)
+    {
+        if (index < 0 || index >= Names.Length) return;
+        S.ActiveVariant = index;
+        S.MountCounter++;
+
+        try
+        {
+            Nav.NavigateTo(Nav.GetUriWithQueryParameter("v", index + 1), forceLoad: false, replace: true);
+        }
+        catch
+        {
+            // URL persistence is a nicety; never let it take the harness down.
+        }
+    }
+
+    private void Replay() => S.MountCounter++;
+}

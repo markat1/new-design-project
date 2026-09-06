@@ -1,0 +1,972 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fakturaer — delt visning</title>
+<style>
+/* ============================================================
+   TOKENS — mirrors proto/BlazorProto/wwwroot/css/app.css
+   ============================================================ */
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --ink-1: #09090b;
+  --ink-2: #52525b;
+  --ink-3: #a1a1aa;
+
+  --line: #e4e4e7;
+  --line-2: #d4d4d8;
+
+  --surface: #ffffff;
+  --canvas: #fafafa;
+  --sunk: #fbfbfc;
+
+  --accent: #4f46e5;
+  --accent-2: #4338ca;
+  --accent-soft: #eef2ff;
+
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --ok: #15803d;
+  --ok-soft: #f0fdf4;
+
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  --z-sticky-cell: 2;
+  --z-sticky-head: 3;
+  --z-sticky-corner: 4;
+  --z-splitter: 50;
+  --z-overlay: 400;
+
+  --rule: rgba(9, 9, 11, 0.07);
+  --rule-strong: rgba(9, 9, 11, 0.11);
+  --row-hover: rgba(9, 9, 11, 0.025);
+  --row-hover-solid: #f9f9f9;
+  --row-pick: var(--accent-soft);
+  --row-pick-hover: #e6eaff;   /* --row-pick one step deeper, for hover on an already-picked row */
+  --disabled-ink: #9b9ba3;
+  --disabled-bg: #e9e9ec;
+
+  /* Driven by the splitter. Percentage of the split container. */
+  --split: 50%;
+  --pane-min-l: 340px;
+  --pane-min-r: 300px;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  color: var(--ink-1);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;           /* the shell owns scrolling, not the page */
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Every internal scroller gets the same restrained treatment.
+   There is no page scrollbar left to leave alone. */
+.scroller::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroller::-webkit-scrollbar-thumb { background: rgba(9, 9, 11, 0.2); border-radius: 4px; }
+.scroller::-webkit-scrollbar-track { background: transparent; }
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.shell {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
+}
+.topbar h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--sunk);
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.spacer { margin-left: auto; }
+
+.search { position: relative; display: flex; align-items: center; }
+.search input {
+  height: 34px;
+  width: 220px;
+  padding: 0 10px 0 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-1);
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+.search input::placeholder { color: var(--ink-3); }
+.search input:hover { border-color: var(--line-2); }
+.search input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.search svg { position: absolute; left: 10px; color: var(--ink-3); pointer-events: none; }
+
+/* ============================================================
+   SPLIT
+   ============================================================ */
+.split {
+  flex: 1;
+  display: flex;
+  min-height: 0;              /* lets the panes actually shrink and scroll */
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The table measures THIS box, not the viewport. Every tier below is a
+   container query, so dragging the splitter re-tiers the table live. */
+.pane-table {
+  flex: 0 0 var(--split);
+  min-width: var(--pane-min-l);
+  container-type: inline-size;
+  container-name: tablepane;
+  padding: 16px;
+}
+
+.pane-detail {
+  flex: 1 1 0;
+  min-width: var(--pane-min-r);
+  background: var(--sunk);
+  border-left: 1px solid var(--rule);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ---------- splitter ---------- */
+.splitter {
+  flex: none;
+  position: relative;
+  z-index: var(--z-splitter);
+  width: 11px;
+  margin: 0 -5px;             /* the 1px line lands on the pane boundary */
+  cursor: col-resize;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  touch-action: none;
+}
+/* Visible hairline, centred in the grab strip. */
+.splitter::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--rule-strong);
+  transition: background-color 150ms ease-out;
+}
+/* Grab area widened to 27px without changing what you see. Nothing
+   interactive sits within the bleed, so no target collides with it. */
+.splitter::after { content: ''; position: absolute; inset: 0 -8px; }
+.splitter:hover::before,
+.splitter[data-dragging]::before { background: var(--accent); }
+.splitter:focus-visible { outline: 2px solid var(--ink-1); outline-offset: -2px; border-radius: 2px; }
+@media (pointer: coarse) {
+  .splitter { width: 20px; margin: 0 -9px; }
+  .splitter::after { inset: 0 -12px; }
+}
+/* While dragging, nothing else may select text or take the cursor. */
+body[data-dragging] { cursor: col-resize; user-select: none; -webkit-user-select: none; }
+body[data-dragging] .pane { pointer-events: none; }
+
+/* ============================================================
+   TABLE CARD
+   ============================================================ */
+.table-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(9, 9, 11, 0.04),
+    0 4px 12px rgba(9, 9, 11, 0.04),
+    0 16px 32px rgba(9, 9, 11, 0.03);
+}
+
+.table-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky-head);
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 0;
+  text-align: left;
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+.th-inner {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  height: 38px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  text-align: inherit;
+}
+button.th-inner { cursor: pointer; transition: color 150ms ease-out, background-color 150ms ease-out; }
+button.th-inner:hover { color: var(--ink-1); background: var(--row-hover); }
+button.th-inner:focus-visible { outline: 2px solid var(--ink-1); outline-offset: -2px; border-radius: 4px; }
+th.num .th-inner { justify-content: flex-end; }
+
+.sort-icon { opacity: 0; flex: none; transition: opacity 150ms ease-out, transform 150ms var(--ease); }
+button.th-inner:hover .sort-icon { opacity: 0.4; }
+th[aria-sort] .sort-icon { opacity: 1; }
+th[aria-sort="descending"] .sort-icon { transform: rotate(180deg); }
+
+tbody td {
+  padding: 0 14px;
+  height: 48px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-1);
+  vertical-align: middle;
+  background: var(--surface);
+}
+
+td.num, th.num { text-align: right; }
+td.num { font-variant-numeric: tabular-nums; }
+td.muted { color: var(--ink-2); }
+
+tbody tr { cursor: pointer; transition: background-color 150ms ease-out; }
+tbody tr:hover td { background: var(--row-hover); }
+tbody tr:hover td.col-id { background: var(--row-hover-solid); }
+
+/* Selection outranks hover: the picked row stays picked while you
+   move the cursor over its neighbours. */
+tbody tr[data-selected] td { background: var(--row-pick); }
+tbody tr[data-selected] td.col-id { background: var(--row-pick); }
+tbody tr[data-selected]:hover td,
+tbody tr[data-selected]:hover td.col-id { background: var(--row-pick-hover); }
+
+.truncate {
+  display: block;
+  max-width: 30ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The id cell is the row's accessible handle — a real button, so the
+   row is reachable and selectable from the keyboard. */
+.row-pick {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: var(--fw-medium);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.row-pick:focus-visible { outline: 2px solid var(--ink-1); outline-offset: 2px; border-radius: 4px; }
+
+.customer { display: flex; align-items: center; gap: 9px; }
+.avatar {
+  flex: none;
+  width: 26px; height: 26px;
+  border-radius: 999px;
+  display: grid; place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
+/* ---------- status ---------- */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px 0 7px;
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+  background: var(--sunk);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+.status::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: currentColor; flex: none; }
+.status-paid    { color: var(--ok);       background: var(--ok-soft);     border-color: rgba(21,128,61,0.16); }
+.status-open    { color: var(--accent-2); background: var(--accent-soft); border-color: rgba(79,70,229,0.16); }
+.status-overdue { color: var(--danger);   background: var(--danger-soft); border-color: rgba(220,38,38,0.16); }
+.status-draft   { color: var(--ink-2); }
+.status-draft::before { background: var(--ink-3); }
+
+/* ---------- sticky identity column ---------- */
+th.col-id, td.col-id { position: sticky; left: 0; background: var(--surface); }
+td.col-id { z-index: var(--z-sticky-cell); }
+th.col-id { z-index: var(--z-sticky-corner); }
+
+th.col-id::after, td.col-id::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: -1px;
+  width: 14px;
+  transform: translateX(100%);
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(9,9,11,0.06), rgba(9,9,11,0));
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+.table-scroll[data-scrolled-x] th.col-id::after,
+.table-scroll[data-scrolled-x] td.col-id::after { opacity: 1; }
+
+/* ============================================================
+   TIERS — @container, not @media. Measured against .pane-table,
+   so the table re-tiers as the splitter moves, independently of
+   how wide the window happens to be.
+   ============================================================ */
+@container tablepane (max-width: 1000px) { .p-method { display: none; } }
+@container tablepane (max-width: 880px)  { .p-issued { display: none; } }
+@container tablepane (max-width: 740px)  { .p-due    { display: none; } }
+
+/* ---------- footer ---------- */
+.table-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  background: var(--sunk);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.table-foot .total { font-variant-numeric: tabular-nums; color: var(--ink-1); font-weight: var(--fw-medium); }
+
+/* ---------- empty ---------- */
+.empty {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 288px;
+  padding: 40px 24px;
+  text-align: center;
+}
+.empty[data-on] { display: flex; }
+.empty svg { color: var(--ink-3); margin-bottom: 6px; }
+.empty h3 { margin: 0; font-size: 15px; font-weight: var(--fw-semibold); text-wrap: balance; }
+.empty p { margin: 0 0 12px; font-size: 13px; color: var(--ink-2); max-width: 42ch; }
+
+/* ============================================================
+   DETAIL PANE
+   ============================================================ */
+.detail { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+.detail-head { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.detail-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  text-wrap: balance;
+}
+.detail-customer { display: flex; align-items: center; gap: 10px; }
+.detail-customer .avatar { width: 32px; height: 32px; font-size: 12px; }
+.detail-customer strong { font-weight: var(--fw-medium); font-size: 14px; }
+
+.detail-amount {
+  font-size: 30px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.detail-amount small { display: block; font-size: 12px; font-weight: var(--fw-normal); color: var(--ink-2); letter-spacing: 0; margin-top: 2px; }
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px 20px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+.meta-grid dt {
+  margin: 0 0 3px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+}
+.meta-grid dd { margin: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.lines { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.lines h3 {
+  margin: 0;
+  padding: 11px 14px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--rule);
+}
+.lines table { font-size: 13px; }
+.lines td { height: 40px; padding: 0 14px; border-bottom: 1px solid var(--rule); }
+.lines tr:last-child td { border-bottom: 0; }
+.lines tfoot td { border-top: 1px solid var(--rule-strong); font-weight: var(--fw-medium); background: var(--sunk); }
+
+.detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 90ms ease;
+}
+.btn:active { transform: scale(0.96); }
+.btn:focus-visible { outline: 2px solid var(--ink-1); outline-offset: 2px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-2); }
+.btn-outline { background: var(--surface); border-color: var(--line-2); color: var(--ink-1); }
+.btn-outline:hover { background: var(--canvas); }
+
+/* Nothing picked yet — a first-run screen, not an error. */
+.detail-empty {
+  height: 100%;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 40px 24px;
+  text-align: center;
+}
+.detail-empty svg { color: var(--ink-3); margin-bottom: 4px; }
+.detail-empty h3 { margin: 0; font-size: 15px; font-weight: var(--fw-semibold); }
+.detail-empty p { margin: 0; font-size: 13px; color: var(--ink-2); max-width: 34ch; }
+
+/* ============================================================
+   STACKED — below this the split itself stops making sense, and
+   that IS a viewport question, so it stays a media query.
+   ============================================================ */
+@media (max-width: 760px) {
+  .split { flex-direction: column; }
+  .pane-table { flex: 0 0 58%; min-width: 0; padding: 12px; }
+  .pane-detail { flex: 1 1 0; min-width: 0; border-left: 0; border-top: 1px solid var(--rule); }
+  .splitter { display: none; }
+  .detail { padding: 16px; }
+  .search input { width: 150px; }
+}
+
+/* ---------- readout ---------- */
+.readout {
+  position: fixed;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  left: calc(14px + env(safe-area-inset-left));
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.82);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 8px 24px rgba(0,0,0,0.24);
+  color: rgba(255,255,255,0.9);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  pointer-events: none;
+}
+.readout b { color: #fff; font-weight: var(--fw-medium); }
+.readout span { color: rgba(255,255,255,0.45); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (pointer: coarse) {
+  .th-inner { height: 44px; }
+  tbody td { height: 54px; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <header class="topbar">
+    <h1 id="tbl-title">Fakturaer</h1>
+    <span class="count-badge" id="row-count">8</span>
+    <span class="spacer"></span>
+    <div class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <label for="tbl-search" class="sr-only">Søg i fakturaer</label>
+      <input id="tbl-search" type="search" placeholder="Søg">
+    </div>
+  </header>
+
+  <div class="split" id="split">
+    <section class="pane pane-table" id="pane-table" aria-label="Fakturaliste">
+      <div class="table-card">
+        <div class="table-scroll scroller" id="scroller" tabindex="0" role="region" aria-labelledby="tbl-title">
+          <table id="tbl">
+            <caption class="sr-only">Fakturaer. Kan sorteres pr. kolonne. Vælg en række for at se detaljer i højre rude.</caption>
+            <thead>
+              <tr>
+                <th class="col-id" scope="col">
+                  <button type="button" class="th-inner" data-sort="id" data-type="text">Faktura
+                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </th>
+                <th scope="col">
+                  <button type="button" class="th-inner" data-sort="customer" data-type="text">Kunde
+                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </th>
+                <th scope="col">
+                  <button type="button" class="th-inner" data-sort="status" data-type="text">Status
+                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </th>
+                <th scope="col" class="num">
+                  <button type="button" class="th-inner" data-sort="amount" data-type="number">Beløb
+                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </th>
+                <th scope="col" class="p-due">
+                  <button type="button" class="th-inner" data-sort="due" data-type="date">Forfald
+                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </th>
+                <th scope="col" class="p-issued">
+                  <button type="button" class="th-inner" data-sort="issued" data-type="date">Udstedt
+                    <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </th>
+                <th scope="col" class="p-method"><span class="th-inner">Metode</span></th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+
+          <div class="empty" id="empty">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            <h3 id="empty-title">Ingen fakturaer matcher</h3>
+            <p id="empty-body">Prøv en kortere søgning, eller ryd den for at se alle 8.</p>
+            <button type="button" class="btn btn-outline" id="clear-search">Ryd søgning</button>
+          </div>
+        </div>
+
+        <div class="table-foot">
+          <span>Viser <span class="total" id="shown">8</span> af <span class="total">8</span></span>
+          <span class="spacer"></span>
+          <span>Udestående <span class="total" id="outstanding">20.980,50 kr.</span></span>
+        </div>
+      </div>
+    </section>
+
+    <button type="button" class="splitter" id="splitter"
+            role="separator" aria-orientation="vertical"
+            aria-label="Justér bredden mellem liste og detaljer"
+            aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"
+            aria-controls="pane-table"></button>
+
+    <section class="pane pane-detail scroller" id="pane-detail" aria-live="polite" aria-label="Fakturadetaljer">
+      <div id="detail-host"></div>
+    </section>
+  </div>
+</div>
+
+<div class="readout" aria-hidden="true">
+  <b id="ro-w">—</b><span>px rude</span>
+  <span>·</span>
+  <b id="ro-tier">—</b>
+</div>
+
+<script>
+const ROWS = [
+  { id:'INV-2418', customer:'Northwind Trading Company', short:'NT', status:'overdue', label:'Forfalden', amount:4820.00,  due:'2026-08-12', issued:'2026-07-13', method:'Bankoverførsel',
+    items:[['Konsulentydelse, juli', 32, 140.00], ['Licens, 1 år', 1, 340.00]] },
+  { id:'INV-2417', customer:'Vela Robotics',              short:'VR', status:'open',    label:'Åben',      amount:12600.50, due:'2026-09-02', issued:'2026-08-03', method:'Wire',
+    items:[['Integrationsarbejde', 60, 195.00], ['Support, kvartal', 1, 900.50]] },
+  { id:'INV-2416', customer:'Halden & Co.',               short:'HC', status:'paid',    label:'Betalt',    amount:940.00,   due:'2026-08-20', issued:'2026-07-21', method:'Kort ·· 4471',
+    items:[['Designgennemgang', 4, 235.00]] },
+  { id:'INV-2415', customer:'Ferrous Manufacturing Group',short:'FM', status:'open',    label:'Åben',      amount:1000.00,  due:'2026-09-14', issued:'2026-08-15', method:'Bankoverførsel',
+    items:[['Onboarding-workshop', 1, 1000.00]] },
+  { id:'INV-2414', customer:'Solberg Media',              short:'SM', status:'draft',   label:'Kladde',    amount:0,        due:'—',          issued:'2026-08-24', method:'—',
+    items:[] },
+  { id:'INV-2413', customer:'Kestrel Analytics',          short:'KA', status:'paid',    label:'Betalt',    amount:7315.25,  due:'2026-08-01', issued:'2026-07-02', method:'Wire',
+    items:[['Datamigrering', 41, 165.00], ['Rapportopsætning', 2, 267.63]] },
+  { id:'INV-2412', customer:'Ondrej Systems',             short:'OS', status:'paid',    label:'Betalt',    amount:288.90,   due:'2026-07-28', issued:'2026-06-28', method:'Kort ·· 1102',
+    items:[['Hosting, august', 1, 288.90]] },
+  { id:'INV-2411', customer:'Bright Harbour Logistics',   short:'BH', status:'overdue', label:'Forfalden', amount:2560.00,  due:'2026-07-15', issued:'2026-06-15', method:'Bankoverførsel',
+    items:[['Ruteoptimering', 16, 145.00], ['Rejseomkostninger', 1, 240.00]] },
+];
+
+const money = new Intl.NumberFormat('da-DK', { style:'currency', currency:'DKK' });
+const day   = new Intl.DateTimeFormat('da-DK', { day:'numeric', month:'short', year:'numeric' });
+const fmtDate = v => v === '—' ? '—' : day.format(new Date(v + 'T00:00:00'));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+const tbody       = document.getElementById('tbody');
+const empty       = document.getElementById('empty');
+const detailHost  = document.getElementById('detail-host');
+const paneTable   = document.getElementById('pane-table');
+const splitEl     = document.getElementById('split');
+const splitter    = document.getElementById('splitter');
+
+/* ---- restore everything before the first paint ---- */
+const KEY = 'invoices.split';
+let sort = { key:'id', dir:'desc' };
+let query = '';
+let picked = null;
+let splitPct = 50;
+try {
+  const s = JSON.parse(sessionStorage.getItem(KEY) || 'null');
+  if (s && typeof s === 'object') {
+    if (s.key && s.dir) sort = { key: s.key, dir: s.dir };
+    if (typeof s.query === 'string') query = s.query;
+    if (typeof s.picked === 'string') picked = s.picked;
+    if (typeof s.split === 'number') splitPct = s.split;
+  }
+} catch { /* privat vindue eller ugyldig værdi — defaults duer */ }
+
+function persist() {
+  try { sessionStorage.setItem(KEY, JSON.stringify({ ...sort, query, picked, split: splitPct })); }
+  catch { /* ingen storage tilgængelig */ }
+}
+
+/* ---- splitter ---- */
+function clampPct(pct) {
+  const total = splitEl.clientWidth;
+  if (!total) return pct;
+  const minL = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--pane-min-l'), 10) || 340;
+  const minR = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--pane-min-r'), 10) || 300;
+  const lo = (minL / total) * 100;
+  const hi = 100 - (minR / total) * 100;
+  if (lo > hi) return 50;
+  return Math.min(hi, Math.max(lo, pct));
+}
+
+function applySplit(pct, save) {
+  splitPct = clampPct(pct);
+  document.documentElement.style.setProperty('--split', splitPct.toFixed(3) + '%');
+  splitter.setAttribute('aria-valuenow', Math.round(splitPct));
+  if (save) persist();
+}
+
+splitter.addEventListener('pointerdown', e => {
+  splitter.setPointerCapture(e.pointerId);
+  splitter.setAttribute('data-dragging', '');
+  document.body.setAttribute('data-dragging', '');
+});
+splitter.addEventListener('pointermove', e => {
+  if (!splitter.hasAttribute('data-dragging')) return;
+  const r = splitEl.getBoundingClientRect();
+  applySplit(((e.clientX - r.left) / r.width) * 100, false);
+});
+function endDrag(e) {
+  if (!splitter.hasAttribute('data-dragging')) return;
+  splitter.removeAttribute('data-dragging');
+  document.body.removeAttribute('data-dragging');
+  try { splitter.releasePointerCapture(e.pointerId); } catch {}
+  persist();
+}
+splitter.addEventListener('pointerup', endDrag);
+splitter.addEventListener('pointercancel', endDrag);
+splitter.addEventListener('dblclick', () => applySplit(50, true));
+splitter.addEventListener('keydown', e => {
+  const step = e.shiftKey ? 10 : 2;
+  if (e.key === 'ArrowLeft')  { applySplit(splitPct - step, true); e.preventDefault(); }
+  if (e.key === 'ArrowRight') { applySplit(splitPct + step, true); e.preventDefault(); }
+  if (e.key === 'Home')       { applySplit(0, true);   e.preventDefault(); }
+  if (e.key === 'End')        { applySplit(100, true); e.preventDefault(); }
+  if (e.key === 'Enter')      { applySplit(50, true);  e.preventDefault(); }
+});
+
+/* ---- list ---- */
+function visible() {
+  const q = query.trim().toLowerCase();
+  let out = q ? ROWS.filter(r => (r.id + ' ' + r.customer + ' ' + r.label).toLowerCase().includes(q)) : ROWS.slice();
+  const { key, dir } = sort;
+  const mul = dir === 'asc' ? 1 : -1;
+  out.sort((a, b) => {
+    const x = a[key], y = b[key];
+    if (key === 'amount') return (x - y) * mul;
+    if (key === 'due' || key === 'issued') {
+      if (x === '—') return 1;
+      if (y === '—') return -1;
+      return (new Date(x) - new Date(y)) * mul;
+    }
+    return String(x).localeCompare(String(y), 'da') * mul;
+  });
+  return out;
+}
+
+function markSortedColumn() {
+  document.querySelectorAll('thead th').forEach(th => th.removeAttribute('aria-sort'));
+  const btn = document.querySelector(`button.th-inner[data-sort="${sort.key}"]`);
+  if (btn) btn.closest('th').setAttribute('aria-sort', sort.dir === 'asc' ? 'ascending' : 'descending');
+}
+
+function renderTable() {
+  const rows = visible();
+  tbody.innerHTML = rows.map(r => `
+    <tr data-id="${esc(r.id)}"${r.id === picked ? ' data-selected' : ''}>
+      <td class="col-id">
+        <button type="button" class="row-pick" aria-pressed="${r.id === picked}">
+          ${esc(r.id)}<span class="sr-only">, vis detaljer</span>
+        </button>
+      </td>
+      <td>
+        <span class="customer">
+          <span class="avatar" aria-hidden="true">${esc(r.short)}</span>
+          <span class="truncate" title="${esc(r.customer)}">${esc(r.customer)}</span>
+        </span>
+      </td>
+      <td><span class="status status-${r.status}">${esc(r.label)}</span></td>
+      <td class="num">${r.status === 'draft' ? '<span class="muted">—</span>' : money.format(r.amount)}</td>
+      <td class="muted p-due">${esc(fmtDate(r.due))}</td>
+      <td class="muted p-issued">${esc(fmtDate(r.issued))}</td>
+      <td class="muted p-method">${esc(r.method)}</td>
+    </tr>
+  `).join('');
+
+  const none = rows.length === 0;
+  empty.toggleAttribute('data-on', none);
+  document.getElementById('tbl').style.display = none ? 'none' : '';
+  document.getElementById('empty-title').textContent = `Ingen fakturaer matcher “${query.trim()}”`;
+  document.getElementById('empty-body').textContent = `Prøv en kortere søgning, eller ryd den for at se alle ${ROWS.length}.`;
+  document.getElementById('row-count').textContent = rows.length;
+  document.getElementById('shown').textContent = rows.length;
+
+  const owed = rows.filter(r => r.status === 'open' || r.status === 'overdue').reduce((s, r) => s + r.amount, 0);
+  document.getElementById('outstanding').textContent = money.format(owed);
+}
+
+/* ---- detail ---- */
+function renderDetail() {
+  const r = ROWS.find(x => x.id === picked);
+  if (!r) {
+    detailHost.innerHTML = `
+      <div class="detail-empty">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M9 10v10"/></svg>
+        <h3>Ingen faktura valgt</h3>
+        <p>Vælg en række i listen for at se beløb, linjer og betalingsoplysninger her.</p>
+      </div>`;
+    return;
+  }
+  const net = r.items.reduce((s, [, q, p]) => s + q * p, 0);
+  detailHost.innerHTML = `
+    <div class="detail">
+      <div class="detail-head">
+        <h2>${esc(r.id)}</h2>
+        <span class="status status-${r.status}">${esc(r.label)}</span>
+      </div>
+
+      <div class="detail-customer">
+        <span class="avatar" aria-hidden="true">${esc(r.short)}</span>
+        <strong>${esc(r.customer)}</strong>
+      </div>
+
+      <div class="detail-amount">
+        ${r.status === 'draft' ? '—' : money.format(r.amount)}
+        <small>${r.status === 'paid' ? 'Betalt' : r.status === 'draft' ? 'Ikke udstedt' : 'Forfalder ' + esc(fmtDate(r.due))}</small>
+      </div>
+
+      <dl class="meta-grid">
+        <div><dt>Udstedt</dt><dd>${esc(fmtDate(r.issued))}</dd></div>
+        <div><dt>Forfald</dt><dd>${esc(fmtDate(r.due))}</dd></div>
+        <div><dt>Metode</dt><dd>${esc(r.method)}</dd></div>
+      </dl>
+
+      ${r.items.length ? `
+      <div class="lines">
+        <h3>Linjer</h3>
+        <table>
+          <tbody>
+            ${r.items.map(([d, q, p]) => `
+              <tr>
+                <td>${esc(d)}</td>
+                <td class="num muted">${q} ×</td>
+                <td class="num">${money.format(p)}</td>
+                <td class="num">${money.format(q * p)}</td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot>
+            <tr><td colspan="3">I alt</td><td class="num">${money.format(net)}</td></tr>
+          </tfoot>
+        </table>
+      </div>` : ''}
+
+      <div class="detail-actions">
+        <button type="button" class="btn btn-primary">Send påmindelse</button>
+        <button type="button" class="btn btn-outline">Hent PDF</button>
+      </div>
+    </div>`;
+}
+
+function pick(id) {
+  picked = id;
+  persist();
+  renderTable();
+  renderDetail();
+}
+
+/* ---- events ---- */
+tbody.addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-id]');
+  if (tr) pick(tr.dataset.id);
+});
+
+document.querySelectorAll('button.th-inner[data-sort]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.sort;
+    sort = { key, dir: sort.key === key && sort.dir === 'asc' ? 'desc' : 'asc' };
+    markSortedColumn();
+    persist();
+    renderTable();
+  });
+});
+
+const input = document.getElementById('tbl-search');
+let t;
+input.addEventListener('input', () => {
+  clearTimeout(t);
+  t = setTimeout(() => { query = input.value; persist(); renderTable(); }, 300);
+});
+document.getElementById('clear-search').addEventListener('click', () => {
+  input.value = ''; query = ''; persist(); renderTable(); input.focus();
+});
+
+const scroller = document.getElementById('scroller');
+scroller.addEventListener('scroll', () => {
+  scroller.toggleAttribute('data-scrolled-x', scroller.scrollLeft > 0);
+}, { passive: true });
+
+/* ---- readout: observes the PANE, so it tracks splitter drags too ---- */
+const roW = document.getElementById('ro-w');
+const roTier = document.getElementById('ro-tier');
+new ResizeObserver(entries => {
+  const w = Math.round(entries[0].contentRect.width);
+  roW.textContent = w;
+  roTier.textContent = w > 1000 ? 'alle kolonner'
+                     : w > 880  ? 'metode skjult'
+                     : w > 740  ? 'udstedt skjult'
+                                : 'forfald skjult';
+}).observe(paneTable);
+
+window.addEventListener('resize', () => applySplit(splitPct, false), { passive: true });
+
+/* ---- first paint ---- */
+input.value = query;
+applySplit(splitPct, false);
+markSortedColumn();
+renderTable();
+renderDetail();
+</script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+@inject OnboardingState S
+@inject IJSRuntime JS
+
+<div class="v2-wrap">
+    <div class="v2-bar" role="presentation"><i style="transform:scaleX(@Progress)"></i></div>
+
+    <div class="v2-col">
+
+        @if (S.ConvoDone)
+        {
+            <div class="v2-step v2-done">
+                <p class="v2-num">DONE</p>
+                <h2>You're all set, @S.FirstName.</h2>
+                <p>@Content.Workspace is ready. Here's what we saved.</p>
+                <Recap />
+                <div class="v2-actions">
+                    <button type="button" class="v2-cta">Open workspace</button>
+                    <button type="button" class="v2-skip" data-act="restart" @onclick="Restart">Start over</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            @if (S.ConvoIndex > 0)
+            {
+                <ul class="v2-log">
+                    @for (var i = 0; i < S.ConvoIndex; i++)
+                    {
+                        var idx = i;
+                        var t = Content.Tasks[idx];
+                        var val = S.Summary(t.Key) ?? (t.Key == "invites" ? "Skipped" : t.Key == "prefs" ? "Defaults kept" : "—");
+                        <li>
+                            <button type="button" @onclick="() => Jump(idx)">
+                                <span class="v2-log-q">@t.Label</span>
+                                <span class="v2-log-a" title="@val">@val</span>
+                                <span class="v2-log-edit">Edit</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+
+            @* Letter keys and Enter are handled here by bubbling. Every button
+               inside stops propagation, so a focused button doesn't both click
+               and advance. Text inputs handle their own Enter. No JS interop. *@
+            <div class="v2-step" id="v2-step" tabindex="-1" @ref="stepEl" @key="S.ConvoIndex" @onkeydown="StepKey">
+                <p class="v2-num">@Num</p>
+                <h1 class="v2-q">@Task.Q</h1>
+                <p class="v2-help">@Task.Help</p>
+
+                @if (Task.Key == "name")
+                {
+                    <div class="v2-field">
+                        <label class="sr-only" for="v2-name">Full name</label>
+                        <input class="v2-input" id="v2-name" type="text" autocomplete="name" placeholder="Type your name"
+                               @bind="S.Name" @bind:event="oninput"
+                               @onkeydown="TextKey" @onkeydown:stopPropagation="true"
+                               aria-invalid="@Invalid("name")" />
+                        @if (S.Errors.TryGetValue("name", out var nameErr))
+                        {
+                            <p class="v2-err">@Icons.Warn @nameErr</p>
+                        }
+                        <div class="v2-sub-field">
+                            <label class="v2-sub-label" for="v2-pref">And what should we call you?</label>
+                            <input class="v2-input v2-input-sm" id="v2-pref" type="text" placeholder="Optional"
+                                   @bind="S.Preferred" @bind:event="oninput"
+                                   @onkeydown="TextKey" @onkeydown:stopPropagation="true" />
+                        </div>
+                    </div>
+                }
+
+                else if (Task.Key == "role")
+                {
+                    <div class="v2-opts" role="group" aria-label="Your role">
+                        @for (var i = 0; i < Content.Roles.Length; i++)
+                        {
+                            var role = Content.Roles[i];
+                            var letter = (char)('A' + i);
+                            <button type="button" class="v2-opt" aria-pressed="@(S.Role == role ? "true" : "false")"
+                                    @onclick="() => PickRole(role)" @onkeydown:stopPropagation="true">
+                                <span class="v2-key" aria-hidden="true">@letter</span>
+                                <span>@role</span>
+                            </button>
+                        }
+                    </div>
+                    @if (S.Errors.TryGetValue("role", out var roleErr))
+                    {
+                        <p class="v2-err">@Icons.Warn @roleErr</p>
+                    }
+                }
+
+                else if (Task.Key == "invites")
+                {
+                    <div class="v2-field">
+                        <label class="sr-only" for="v2-mail">Teammate email address</label>
+                        <input class="v2-input" id="v2-mail" type="email" autocomplete="off"
+                               placeholder="teammate@@company.com"
+                               @bind="mailDraft" @bind:event="oninput"
+                               @onkeydown="MailKey" @onkeydown:stopPropagation="true"
+                               aria-invalid="@Invalid("mail")" />
+                        @if (S.Errors.TryGetValue("mail", out var mailErr))
+                        {
+                            <p class="v2-err">@Icons.Warn @mailErr</p>
+                        }
+
+                        @if (S.Invites.Count > 0)
+                        {
+                            <ul class="v2-list" aria-label="Pending invitations">
+                                @foreach (var m in S.Invites)
+                                {
+                                    var mail = m;
+                                    <li @key="mail">
+                                        <span class="f-chip-mail" title="@mail">@mail</span>
+                                        <button type="button" class="f-chip-x" data-act="remove" aria-label="Remove @mail"
+                                                @onclick="() => Remove(mail)" @onkeydown:stopPropagation="true">@Icons.X</button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p class="v2-empty">Nobody yet.<br />You can invite people later from Settings → Members.</p>
+                        }
+                    </div>
+                }
+
+                else if (Task.Key == "prefs")
+                {
+                    <div class="v2-switches">
+                        @foreach (var p in Content.Prefs)
+                        {
+                            var pref = p;
+                            <label class="f-switch">
+                                <input type="checkbox" checked="@S.Prefs[pref.Key]"
+                                       @onchange="e => TogglePref(pref.Key, e.Value is bool b && b)" />
+                                <span class="f-track" aria-hidden="true"><span class="f-knob"></span></span>
+                                <span>
+                                    <span class="f-sw-title">@pref.Title</span>
+                                    <span class="f-sw-desc">@pref.Desc</span>
+                                </span>
+                            </label>
+                        }
+                    </div>
+                }
+
+                <div class="v2-actions">
+                    <button type="button" class="v2-cta" id="v2-next" @onclick="() => Advance(false)" @onkeydown:stopPropagation="true">
+                        @(IsLast ? "Finish setup" : "Continue") <kbd>&#9166;</kbd>
+                    </button>
+                    @if (!Task.Required)
+                    {
+                        <button type="button" class="v2-skip" id="v2-skip" @onclick="() => Advance(true)" @onkeydown:stopPropagation="true">Skip this</button>
+                    }
+                    @if (S.ConvoIndex > 0)
+                    {
+                        <button type="button" class="v2-skip" id="v2-back" aria-label="Back to previous question"
+                                @onclick="Back" @onkeydown:stopPropagation="true">@Icons.ArrowL Back</button>
+                    }
+                </div>
+
+                <p class="v2-hint">@Hint</p>
+            </div>
+        }
+
+    </div>
+</div>
+
+@code {
+    private ElementReference stepEl;
+    private string mailDraft = "";
+    private bool focusNext;
+
+    private TaskDef Task => Content.Tasks[S.ConvoIndex];
+    private bool IsLast => S.ConvoIndex == Content.Tasks.Length - 1;
+    private string Num => $"{S.ConvoIndex + 1:00} / {Content.Tasks.Length:00}";
+
+    private double Progress => S.ConvoDone ? 1 : (S.ConvoIndex + 1) / (double)(Content.Tasks.Length + 1);
+
+    private string Hint => Task.Key switch
+    {
+        "role" => "Press a letter key to choose, then Enter.",
+        "invites" => "Type an email and press Enter to add them.",
+        "prefs" => "Toggle what you want, then press Enter.",
+        _ => "Press Enter to continue.",
+    };
+
+    private string? Invalid(string key) => S.Errors.ContainsKey(key) ? "true" : null;
+
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (focusNext && !S.ConvoDone)
+        {
+            focusNext = false;
+            await JS.InvokeVoidAsync("protoPicker.focusFirst", stepEl);
+        }
+    }
+
+    private void PickRole(string role)
+    {
+        S.Role = role;
+        S.Errors.Remove("role");
+    }
+
+    private void TogglePref(string key, bool on)
+    {
+        S.Prefs[key] = on;
+        S.TouchedPrefs = true;
+    }
+
+    private void Remove(string mail) => S.RemoveInvite(mail);
+
+    private void Advance(bool skipped)
+    {
+        if (!skipped && !S.Validate(Task.Key))
+        {
+            focusNext = true;
+            return;
+        }
+
+        S.Errors.Clear();
+        S.MarkVisited(Task.Key);
+
+        if (IsLast) { S.ConvoDone = true; return; }
+
+        S.ConvoIndex++;
+        focusNext = true;
+    }
+
+    private void Back()
+    {
+        if (S.ConvoIndex == 0) return;
+        S.Errors.Clear();
+        S.ConvoIndex--;
+        focusNext = true;
+    }
+
+    private void Jump(int i)
+    {
+        S.Errors.Clear();
+        S.ConvoIndex = i;
+        focusNext = true;
+    }
+
+    private void Restart()
+    {
+        S.ResetFlow();
+        // Enter is handled inside the step subtree, not on the document, so the
+        // restarted question has to take focus or the keyboard flow dead-ends.
+        focusNext = true;
+    }
+
+    private void MailKey(KeyboardEventArgs e)
+    {
+        if (e.Key != "Enter") return;
+        if (!string.IsNullOrWhiteSpace(mailDraft))
+        {
+            if (S.AddInvite(mailDraft)) mailDraft = "";
+        }
+        else
+        {
+            Advance(false);
+        }
+    }
+
+    private void TextKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") Advance(false);
+    }
+
+    private void StepKey(KeyboardEventArgs e)
+    {
+        if (e.CtrlKey || e.MetaKey || e.AltKey) return;
+
+        if (e.Key == "Enter") { Advance(false); return; }
+
+        // Letters A–F pick a role. Deliberately not 1–N or R, so the picker
+        // keeps its own keys on this screen.
+        if (Task.Key != "role" || e.Key.Length != 1) return;
+        var idx = char.ToUpperInvariant(e.Key[0]) - 'A';
+        if (idx >= 0 && idx < Content.Roles.Length) PickRole(Content.Roles[idx]);
+    }
+}

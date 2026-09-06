@@ -1,0 +1,103 @@
+@inject OnboardingState S
+
+<div class="v1-wrap">
+    <section class="v1-card" aria-labelledby="v1-title">
+
+        @if (S.StepperDone)
+        {
+            <div class="v1-done">
+                <div class="v1-tick">@Icons.CheckBig</div>
+                <h2>You're all set, @S.FirstName.</h2>
+                <p>@Content.Workspace is ready when you are.</p>
+                <Recap />
+                <div style="display:flex;gap:10px;justify-content:center;margin-top:24px">
+                    <button type="button" class="btn btn-outline" data-act="restart" @onclick="Restart">Start over</button>
+                    <button type="button" class="btn btn-primary">Open workspace</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="v1-head">
+                <div class="v1-rail" role="presentation">
+                    @for (var i = 0; i < Content.Tasks.Length; i++)
+                    {
+                        <span class="v1-seg"><i style="transform:scaleX(@(i <= S.StepperIndex ? 1 : 0))"></i></span>
+                    }
+                </div>
+                <p class="v1-count" id="v1-count" aria-live="polite">Step @(S.StepperIndex + 1) of @Content.Tasks.Length</p>
+                <h1 class="v1-title" id="v1-title">@Task.Title</h1>
+                <p class="v1-sub">@Task.Sub</p>
+            </div>
+
+            @* @key forces a fresh element per step, so the CSS entrance animation
+               replays — no reflow hack needed the way the vanilla version did it. *@
+            <div class="v1-body @(back ? "v1-back" : "v1-fwd")" id="v1-body" @key="S.StepperIndex">
+                <Fields TaskKey="@Task.Key" Changed="StateHasChanged" Submit="Next" @ref="fields" />
+            </div>
+
+            <div class="v1-foot">
+                <button type="button" class="btn btn-ghost" id="v1-back"
+                        style="visibility:@(S.StepperIndex == 0 ? "hidden" : "visible")"
+                        @onclick="Back">Back</button>
+                <button type="button" class="btn btn-primary" id="v1-next" @onclick="Next">
+                    @(IsLast ? "Finish setup" : "Continue")
+                </button>
+            </div>
+        }
+
+    </section>
+</div>
+
+@code {
+    private Fields? fields;
+    private bool back;
+    private bool focusNext;
+
+    private TaskDef Task => Content.Tasks[S.StepperIndex];
+    private bool IsLast => S.StepperIndex == Content.Tasks.Length - 1;
+
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        // Only after a step change — never on mount, or flipping variants would
+        // steal focus into a text box and swallow the picker's number keys.
+        if (focusNext && fields is not null)
+        {
+            focusNext = false;
+            await fields.FocusFirstAsync();
+        }
+    }
+
+    private async Task Next()
+    {
+        if (!S.Validate(Task.Key))
+        {
+            if (fields is not null) await fields.FocusFirstAsync();
+            return;
+        }
+
+        S.Errors.Clear();
+        S.MarkVisited(Task.Key);
+
+        if (IsLast) { S.StepperDone = true; return; }
+
+        back = false;
+        S.StepperIndex++;
+        focusNext = true;
+    }
+
+    private void Back()
+    {
+        if (S.StepperIndex == 0) return;
+        S.Errors.Clear();
+        back = true;
+        S.StepperIndex--;
+        focusNext = true;
+    }
+
+    private void Restart()
+    {
+        S.ResetFlow();
+        focusNext = true;
+    }
+}

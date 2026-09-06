@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Responsive data table</title>
+<style>
+/* ============================================================
+   TOKENS — mirrors proto/BlazorProto/wwwroot/css/app.css
+   ============================================================ */
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --ink-1: #09090b;
+  --ink-2: #52525b;
+  --ink-3: #a1a1aa;
+
+  --line: #e4e4e7;
+  --line-2: #d4d4d8;
+
+  --surface: #ffffff;
+  --canvas: #fafafa;
+  --sunk: #fbfbfc;
+
+  --accent: #4f46e5;
+  --accent-2: #4338ca;
+  --accent-soft: #eef2ff;
+
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --ok: #15803d;
+  --ok-soft: #f0fdf4;
+
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  /* Fixed scale. Nothing in this file invents its own stacking number. */
+  --z-sticky-cell: 2;
+  --z-sticky-head: 3;
+  --z-sticky-corner: 4;
+  --z-overlay: 400;
+
+  /* Table-local: alpha hairlines. In a dense grid a solid #e4e4e7 rule reads
+     as drawn ON the surface; alpha lets it sit IN it. */
+  --rule: rgba(9, 9, 11, 0.07);
+  --rule-strong: rgba(9, 9, 11, 0.11);
+  --row-hover: rgba(9, 9, 11, 0.025);
+  /* Opaque twin of --row-hover: sticky cells sit over scrolling content and
+     cannot be translucent. #fff composited with the alpha above = #f9f9f9. */
+  --row-hover-solid: #f9f9f9;
+  --disabled-ink: #9b9ba3;
+  --disabled-bg: #e9e9ec;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  color: var(--ink-1);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Content cap, not device cap. */
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+@media (max-width: 640px) { .page { padding: 24px 16px 96px; } }
+
+.page-title { font-size: 22px; font-weight: var(--fw-semibold); letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.page-sub { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 65ch; }
+
+/* ============================================================
+   TABLE CARD
+   Outer radius 12. The scroller carries no padding, so the inner
+   corners inherit 12 via overflow clipping — no radius mismatch.
+   ============================================================ */
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  overflow: hidden;
+  /* Layered, not one big drop. */
+  box-shadow:
+    0 1px 2px rgba(9, 9, 11, 0.04),
+    0 4px 12px rgba(9, 9, 11, 0.04),
+    0 16px 32px rgba(9, 9, 11, 0.03);
+}
+
+.table-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.table-head h2 { margin: 0; font-size: 15px; font-weight: var(--fw-semibold); text-wrap: balance; }
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--sunk);
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.head-spacer { margin-left: auto; }
+
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search input {
+  height: 34px;
+  width: 200px;
+  padding: 0 10px 0 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-1);
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+.search input::placeholder { color: var(--ink-3); }
+.search input:hover { border-color: var(--line-2); }
+.search input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.search svg {
+  position: absolute;
+  left: 10px;
+  color: var(--ink-3);
+  pointer-events: none;
+}
+@media (max-width: 560px) {
+  .head-spacer { display: none; }
+  .search { width: 100%; }
+  .search input { width: 100%; }
+}
+
+/* ---------- the scroll region ---------- */
+.table-scroll {
+  overflow: auto;
+  max-height: 70dvh;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(9, 9, 11, 0.2);
+  border-radius: 4px;
+}
+.table-scroll::-webkit-scrollbar-track { background: transparent; }
+
+table {
+  width: 100%;
+  border-collapse: separate;   /* separate, so sticky cells keep their borders */
+  border-spacing: 0;
+  font-size: 14px;
+  /* Dates and money line up column-wise everywhere in this table. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- header ---------- */
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky-head);
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 0;
+  text-align: left;
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+.th-inner {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  height: 38px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  /* Uppercase without tracking looks cramped. */
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  text-align: inherit;
+}
+button.th-inner { cursor: pointer; transition: color 150ms ease-out, background-color 150ms ease-out; }
+button.th-inner:hover { color: var(--ink-1); background: var(--row-hover); }
+button.th-inner:focus-visible { outline: 2px solid var(--ink-1); outline-offset: -2px; border-radius: 4px; }
+th.num .th-inner { justify-content: flex-end; }
+
+.sort-icon {
+  opacity: 0;
+  flex: none;
+  transition: opacity 150ms ease-out, transform 150ms var(--ease);
+}
+button.th-inner:hover .sort-icon { opacity: 0.4; }
+th[aria-sort] .sort-icon { opacity: 1; }
+th[aria-sort="descending"] .sort-icon { transform: rotate(180deg); }
+
+/* ---------- body ---------- */
+tbody td {
+  padding: 0 14px;
+  height: 48px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-1);
+  vertical-align: middle;
+  background: var(--surface);
+}
+/* No tr:last-child reset here: the last child is always a hidden detail row,
+   so the reset never landed on the row you can actually see. The footer drops
+   its own border-top instead, leaving exactly one rule at the boundary. */
+
+/* Right-aligned tabular figures carry the column. No zebra striping needed. */
+td.num, th.num { text-align: right; }
+td.num { font-variant-numeric: tabular-nums; }
+
+td.muted { color: var(--ink-2); }
+
+tbody tr { transition: background-color 150ms ease-out; }
+tbody tr:hover td { background: var(--row-hover); }
+
+/* Truncate long free text against the container, never with a typed "..." */
+.truncate {
+  display: block;
+  max-width: 30ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-id { font-weight: var(--fw-medium); }
+
+.customer { display: flex; align-items: center; gap: 9px; }
+.avatar {
+  flex: none;
+  width: 26px; height: 26px;
+  border-radius: 999px;
+  display: grid; place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
+/* ---------- status: colour + shape + word, never colour alone ---------- */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px 0 7px;
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+  background: var(--sunk);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+.status::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  flex: none;
+}
+.status-paid     { color: var(--ok);      background: var(--ok-soft); border-color: rgba(21,128,61,0.16); }
+.status-open     { color: var(--accent-2);background: var(--accent-soft); border-color: rgba(79,70,229,0.16); }
+.status-overdue  { color: var(--danger);  background: var(--danger-soft); border-color: rgba(220,38,38,0.16); }
+.status-draft    { color: var(--ink-2); }
+/* Draft is the "off" state — a dedicated muted token, not opacity. */
+.status-draft::before { background: var(--ink-3); }
+
+/* ---------- row actions ---------- */
+td.actions { text-align: right; white-space: nowrap; }
+.action-group { display: flex; justify-content: flex-end; gap: 10px; }
+.icon-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out, transform 90ms ease;
+}
+/* 34 + 5 + 5 = 44. The 10px gap absorbs both bleeds exactly, so
+   neighbouring targets touch but never overlap. */
+.icon-btn::after { content: ''; position: absolute; inset: -5px; }
+.icon-btn:hover { background: var(--row-hover); color: var(--ink-1); }
+.icon-btn:active { transform: scale(0.96); }
+.icon-btn:focus-visible { outline: 2px solid var(--ink-1); outline-offset: 2px; }
+
+/* ---------- sticky identity column ---------- */
+th.col-id, td.col-id {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+}
+td.col-id { z-index: var(--z-sticky-cell); }
+th.col-id { z-index: var(--z-sticky-corner); }
+tbody tr:hover td.col-id { background: var(--row-hover-solid); }
+
+/* The seam only appears once there is something hidden to the left. */
+th.col-id::after, td.col-id::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: -1px;
+  width: 14px;
+  transform: translateX(100%);
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(9,9,11,0.06), rgba(9,9,11,0));
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+.table-scroll[data-scrolled-x] th.col-id::after,
+.table-scroll[data-scrolled-x] td.col-id::after { opacity: 1; }
+
+/* ============================================================
+   RESPONSIVE — breakpoints sit where THIS table's content breaks.
+   Measured from the sum of column min-widths, not device sizes:
+     all 8 columns need ~1000px
+     drop Method   -> fits to ~880
+     drop Issued   -> fits to ~740
+     below 740 the identity column sticks and the rest scrolls,
+     with the dropped fields recoverable per row.
+   ============================================================ */
+@media (max-width: 1000px) { .p-low  { display: none; } }
+@media (max-width: 880px)  { .p-mid  { display: none; } }
+
+/* The expander only earns its column once columns are actually hidden. */
+th.col-expand, td.col-expand { display: none; width: 48px; }
+@media (max-width: 1000px) {
+  th.col-expand, td.col-expand { display: table-cell; }
+}
+
+td.col-expand { padding-left: 6px; padding-right: 0; }
+
+.expander {
+  display: inline-grid;
+  place-items: center;
+  position: relative;
+  width: 34px; height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+.expander::after { content: ''; position: absolute; inset: -5px; }
+.expander:hover { background: var(--row-hover); color: var(--ink-1); }
+.expander:focus-visible { outline: 2px solid var(--ink-1); outline-offset: 2px; }
+.expander svg { transition: transform 200ms var(--ease); }
+.expander[aria-expanded="true"] svg { transform: rotate(90deg); }
+
+/* ---------- the detail row that carries the dropped columns ---------- */
+tr.detail-row > td {
+  height: auto;
+  padding: 0 14px 0 52px;
+  background: var(--sunk);
+  border-bottom: 1px solid var(--rule);
+}
+tr.detail-row[hidden] { display: none; }
+
+/* A detail row is part of the row above it, not a row in its own right:
+   it never highlights alone, and it follows its parent's hover. */
+tbody tr.detail-row:hover > td { background: var(--sunk); }
+tbody tr:hover + tr.detail-row > td { background: var(--row-hover-solid); }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px 24px;
+  padding: 14px 0 16px;
+}
+.detail-grid dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  margin: 0 0 3px;
+}
+.detail-grid dd { margin: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+
+/* ---------- footer ---------- */
+.table-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--sunk);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.table-foot .total { font-variant-numeric: tabular-nums; color: var(--ink-1); font-weight: var(--fw-medium); }
+.foot-spacer { margin-left: auto; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 90ms ease;
+}
+.btn:active { transform: scale(0.985); }
+.btn:focus-visible { outline: 2px solid var(--ink-1); outline-offset: 2px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-2); }
+.btn-outline { background: var(--surface); border-color: var(--line-2); color: var(--ink-1); }
+.btn-outline:hover { background: var(--canvas); }
+.btn:disabled { background: var(--disabled-bg); border-color: transparent; color: var(--disabled-ink); cursor: default; }
+.btn:disabled:active { transform: none; }
+
+/* ---------- empty state: says why, and what to do next ---------- */
+.empty {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  min-height: 288px;   /* ~6 rows at 48px — matches the filled state */
+  padding: 40px 24px;
+  text-align: center;
+}
+.empty[data-on] { display: flex; }
+.empty svg { color: var(--ink-3); margin-bottom: 6px; }
+.empty h3 { margin: 0; font-size: 15px; font-weight: var(--fw-semibold); text-wrap: balance; }
+.empty p { margin: 0 0 12px; font-size: 13px; color: var(--ink-2); max-width: 42ch; }
+
+/* ---------- breakpoint readout (dev affordance, not product chrome) ---------- */
+.readout {
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  left: calc(16px + env(safe-area-inset-left));
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.82);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 8px 24px rgba(0,0,0,0.24);
+  color: rgba(255,255,255,0.9);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.readout b { color: #fff; font-weight: 500; }
+.readout span { color: rgba(255,255,255,0.45); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Coarse pointers get taller rows and full-height header targets. */
+@media (pointer: coarse) {
+  .th-inner { height: 44px; }
+  tbody td { height: 54px; }
+}
+</style>
+</head>
+<body>
+
+<main class="page">
+  <div>
+    <h1 class="page-title">Invoices</h1>
+    <p class="page-sub">Resize the window. Columns drop in priority order at the widths where this table's own content stops fitting, and whatever gets dropped stays reachable from the row.</p>
+  </div>
+
+  <section class="table-card">
+    <div class="table-head">
+      <h2 id="tbl-title">All invoices</h2>
+      <span class="count-badge" id="row-count">8</span>
+      <div class="head-spacer"></div>
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <label for="tbl-search" class="sr-only">Search invoices</label>
+        <input id="tbl-search" type="search" placeholder="Search invoices">
+      </div>
+    </div>
+
+    <div class="table-scroll" id="scroller" tabindex="0" role="region" aria-labelledby="tbl-title">
+      <table id="tbl">
+        <caption class="sr-only">Invoices, sortable by column. Some columns are hidden at narrow widths and can be revealed per row.</caption>
+        <thead>
+          <tr>
+            <th class="col-expand"><span class="sr-only">Row details</span></th>
+            <th class="col-id" scope="col" aria-sort="none">
+              <button type="button" class="th-inner" data-sort="id" data-type="text">
+                Invoice
+                <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="th-inner" data-sort="customer" data-type="text">
+                Customer
+                <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="th-inner" data-sort="status" data-type="text">
+                Status
+                <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </th>
+            <th scope="col" class="num">
+              <button type="button" class="th-inner" data-sort="amount" data-type="number">
+                Amount
+                <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="th-inner" data-sort="due" data-type="date">
+                Due
+                <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </th>
+            <th scope="col" class="p-mid">
+              <button type="button" class="th-inner" data-sort="issued" data-type="date">
+                Issued
+                <svg class="sort-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </th>
+            <th scope="col" class="p-low"><span class="th-inner">Method</span></th>
+            <th scope="col" class="actions"><span class="th-inner" style="justify-content:flex-end">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+
+      <div class="empty" id="empty">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        <h3 id="empty-title">No invoices match “design”</h3>
+        <p id="empty-body">Try a shorter search, or clear it to see all 8 invoices.</p>
+        <button type="button" class="btn btn-outline" id="clear-search">Clear search</button>
+      </div>
+    </div>
+
+    <div class="table-foot">
+      <span>Showing <span class="total" id="shown">8</span> of <span class="total">8</span></span>
+      <span class="foot-spacer"></span>
+      <span>Outstanding <span class="total" id="outstanding">$20,980.50</span></span>
+      <button type="button" class="btn btn-primary">Create invoice</button>
+    </div>
+  </section>
+</main>
+
+<div class="readout" aria-hidden="true">
+  <b id="ro-w">—</b><span>px</span>
+  <span>·</span>
+  <b id="ro-tier">—</b>
+</div>
+
+<script>
+const ROWS = [
+  { id:'INV-2418', customer:'Northwind Trading Company', short:'NT', status:'overdue', label:'Overdue',  amount:4820.00, due:'2026-08-12', issued:'2026-07-13', method:'ACH transfer' },
+  { id:'INV-2417', customer:'Vela Robotics',             short:'VR', status:'open',    label:'Open',     amount:12600.50, due:'2026-09-02', issued:'2026-08-03', method:'Wire' },
+  { id:'INV-2416', customer:'Halden & Co.',              short:'HC', status:'paid',    label:'Paid',     amount:940.00,  due:'2026-08-20', issued:'2026-07-21', method:'Card ·· 4471' },
+  { id:'INV-2415', customer:'Ferrous Manufacturing Group',short:'FM',status:'open',    label:'Open',     amount:1000.00, due:'2026-09-14', issued:'2026-08-15', method:'ACH transfer' },
+  { id:'INV-2414', customer:'Solberg Media',             short:'SM', status:'draft',   label:'Draft',    amount:0,       due:'—',          issued:'2026-08-24', method:'—' },
+  { id:'INV-2413', customer:'Kestrel Analytics',         short:'KA', status:'paid',    label:'Paid',     amount:7315.25, due:'2026-08-01', issued:'2026-07-02', method:'Wire' },
+  { id:'INV-2412', customer:'Ondrej Systems',            short:'OS', status:'paid',    label:'Paid',     amount:288.90,  due:'2026-07-28', issued:'2026-06-28', method:'Card ·· 1102' },
+  { id:'INV-2411', customer:'Bright Harbour Logistics',  short:'BH', status:'overdue', label:'Overdue',  amount:2560.00, due:'2026-07-15', issued:'2026-06-15', method:'ACH transfer' },
+];
+
+const money = new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' });
+const day   = new Intl.DateTimeFormat('en-US', { month:'short', day:'numeric', year:'numeric' });
+
+const fmtDate = v => v === '—' ? '—' : day.format(new Date(v + 'T00:00:00'));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+const tbody = document.getElementById('tbody');
+const empty = document.getElementById('empty');
+
+// Restore before the first render so nothing flashes a default and snaps.
+const KEY = 'invoices.view';
+let sort = { key:'id', dir:'desc' };
+let query = '';
+try {
+  const saved = JSON.parse(sessionStorage.getItem(KEY) || 'null');
+  if (saved && typeof saved === 'object') {
+    if (saved.key && saved.dir) sort = { key: saved.key, dir: saved.dir };
+    if (typeof saved.query === 'string') query = saved.query;
+  }
+} catch { /* private mode, corrupt value — defaults are fine */ }
+
+function persist() {
+  try {
+    sessionStorage.setItem(KEY, JSON.stringify({ ...sort, query }));
+  } catch { /* nothing to do if storage is unavailable */ }
+}
+
+function markSortedColumn() {
+  document.querySelectorAll('thead th').forEach(th => th.removeAttribute('aria-sort'));
+  const btn = document.querySelector(`button.th-inner[data-sort="${sort.key}"]`);
+  if (btn) btn.closest('th').setAttribute('aria-sort', sort.dir === 'asc' ? 'ascending' : 'descending');
+}
+
+function visible() {
+  const q = query.trim().toLowerCase();
+  let out = q ? ROWS.filter(r => (r.id + ' ' + r.customer + ' ' + r.label).toLowerCase().includes(q)) : ROWS.slice();
+  const { key, dir } = sort;
+  const mul = dir === 'asc' ? 1 : -1;
+  out.sort((a, b) => {
+    let x = a[key], y = b[key];
+    if (key === 'amount') return (x - y) * mul;
+    if (key === 'due' || key === 'issued') {
+      if (x === '—') return 1;
+      if (y === '—') return -1;
+      return (new Date(x) - new Date(y)) * mul;
+    }
+    return String(x).localeCompare(String(y)) * mul;
+  });
+  return out;
+}
+
+function render() {
+  const rows = visible();
+  tbody.innerHTML = rows.map((r, i) => `
+    <tr>
+      <td class="col-expand">
+        <button type="button" class="expander" aria-expanded="false" aria-controls="d-${i}"
+                aria-label="Show more details for invoice ${esc(r.id)}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+        </button>
+      </td>
+      <td class="col-id"><span class="cell-id">${esc(r.id)}</span></td>
+      <td>
+        <span class="customer">
+          <span class="avatar" aria-hidden="true">${esc(r.short)}</span>
+          <span class="truncate" title="${esc(r.customer)}">${esc(r.customer)}</span>
+        </span>
+      </td>
+      <td><span class="status status-${r.status}">${esc(r.label)}</span></td>
+      <td class="num">${r.status === 'draft' ? '<span class="muted">—</span>' : money.format(r.amount)}</td>
+      <td class="muted">${esc(fmtDate(r.due))}</td>
+      <td class="muted p-mid">${esc(fmtDate(r.issued))}</td>
+      <td class="muted p-low">${esc(r.method)}</td>
+      <td class="actions">
+        <span class="action-group">
+          <button type="button" class="icon-btn" aria-label="Download invoice ${esc(r.id)}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
+          </button>
+          <button type="button" class="icon-btn" aria-label="More actions for invoice ${esc(r.id)}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+          </button>
+        </span>
+      </td>
+    </tr>
+    <tr class="detail-row" id="d-${i}" hidden>
+      <td colspan="9">
+        <dl class="detail-grid">
+          <div><dt>Issued</dt><dd>${esc(fmtDate(r.issued))}</dd></div>
+          <div><dt>Method</dt><dd>${esc(r.method)}</dd></div>
+          <div><dt>Customer</dt><dd>${esc(r.customer)}</dd></div>
+        </dl>
+      </td>
+    </tr>
+  `).join('');
+
+  const none = rows.length === 0;
+  empty.toggleAttribute('data-on', none);
+  document.getElementById('tbl').style.display = none ? 'none' : '';
+  document.getElementById('empty-title').textContent = `No invoices match “${query.trim()}”`;
+  document.getElementById('empty-body').textContent = `Try a shorter search, or clear it to see all ${ROWS.length} invoices.`;
+  document.getElementById('row-count').textContent = rows.length;
+  document.getElementById('shown').textContent = rows.length;
+
+  const owed = rows.filter(r => r.status === 'open' || r.status === 'overdue')
+                   .reduce((s, r) => s + r.amount, 0);
+  document.getElementById('outstanding').textContent = money.format(owed);
+}
+
+// ---- sorting ----
+document.querySelectorAll('button.th-inner[data-sort]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.sort;
+    sort = { key, dir: sort.key === key && sort.dir === 'asc' ? 'desc' : 'asc' };
+    markSortedColumn();
+    persist();
+    render();
+  });
+});
+
+// ---- row expansion (delegated; survives re-render) ----
+tbody.addEventListener('click', e => {
+  const btn = e.target.closest('.expander');
+  if (!btn) return;
+  const open = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', String(!open));
+  document.getElementById(btn.getAttribute('aria-controls')).toggleAttribute('hidden', open);
+});
+
+// ---- search, debounced ----
+const input = document.getElementById('tbl-search');
+let t;
+input.addEventListener('input', () => {
+  clearTimeout(t);
+  t = setTimeout(() => { query = input.value; persist(); render(); }, 300);
+});
+document.getElementById('clear-search').addEventListener('click', () => {
+  input.value = ''; query = ''; persist(); render(); input.focus();
+});
+
+// ---- horizontal scroll seam ----
+const scroller = document.getElementById('scroller');
+const onScroll = () => scroller.toggleAttribute('data-scrolled-x', scroller.scrollLeft > 0);
+scroller.addEventListener('scroll', onScroll, { passive: true });
+
+// ---- breakpoint readout ----
+const roW = document.getElementById('ro-w');
+const roTier = document.getElementById('ro-tier');
+function readout() {
+  const w = Math.round(window.innerWidth);
+  roW.textContent = w;
+  roTier.textContent = w > 1000 ? 'all columns'
+                     : w > 880  ? 'method hidden'
+                     : w > 740  ? 'issued hidden'
+                                : 'sticky + scroll';
+}
+// Widening past the expander's breakpoint makes open detail rows redundant —
+// collapse them so the row doesn't repeat what the columns now show.
+function reconcileDetails() {
+  const expanderShown = getComputedStyle(document.querySelector('th.col-expand')).display !== 'none';
+  if (expanderShown) return;
+  tbody.querySelectorAll('.expander[aria-expanded="true"]').forEach(btn => {
+    btn.setAttribute('aria-expanded', 'false');
+    document.getElementById(btn.getAttribute('aria-controls')).hidden = true;
+  });
+}
+
+window.addEventListener('resize', () => { readout(); onScroll(); reconcileDetails(); }, { passive: true });
+
+readout();
+input.value = query;
+markSortedColumn();
+render();
+</script>
+</body>
+</html>
