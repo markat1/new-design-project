@@ -19,14 +19,15 @@
         }
         else
         {
-            <div class="v3-head">
-                <div>
-                    <span class="v3-eyebrow" title="@Content.Workspace">@Content.Workspace</span>
-                    <h1 class="v3-h1">Finish setting up</h1>
-                    <p class="v3-lede">Four things, in any order. The two optional ones can wait — you can finish as soon as your name and role are in.</p>
-                </div>
+            <span class="v3-eyebrow" title="@Content.Workspace">@Content.Workspace</span>
+            <h1 class="v3-h1">Finish setting up</h1>
+            <p class="v3-lede">Four things, in any order. The two optional ones can wait — you can finish as soon as your name and role are in.</p>
 
-                @* Summary lives with the page's subject; the sidebar dots carry per-step state. *@
+            <div class="v3-single">
+
+                @* Sits on the card rather than in the header's empty corner, where it
+                   lined up with nothing. Outside the panel, so it doesn't re-animate
+                   on every step change with the keyed panel. *@
                 <div class="v3-progress">
                     <div class="v3-progress-top">
                         <span class="v3-progress-n">@S.DoneCount of @Content.Tasks.Length done</span>
@@ -37,9 +38,6 @@
                         <i style="transform:scaleX(@Fraction)"></i>
                     </div>
                 </div>
-            </div>
-
-            <div class="v3-single">
 
                 <section class="v3-panel" aria-labelledby="v3-panel-h" @key="S.ChecklistKey">
                     <h2 class="v3-panel-h" id="v3-panel-h">@Task.Title</h2>

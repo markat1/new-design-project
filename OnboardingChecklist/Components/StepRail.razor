@@ -37,11 +37,14 @@
     }
 
     <div class="side-finish">
-        @* Quiet on purpose: the panel owns the one filled primary on screen.
-           Still genuinely enabled — it walks you to the blocking step. *@
-        <button type="button" class="btn btn-outline" id="v3-finish"
+        @* Shaped like every other row in this column; the panel owns the one filled
+           primary on screen. Still genuinely enabled — it walks you to what's missing. *@
+        <button type="button" class="side-nav-item side-finish-btn" id="v3-finish"
                 aria-describedby="@(Left.Length > 0 ? "side-finish-note" : null)"
-                @onclick="() => S.Finish()">Finish setup</button>
+                @onclick="() => S.Finish()">
+            @Icons.CheckRow
+            <span>Finish setup</span>
+        </button>
         <p class="side-finish-note" id="side-finish-note">
             @(Left.Length > 0
                 ? $"{Left.Length} required step{(Left.Length > 1 ? "s" : "")} left"
