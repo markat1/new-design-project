@@ -25,6 +25,9 @@
   --ok-soft: #f0fdf4;
 
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Both pages cap their content here, so switching pages doesn't shift it. */
+  --page-w: 940px;
 }
 
 * { box-sizing: border-box; }
@@ -349,7 +352,7 @@ body {
    VARIANT 3 — CHECKLIST (master–detail)
    ============================================================ */
 .v3-wrap { padding: 44px 32px 64px; background: var(--canvas); }
-.v3-shell { max-width: 940px; margin: 0 auto; }
+.v3-shell { max-width: var(--page-w); margin: 0 auto; }
 .v3-eyebrow {
   display: block;
   max-width: 380px;
@@ -615,7 +618,8 @@ body {
 /* ============================================================
    SENT QUOTES — table
    ============================================================ */
-.page { padding: 44px 32px 64px; }
+/* border-box is global, so max-width covers the padding: content lands on --page-w. */
+.page { max-width: calc(var(--page-w) + 64px); margin: 0 auto; padding: 44px 32px 64px; }
 
 .page-head {
   display: flex;
@@ -639,7 +643,11 @@ body {
   overflow-x: auto;
 }
 
-.t { width: 100%; border-collapse: collapse; font-size: 14px; }
+.t { width: 100%; min-width: 660px; table-layout: fixed; border-collapse: collapse; font-size: 14px; }
+.t th:nth-child(1) { width: 118px; }
+.t th:nth-child(3) { width: 116px; }
+.t th:nth-child(4) { width: 116px; }
+.t th:nth-child(5) { width: 128px; }
 
 .t th { padding: 0; border-bottom: 1px solid var(--line); background: var(--sunk); }
 .t th:first-child { border-top-left-radius: 11px; }
@@ -678,7 +686,7 @@ body {
 
 .t-client {
   display: block;
-  max-width: 34ch;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
