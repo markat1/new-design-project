@@ -6,7 +6,10 @@
 
   --ink-1: #09090b;
   --ink-2: #52525b;
-  --ink-3: #a1a1aa;
+  /* Was #a1a1aa, which measured 2.56:1 on white — below the 4.5:1 floor for
+     body text. This passes on white (5.6:1), on --accent-soft (5.0:1) and on
+     the pill's #f0f0f1 (4.9:1), which are the three grounds it lands on. */
+  --ink-3: #67676f;
 
   --line: #e4e4e7;
   --line-2: #d4d4d8;
@@ -117,6 +120,7 @@ body {
 /* ---------- shared controls (used by Stepper + Checklist) ---------- */
 
 .btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -138,6 +142,19 @@ body {
 }
 .btn:active { transform: scale(0.985); }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Guarantees the 44px touch floor without inflating the button visually — the
+   38px height is right on a desktop toolbar, 38px of hit area is not. */
+.btn::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 100%;
+  min-height: 44px;
+  transform: translateY(-50%);
+}
 
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-2); }
@@ -170,6 +187,7 @@ body {
 
 .f-input {
   width: 100%;
+  min-height: 44px;
   font: inherit;
   font-size: 16px;
   line-height: 1.4;
@@ -588,6 +606,7 @@ body {
   align-items: center;
   gap: 9px;
   width: 100%;
+  min-height: 44px;
   padding: 8px 10px;
   border: 0;
   border-radius: 8px;
@@ -729,6 +748,7 @@ body {
   align-items: center;
   gap: 5px;
   width: 100%;
+  min-height: 44px;
   padding: 11px 14px;
   border: 0;
   background: transparent;
