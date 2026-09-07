@@ -1,0 +1,114 @@
+@* The list of priced mails already sent. Sorting and filtering are plain LINQ —
+   the vanilla prototype needed 90 lines of JS for what C# does inline. *@
+<div class="page">
+    <header class="page-head">
+        <div>
+            <h1 class="page-h1">Sent quotes</h1>
+            <p class="page-lede">Every priced mail you've sent, newest first.</p>
+        </div>
+        <div class="page-search">
+            <input class="f-input" type="search" placeholder="Search client or reference"
+                   aria-label="Search quotes"
+                   @bind="query" @bind:event="oninput" />
+        </div>
+    </header>
+
+    @if (Rows.Length == 0)
+    {
+        <div class="t-empty">
+            <p class="t-empty-h">No quotes match &ldquo;@query&rdquo;</p>
+            <p class="t-empty-b">Try a shorter search, or clear it to see all @Quote.All.Length quotes.</p>
+            <button type="button" class="btn btn-outline" @onclick="() => query = string.Empty">Clear search</button>
+        </div>
+    }
+    else
+    {
+        <div class="t-wrap">
+            <table class="t">
+                <thead>
+                    <tr>
+                        @foreach (var c in Columns)
+                        {
+                            var col = c;
+                            <th scope="col" class="@(col.Num ? "num" : null)"
+                                aria-sort="@(sort == col.Key ? (asc ? "ascending" : "descending") : "none")">
+                                <button type="button" class="t-th" @onclick="() => Sort(col.Key)">
+                                    @col.Label
+                                    <span class="t-sort" data-on="@(sort == col.Key ? "" : null)" data-asc="@(sort == col.Key && asc ? "" : null)">@Icons.Chevron</span>
+                                </button>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Rows)
+                    {
+                        <tr @key="r.Ref">
+                            <td class="t-ref">@r.Ref</td>
+                            <td><span class="t-client" title="@r.Client">@r.Client</span></td>
+                            <td><span class="t-pill" data-s="@r.Status.ToString().ToLowerInvariant()">@r.Label</span></td>
+                            <td class="num">@(r.Amount == 0 ? "—" : r.Amount.ToString("N0"))</td>
+                            <td class="num t-muted">@r.Sent</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="t-foot">@Rows.Length of @Quote.All.Length quotes</p>
+    }
+</div>
+
+@code {
+    private record Col(string Key, string Label, bool Num = false);
+
+    private static readonly Col[] Columns =
+    [
+        new("ref", "Reference"),
+        new("client", "Client"),
+        new("status", "Status"),
+        new("amount", "Amount", true),
+        new("sent", "Sent", true),
+    ];
+
+    private string query = "";
+    private string sort = "sent";
+    private bool asc;
+
+    private Quote[] Rows
+    {
+        get
+        {
+            var q = query.Trim();
+            IEnumerable<Quote> rows = Quote.All;
+
+            if (q.Length > 0)
+            {
+                rows = rows.Where(r =>
+                    r.Client.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                    r.Ref.Contains(q, StringComparison.OrdinalIgnoreCase));
+            }
+
+            Func<Quote, IComparable> key = sort switch
+            {
+                "ref" => r => r.Ref,
+                "client" => r => r.Client,
+                "status" => r => r.Status.ToString(),
+                "amount" => r => r.Amount,
+                _ => r => r.Sent,
+            };
+
+            // A draft has no sent date. Sorting "—" as text puts it above every
+            // real date descending, so undated rows are pushed out to the end
+            // in both directions instead of leading the list.
+            var ordered = asc ? rows.OrderBy(key) : rows.OrderByDescending(key);
+            return ordered.OrderBy(r => r.Sent == "—" ? 1 : 0).ToArray();
+        }
+    }
+
+    private void Sort(string key)
+    {
+        if (sort == key) { asc = !asc; return; }
+        sort = key;
+        asc = false;
+    }
+}

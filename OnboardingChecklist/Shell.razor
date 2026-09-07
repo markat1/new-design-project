@@ -1,0 +1,42 @@
+@inject AppState App
+
+@* App shell: a persistent side menu on the left, one page at a time on the right.
+   No Router — two pages don't earn URL routing yet, and adding it would mean
+   bringing back the App.razor/Router the project deliberately deleted. *@
+<div class="app">
+
+    <nav class="side" aria-label="Sections">
+        <span class="side-brand" title="@Content.Workspace">@Content.Workspace</span>
+
+        <div class="side-nav">
+            <button type="button" class="side-nav-item"
+                    data-active="@(App.Page == AppPage.Sent ? "" : null)"
+                    aria-current="@(App.Page == AppPage.Sent ? "page" : null)"
+                    @onclick="() => App.Page = AppPage.Sent">
+                @Icons.Inbox
+                <span>Sent quotes</span>
+                <span class="side-nav-count">@Quote.All.Length</span>
+            </button>
+
+            <button type="button" class="side-nav-item"
+                    data-active="@(App.Page == AppPage.Quote ? "" : null)"
+                    aria-current="@(App.Page == AppPage.Quote ? "page" : null)"
+                    @onclick="() => App.Page = AppPage.Quote">
+                @Icons.Plus
+                <span>New quote</span>
+            </button>
+        </div>
+    </nav>
+
+    <main class="main">
+        @if (App.Page == AppPage.Sent)
+        {
+            <Sent />
+        }
+        else
+        {
+            <NewQuote />
+        }
+    </main>
+
+</div>
