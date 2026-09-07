@@ -391,6 +391,25 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.v3-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 40px;
+}
+@media (max-width: 760px) { .v3-head { flex-direction: column; gap: 20px; } }
+
+.v3-progress { flex: none; width: 196px; padding-top: 22px; }
+.v3-progress-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.v3-progress-n { font-size: 13px; font-weight: 500; color: var(--ink-1); font-variant-numeric: tabular-nums; }
+.v3-progress-pct { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
 .v3-h1 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
 .v3-lede { margin: 8px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); max-width: 56ch; }
 
@@ -573,12 +592,8 @@ body {
 
 /* Quote steps, nested under their nav item. Borderless on purpose: the sidebar
    is already a surface, and a card inside it would read as a second column. */
-.side-steps { margin: 2px 0 0 10px; padding-left: 12px; border-left: 1px solid var(--line); }
+.side-steps { margin: 6px 0 0 10px; padding-left: 12px; border-left: 1px solid var(--line); }
 
-.side-meter { padding: 8px 2px 12px; }
-.side-meter-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
-.side-meter-n { font-size: 12px; font-weight: 500; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.side-meter-pct { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
 .side-step {
   display: grid;

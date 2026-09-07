@@ -19,9 +19,25 @@
         }
         else
         {
-            <span class="v3-eyebrow" title="@Content.Workspace">@Content.Workspace</span>
-            <h1 class="v3-h1">Finish setting up</h1>
-            <p class="v3-lede">Four things, in any order. The two optional ones can wait — you can finish as soon as your name and role are in.</p>
+            <div class="v3-head">
+                <div>
+                    <span class="v3-eyebrow" title="@Content.Workspace">@Content.Workspace</span>
+                    <h1 class="v3-h1">Finish setting up</h1>
+                    <p class="v3-lede">Four things, in any order. The two optional ones can wait — you can finish as soon as your name and role are in.</p>
+                </div>
+
+                @* Summary lives with the page's subject; the sidebar dots carry per-step state. *@
+                <div class="v3-progress">
+                    <div class="v3-progress-top">
+                        <span class="v3-progress-n">@S.DoneCount of @Content.Tasks.Length done</span>
+                        <span class="v3-progress-pct">@Pct%</span>
+                    </div>
+                    <div class="v3-meter-bar" role="progressbar" aria-label="Setup progress"
+                         aria-valuemin="0" aria-valuemax="@Content.Tasks.Length" aria-valuenow="@S.DoneCount">
+                        <i style="transform:scaleX(@Fraction)"></i>
+                    </div>
+                </div>
+            </div>
 
             <div class="v3-single">
 

@@ -4,14 +4,6 @@
 @* The quote flow's steps, rendered inside the app side menu rather than as a
    second navigation column beside it. Lives next to the app nav it belongs to. *@
 <div class="side-steps" role="group" aria-label="Quote steps">
-    <div class="side-meter">
-        <div class="side-meter-top">
-            <span class="side-meter-n">@S.DoneCount of @Content.Tasks.Length done</span>
-            <span class="side-meter-pct">@Pct%</span>
-        </div>
-        <div class="v3-meter-bar"><i style="transform:scaleX(@Fraction)"></i></div>
-    </div>
-
     @foreach (var t in Content.Tasks)
     {
         var task = t;
@@ -60,8 +52,6 @@
 
 @code {
     private TaskDef[] Left => S.RequiredLeft;
-    private int Pct => (int)Math.Round(S.DoneCount / (double)Content.Tasks.Length * 100);
-    private double Fraction => S.DoneCount / (double)Content.Tasks.Length;
 
     protected override void OnInitialized() => S.Changed += StateHasChanged;
     public void Dispose() => S.Changed -= StateHasChanged;
