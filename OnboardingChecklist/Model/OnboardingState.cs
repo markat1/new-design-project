@@ -106,6 +106,45 @@ public partial class OnboardingState
         TouchedInvites = true;
     }
 
+    // ---- shared navigation ----
+    // The steps live in the app sidebar and the fields live in the panel, so
+    // neither is the other's parent. They talk through this event instead.
+    public event Action? Changed;
+    public void NotifyChanged() => Changed?.Invoke();
+
+    /// Set when a step should be drawn as blocking; cleared after one render.
+    public string? Nudge { get; set; }
+
+    /// Asks the panel to move focus into its first field after the next render.
+    public bool FocusNext { get; set; }
+
+    public void Open(string key)
+    {
+        ChecklistKey = key;
+        Errors.Clear();
+        FocusNext = true;
+        NotifyChanged();
+    }
+
+    /// Ends the flow, or walks to the first required step still missing an answer.
+    public void Finish()
+    {
+        var left = RequiredLeft;
+        if (left.Length > 0)
+        {
+            ChecklistKey = left[0].Key;
+            Nudge = left[0].Key;
+            Errors.Clear();
+            Validate(left[0].Key);
+            FocusNext = true;
+        }
+        else
+        {
+            ChecklistDone = true;
+        }
+        NotifyChanged();
+    }
+
     public void MarkVisited(string key)
     {
         if (key == "invites") TouchedInvites = true;

@@ -1,0 +1,68 @@
+@implements IDisposable
+@inject OnboardingState S
+
+@* The quote flow's steps, rendered inside the app side menu rather than as a
+   second navigation column beside it. Lives next to the app nav it belongs to. *@
+<div class="side-steps">
+    <div class="side-meter">
+        <div class="side-meter-top">
+            <span class="side-meter-n">@S.DoneCount of @Content.Tasks.Length done</span>
+            <span class="side-meter-pct">@Pct%</span>
+        </div>
+        <div class="v3-meter-bar"><i style="transform:scaleX(@Fraction)"></i></div>
+    </div>
+
+    @foreach (var t in Content.Tasks)
+    {
+        var task = t;
+        var done = S.IsDone(task.Key);
+        var sum = S.Summary(task.Key);
+        <button type="button" class="side-step" @key="task.Key"
+                data-task="@task.Key"
+                data-active="@(S.ChecklistKey == task.Key ? "" : null)"
+                aria-current="@(S.ChecklistKey == task.Key ? "step" : null)"
+                data-nudge="@(S.Nudge == task.Key ? "" : null)"
+                @onclick="() => S.Open(task.Key)">
+            <span class="v3-dot" data-done="@(done ? "" : null)">
+                @if (done)
+                {
+                    @Icons.CheckSm
+                }
+            </span>
+            <span class="side-step-txt">
+                <span class="side-step-t">
+                    <span class="side-step-label">@task.Label</span>
+                    @if (!task.Required)
+                    {
+                        <span class="v3-pill">Optional</span>
+                    }
+                </span>
+                <span class="side-step-s" title="@sum" data-unset="@(sum is null ? "" : null)">
+                    @(sum ?? "Not set yet")
+                </span>
+            </span>
+        </button>
+    }
+
+    <div class="side-finish">
+        @* Quiet on purpose: the panel owns the one filled primary on screen.
+           Still genuinely enabled — it walks you to the blocking step. *@
+        <button type="button" class="btn btn-outline" id="v3-finish"
+                aria-describedby="@(Left.Length > 0 ? "side-finish-note" : null)"
+                @onclick="() => S.Finish()">Finish setup</button>
+        <p class="side-finish-note" id="side-finish-note">
+            @(Left.Length > 0
+                ? $"{Left.Length} required step{(Left.Length > 1 ? "s" : "")} left"
+                : "Everything required is done")
+        </p>
+    </div>
+</div>
+
+@code {
+    private TaskDef[] Left => S.RequiredLeft;
+    private int Pct => (int)Math.Round(S.DoneCount / (double)Content.Tasks.Length * 100);
+    private double Fraction => S.DoneCount / (double)Content.Tasks.Length;
+
+    protected override void OnInitialized() => S.Changed += StateHasChanged;
+    public void Dispose() => S.Changed -= StateHasChanged;
+}

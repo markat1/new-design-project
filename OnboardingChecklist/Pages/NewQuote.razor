@@ -1,3 +1,4 @@
+@implements IDisposable
 @inject OnboardingState S
 
 <div class="v3-wrap">
@@ -22,72 +23,13 @@
             <h1 class="v3-h1">Finish setting up</h1>
             <p class="v3-lede">Four things, in any order. The two optional ones can wait — you can finish as soon as your name and role are in.</p>
 
-            <div class="v3-grid">
-
-                <aside class="v3-rail" aria-label="Setup checklist">
-                    <div class="v3-meter">
-                        <div class="v3-meter-top">
-                            <span class="v3-meter-n">@S.DoneCount of @Content.Tasks.Length complete</span>
-                            <span class="v3-meter-pct">@Pct%</span>
-                        </div>
-                        <div class="v3-meter-bar"><i style="transform:scaleX(@Fraction)"></i></div>
-                    </div>
-
-                    <div class="v3-tasks">
-                        @foreach (var t in Content.Tasks)
-                        {
-                            var task = t;
-                            var done = S.IsDone(task.Key);
-                            var isNew = done && !prevDone.Contains(task.Key);
-                            var sum = S.Summary(task.Key);
-                            <button type="button" class="v3-task" @key="task.Key"
-                                    data-task="@task.Key"
-                                    data-active="@(S.ChecklistKey == task.Key ? "" : null)"
-                                    aria-current="@(S.ChecklistKey == task.Key ? "true" : null)"
-                                    data-nudge="@(nudge == task.Key ? "" : null)"
-                                    @onclick="() => Open(task.Key)">
-                                <span class="v3-dot" data-done="@(done ? "" : null)" data-new="@(isNew ? "" : null)">
-                                    @if (done)
-                                    {
-                                        @Icons.CheckSm
-                                    }
-                                </span>
-                                <span>
-                                    <span class="v3-task-t">
-                                        @task.Label
-                                        @if (!task.Required)
-                                        {
-                                            <span class="v3-pill">Optional</span>
-                                        }
-                                    </span>
-                                    <span class="v3-task-s" title="@sum" data-unset="@(sum is null ? "" : null)">
-                                        @(sum ?? "Not set yet")
-                                    </span>
-                                </span>
-                            </button>
-                        }
-                    </div>
-
-                    <div class="v3-finish">
-                        @* Muted but genuinely enabled — activating it walks you to the
-                           blocking step instead of doing nothing. *@
-                        <button type="button" class="btn btn-primary" id="v3-finish"
-                                data-notready="@(Left.Length > 0 ? "" : null)"
-                                aria-describedby="@(Left.Length > 0 ? "v3-finish-note" : null)"
-                                @onclick="Finish">Finish setup</button>
-                        <p class="v3-finish-note" id="v3-finish-note">
-                            @(Left.Length > 0
-                                ? $"{Left.Length} required step{(Left.Length > 1 ? "s" : "")} left"
-                                : "Everything required is done")
-                        </p>
-                    </div>
-                </aside>
+            <div class="v3-single">
 
                 <section class="v3-panel" aria-labelledby="v3-panel-h" @key="S.ChecklistKey">
                     <h2 class="v3-panel-h" id="v3-panel-h">@Task.Title</h2>
                     <p class="v3-panel-s">@Task.Sub</p>
                     <div class="v3-panel-body">
-                        <Fields TaskKey="@Task.Key" Changed="StateHasChanged" Submit="() => Commit(false)" @ref="fields" />
+                        <Fields TaskKey="@Task.Key" Changed="S.NotifyChanged" Submit="() => Commit(false)" @ref="fields" />
                     </div>
                     <div class="v3-panel-f">
                         @* Back is hidden on the first task rather than disabled: a control
@@ -95,7 +37,7 @@
                            group is anchored with margin-left:auto so the primary never moves. *@
                         @if (Prev is { } prev)
                         {
-                            <button type="button" class="btn btn-ghost" data-act="back" @onclick="() => Open(prev.Key)">@Icons.ArrowL Back</button>
+                            <button type="button" class="btn btn-ghost" data-act="back" @onclick="() => S.Open(prev.Key)">@Icons.ArrowL Back</button>
                         }
                         <div class="v3-panel-f-end">
                             @if (justSaved == Task.Key)
@@ -122,12 +64,6 @@
 @code {
     private Fields? fields;
     private string? justSaved;
-    private string? nudge;
-    private bool focusNext;
-
-    // Only newly-completed rows draw their checkmark, so the rail doesn't
-    // re-animate every time the meter repaints.
-    private HashSet<string> prevDone = [];
 
     private TaskDef Task => Content.Task(S.ChecklistKey);
     private TaskDef[] Left => S.RequiredLeft;
@@ -139,27 +75,18 @@
     private TaskDef? Prev => Index > 0 ? Content.Tasks[Index - 1] : null;
     private TaskDef? Next => Index < Content.Tasks.Length - 1 ? Content.Tasks[Index + 1] : null;
 
-    protected override void OnInitialized() =>
-        prevDone = Content.Tasks.Where(t => S.IsDone(t.Key)).Select(t => t.Key).ToHashSet();
+    protected override void OnInitialized() => S.Changed += StateHasChanged;
+    public void Dispose() => S.Changed -= StateHasChanged;
 
     protected override async Task OnAfterRenderAsync(bool first)
     {
-        prevDone = Content.Tasks.Where(t => S.IsDone(t.Key)).Select(t => t.Key).ToHashSet();
-        nudge = null;
+        S.Nudge = null;
 
-        if (focusNext && fields is not null && !S.ChecklistDone)
+        if (S.FocusNext && fields is not null && !S.ChecklistDone)
         {
-            focusNext = false;
+            S.FocusNext = false;
             await fields.FocusFirstAsync();
         }
-    }
-
-    private void Open(string key)
-    {
-        S.ChecklistKey = key;
-        justSaved = null;
-        S.Errors.Clear();
-        focusNext = true;
     }
 
     private void Commit(bool skipped)
@@ -168,7 +95,7 @@
 
         if (!skipped && !S.Validate(key))
         {
-            focusNext = true;
+            S.FocusNext = true;
             return;
         }
 
@@ -182,32 +109,19 @@
         {
             S.ChecklistKey = next.Key;
             justSaved = null;
-            focusNext = true;
+            S.FocusNext = true;
+            S.NotifyChanged();
         }
         else
         {
-            Finish();
+            S.Finish();
         }
-    }
-
-    private void Finish()
-    {
-        var left = Left;
-        if (left.Length > 0)
-        {
-            S.ChecklistKey = left[0].Key;
-            nudge = left[0].Key;
-            S.Errors.Clear();
-            S.Validate(left[0].Key);
-            focusNext = true;
-            return;
-        }
-        S.ChecklistDone = true;
     }
 
     private void Restart()
     {
         S.ResetFlow();
-        focusNext = true;
+        S.FocusNext = true;
+        S.NotifyChanged();
     }
 }

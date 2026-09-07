@@ -615,6 +615,77 @@ body {
 
 .main { min-width: 0; background: var(--canvas); }
 
+/* Quote steps, nested under their nav item. Borderless on purpose: the sidebar
+   is already a surface, and a card inside it would read as a second column. */
+.side-steps { margin: 2px 0 0 10px; padding-left: 12px; border-left: 1px solid var(--line); }
+
+.side-meter { padding: 8px 2px 12px; }
+.side-meter-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.side-meter-n { font-size: 12px; font-weight: 500; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.side-meter-pct { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+.side-step {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 9px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 130ms ease;
+}
+.side-step:hover { background: #f6f6f7; }
+.side-step:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+.side-step[data-active] { background: var(--accent-soft); }
+.side-step[data-nudge] { animation: nudge 480ms var(--ease) both; }
+
+.side-step-txt { min-width: 0; }
+.side-step-t {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  /* Fixed line box, so a row carrying a pill is exactly as tall as one without. */
+  height: 18px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--ink-1);
+}
+.side-step[data-active] .side-step-t { color: var(--accent); }
+
+/* The label gives way, not the pill — otherwise a long one wraps and that row
+   grows taller than its neighbours. */
+.side-step-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-step-t .v3-pill { flex: none; padding: 1px 5px; line-height: 14px; }
+.side-step-s {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-step-s[data-unset] { color: var(--ink-3); }
+
+.side-finish { padding: 12px 2px 4px; }
+.side-finish .btn { width: 100%; height: 34px; font-size: 13px; }
+.side-finish-note {
+  margin: 7px 0 0;
+  font-size: 11px;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+/* One column now, so the panel caps itself rather than stretching to 940px. */
+.v3-single { margin-top: 30px; }
+.v3-single .v3-panel { max-width: 620px; }
+
+
 /* ============================================================
    SENT QUOTES — table
    ============================================================ */

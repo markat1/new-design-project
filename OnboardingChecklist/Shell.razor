@@ -1,4 +1,6 @@
+@implements IDisposable
 @inject AppState App
+@inject OnboardingState S
 
 @* App shell: a persistent side menu on the left, one page at a time on the right.
    No Router — two pages don't earn URL routing yet, and adding it would mean
@@ -12,7 +14,7 @@
             <button type="button" class="side-nav-item"
                     data-active="@(App.Page == AppPage.Sent ? "" : null)"
                     aria-current="@(App.Page == AppPage.Sent ? "page" : null)"
-                    @onclick="() => App.Page = AppPage.Sent">
+                    @onclick="() => Go(AppPage.Sent)">
                 @Icons.Inbox
                 <span>Sent quotes</span>
                 <span class="side-nav-count">@Quote.All.Length</span>
@@ -21,10 +23,15 @@
             <button type="button" class="side-nav-item"
                     data-active="@(App.Page == AppPage.Quote ? "" : null)"
                     aria-current="@(App.Page == AppPage.Quote ? "page" : null)"
-                    @onclick="() => App.Page = AppPage.Quote">
+                    @onclick="() => Go(AppPage.Quote)">
                 @Icons.Plus
                 <span>New quote</span>
             </button>
+
+            @if (App.Page == AppPage.Quote && !S.ChecklistDone)
+            {
+                <StepRail />
+            }
         </div>
     </nav>
 
@@ -40,3 +47,12 @@
     </main>
 
 </div>
+
+@code {
+    private void Go(AppPage page) => App.Page = page;
+
+    // The steps nested under New quote have to appear and disappear as the
+    // flow's own state changes, not just when the page switches.
+    protected override void OnInitialized() => S.Changed += StateHasChanged;
+    public void Dispose() => S.Changed -= StateHasChanged;
+}
