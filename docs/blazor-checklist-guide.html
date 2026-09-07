@@ -48,8 +48,8 @@
 
 <section class="cover">
   <div class="kicker">Trin-for-trin</div>
-  <h1>Onboarding-checklisten i Blazor<br>— fra tom mappe til hostet app</h1>
-  <p>Sådan laver du et nyt, rent Blazor WebAssembly-projekt der kun indeholder Checklist-varianten, kører det lokalt, og publicerer en hurtig Release-version du kan dele.</p>
+  <h1>Pristilbud i Blazor<br>— fra tom mappe til hostet app</h1>
+  <p>Sådan bygger du et Blazor WebAssembly-projekt fra prototypen: først checklisten alene, så et app-skelet med sidemenu, en tabel over sendte pristilbud og trin-flowet der laver et nyt — og til sidst en hurtig Release-version du kan dele.</p>
   <p class="small">Hvert trin i denne guide er udført og verificeret på den kode der ligger i <code>proto/BlazorProto</code> (commit <code>fdbb995</code>). Følger du dem i rækkefølge, ender du med det samme resultat — og det færdige projekt ligger som reference i <code>OnboardingChecklist/</code> i repoet.</p>
   <div class="meta">new-design-project · september 2026 · .NET 8</div>
 </section>
@@ -221,7 +221,210 @@ window.app = {
   <tr><td>"An unhandled error has occurred" nederst, men appen virker</td><td>CSS-reglen for <code>#blazor-error-ui</code> mangler</td><td>Den ligger i MATERIALS — sektion ikke kopieret helt</td></tr>
 </table>
 
-<h2 class="part"><span class="n">2</span>Publish og host</h2>
+<h2 class="part"><span class="n">2</span>Gør den til en to-sides app</h2>
+<p>Del 1 giver en app med én skærm. Herfra bliver den et rigtigt app-skelet: en sidemenu i venstre kant med to punkter — listen over sendte pristilbud, og trin-flowet der laver et nyt.</p>
+<p class="why">Hvert trin herunder svarer til én commit i repoet, så du kan læse den præcise ændring med <code>git show &lt;hash&gt;</code> hvis noget er uklart.</p>
+
+<h3><span class="step">1</span>Back og Next i panelets fod <span class="small">— <code>e33c0ed</code></span></h3>
+<p>Railen lader dig åbne trinnene i vilkårlig rækkefølge. Foden går dem igennem lineært. I <code>Onboarding.razor</code> erstattes fodens indhold:</p>
+<pre><code><span class="file">Onboarding.razor — .v3-panel-f</span>&lt;div class="v3-panel-f"&gt;
+    @if (Prev is { } prev)
+    {
+        &lt;button type="button" class="btn btn-ghost" @onclick="() =&gt; Open(prev.Key)"&gt;@Icons.ArrowL Back&lt;/button&gt;
+    }
+    &lt;div class="v3-panel-f-end"&gt;
+        @* Skip og den primære knap ankres til højre, så primæren aldrig flytter sig *@
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>Og i <code>@code</code>-blokken erstattes <code>NextIncomplete</code> med lineære naboer:</p>
+<pre><code>private int Index =&gt; Content.IndexOf(S.ChecklistKey);
+private TaskDef? Prev =&gt; Index &gt; 0 ? Content.Tasks[Index - 1] : null;
+private TaskDef? Next =&gt; Index &lt; Content.Tasks.Length - 1 ? Content.Tasks[Index + 1] : null;</code></pre>
+<p class="why">Back er <i>skjult</i> på første trin, ikke deaktiveret. En knap der aldrig kan gøre noget hører ikke til på skærmen. På sidste trin bliver primæren "Save and finish" og kalder <code>Finish()</code>, som stadig går tilbage til et manglende krævet trin.</p>
+
+<h3><span class="step">2</span>App-skelettet <span class="small">— <code>39cb774</code></span></h3>
+<p>Fire nye filer og en omrokering:</p>
+<pre><code>mkdir -p Pages
+git mv Onboarding.razor Pages/NewQuote.razor</code></pre>
+<p><code>Model/AppState.cs</code> — hvilken af de to sider der vises:</p>
+<pre><code><span class="file">Model/AppState.cs</span>namespace OnboardingChecklist.Model;
+
+public enum AppPage { Sent, Quote }
+
+public class AppState
+{
+    public AppPage Page { get; set; } = AppPage.Sent;
+}</code></pre>
+<p><code>Model/Quote.cs</code> holder de sendte pristilbud. Bemærk indholdet: et meget langt klientnavn, en kladde uden beløb og dato, og en afvist række — tabellen skal overleve mere end det pæne tilfælde.</p>
+<pre><code><span class="file">Model/Quote.cs</span>public enum QuoteStatus { Draft, Sent, Viewed, Accepted, Declined }
+
+public record Quote(string Ref, string Client, QuoteStatus Status, decimal Amount, string Sent)
+{
+    public string Label =&gt; Status.ToString();
+
+    public static readonly Quote[] All =
+    [
+        new("Q-2418", "Featherstonehaugh-Villanueva International Systems", QuoteStatus.Viewed, 48_200m, "2026-09-02"),
+        new("Q-2414", "Solberg Media", QuoteStatus.Draft, 0m, "—"),
+        // … seks til
+    ];
+}</code></pre>
+<p><code>Shell.razor</code> i projektets rod bliver den nye rodkomponent: sidemenu til venstre, én side ad gangen til højre.</p>
+<p class="why">Ingen <code>Router</code>. To sider tjener ikke URL-routing hjem, og at indføre den ville betyde at hente <code>App.razor</code> og routeren tilbage — dem vi bevidst slettede i del 1, trin 1.</p>
+<p>Endelig i <code>Program.cs</code>:</p>
+<pre><code><span class="del">builder.RootComponents.Add&lt;Onboarding&gt;("#app");</span>
+<span class="add">builder.RootComponents.Add&lt;Shell&gt;("#app");</span>
+builder.Services.AddSingleton&lt;OnboardingState&gt;();
+<span class="add">builder.Services.AddSingleton&lt;AppState&gt;();</span></code></pre>
+<p>Og <code>@using OnboardingChecklist.Pages</code> tilføjes i <code>_Imports.razor</code>.</p>
+<div class="callout"><b>Navnekollision:</b> kald ikke siden <code>Quote.razor</code>. <code>Quote</code> er allerede datamodellen, og <code>&lt;Quote /&gt;</code> ville være tvetydig. Derfor <code>NewQuote.razor</code>.</div>
+<p><code>Pages/Sent.razor</code> er tabellen. Sortering og filtrering er LINQ — det som en tilsvarende vanilla-prototype bruger 90 linjer JavaScript på:</p>
+<pre><code>Func&lt;Quote, IComparable&gt; key = sort switch
+{
+    "ref" =&gt; r =&gt; r.Ref,
+    "client" =&gt; r =&gt; r.Client,
+    "amount" =&gt; r =&gt; r.Amount,
+    _ =&gt; r =&gt; r.Sent,
+};
+
+var ordered = asc ? rows.OrderBy(key) : rows.OrderByDescending(key);
+// En kladde har ingen dato. "—" sorterer som tekst over enhver rigtig dato
+// faldende, så udaterede rækker skubbes bagest i begge retninger.
+return ordered.OrderBy(r =&gt; r.Sent == "—" ? 1 : 0).ToArray();</code></pre>
+
+<h3><span class="step">3</span>Fælles indholdsbredde <span class="small">— <code>9d5146f</code></span></h3>
+<p>Tabellen fyldte alt hvad sidemenuen levnede: 2246&nbsp;px ved et 2560&nbsp;px vindue, med 1582&nbsp;px mellem en rækkes reference og dens dato. Begge sider kappes nu ved samme token, så indholdets venstrekant ikke hopper når man skifter side.</p>
+<pre><code><span class="file">wwwroot/css/app.css</span>:root {
+  --page-w: 940px;
+}
+
+.v3-shell { max-width: var(--page-w); margin: 0 auto; }
+/* border-box er global, så max-width dækker polstringen */
+.page { max-width: calc(var(--page-w) + 64px); margin: 0 auto; padding: 44px 32px 64px; }</code></pre>
+<p>Tabellen får faste kolonner, så klientnavnet afkortes ved kolonnens kant i stedet for ved et vilkårligt <code>ch</code>-loft med tom plads ved siden af:</p>
+<pre><code>.t { table-layout: fixed; min-width: 660px; }
+.t th:nth-child(1) { width: 118px; }   /* Reference */
+.t th:nth-child(3) { width: 116px; }   /* Status */
+.t th:nth-child(4) { width: 116px; }   /* Amount */
+.t th:nth-child(5) { width: 128px; }   /* Sent */
+<span class="del">.t-client { max-width: 34ch; }</span>
+<span class="add">.t-client { max-width: 100%; }</span></code></pre>
+
+<h3><span class="step">4</span>Trinnene ind i sidemenuen <span class="small">— <code>11f15d9</code></span></h3>
+<p>Da skallen gav siden en rigtig sidemenu, stod der pludselig to lodrette navigationssøjler 8&nbsp;px fra hinanden: app-navigationen, og rail-kortet der efterlignede den. Railen flytter ind som indrykkede trin under sit eget menupunkt.</p>
+<p>Opret <code>Components/StepRail.razor</code> med trinnene, og render den i <code>Shell.razor</code>:</p>
+<pre><code><span class="file">Shell.razor</span>@if (App.Page == AppPage.Quote &amp;&amp; !S.ChecklistDone)
+{
+    &lt;StepRail /&gt;
+}</code></pre>
+<p>Trinnene og felterne er nu ikke længere forælder og barn, så de kan ikke gentegne hinanden med <code>StateHasChanged</code>. Navigationen flytter op på den tilstand de deler:</p>
+<pre><code><span class="file">Model/OnboardingState.cs</span>public event Action? Changed;
+public void NotifyChanged() =&gt; Changed?.Invoke();
+
+public string? Nudge { get; set; }
+public bool FocusNext { get; set; }
+
+public void Open(string key) { ChecklistKey = key; Errors.Clear(); FocusNext = true; NotifyChanged(); }
+public void Finish() { /* går til første manglende krævede trin, ellers ChecklistDone */ }</code></pre>
+<p>Begge komponenter abonnerer:</p>
+<pre><code>@implements IDisposable
+
+protected override void OnInitialized() =&gt; S.Changed += StateHasChanged;
+public void Dispose() =&gt; S.Changed -= StateHasChanged;</code></pre>
+<div class="callout warn"><b>Fælden:</b> <code>Fields</code> sender sin <code>Changed</code> videre til forælderen. Lader du den stå som <code>Changed="StateHasChanged"</code>, gentegnes kun panelet, og sidemenuens måler bliver hængende på det gamle tal. Den skal være <code>Changed="S.NotifyChanged"</code>.</div>
+<p>Med railen væk fra indholdet kapper panelet sig selv, i stedet for at strække et navnefelt ud over 900&nbsp;px:</p>
+<pre><code>.v3-single .v3-panel { max-width: 620px; }</code></pre>
+
+<h3><span class="step">5</span>Tilgængelighedsgulvet <span class="small">— <code>91f3bba</code></span></h3>
+<p>To målte fejl, begge blokerende.</p>
+<p><b>Kontrast.</b> <code>--ink-3</code> var <code>#a1a1aa</code> — <b>2,56:1</b> på hvid, langt under gulvet på 4,5:1 for brødtekst. Tokenet bruges udelukkende som tekstfarve, 19 steder, så det rettes ét sted:</p>
+<pre><code><span class="del">--ink-3: #a1a1aa;</span>
+<span class="add">--ink-3: #67676f;</span></code></pre>
+<table>
+  <tr><th>Baggrund</th><th>Før</th><th>Efter</th></tr>
+  <tr><td>hvid</td><td class="num">2,56:1</td><td class="num">5,61:1</td></tr>
+  <tr><td><code>--accent-soft</code></td><td class="num">2,56:1</td><td class="num">5,01:1</td></tr>
+  <tr><td>pillens <code>#f0f0f1</code></td><td class="num">2,56:1</td><td class="num">4,92:1</td></tr>
+</table>
+<p class="why">Prisen er at den neutrale skala trykkes sammen mod <code>--ink-2</code> (7,7:1). Det gamle spring var købt ved at falde under gulvet.</p>
+<p><b>Tap targets.</b> Gulvet er 44×44&nbsp;px. Sidemenu, sorteringshoveder og felter havde plads til at vokse; knapperne beholder deres udseende og får gulvet gennem et hit-areal:</p>
+<pre><code>.side-nav-item { min-height: 44px; }
+.f-input       { min-height: 44px; }
+.t-th          { min-height: 44px; }
+
+/* 38px er rigtigt for en desktop-knap; 38px hit-areal er ikke. */
+.btn { position: relative; }
+.btn::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 100%;
+  min-height: 44px;
+  transform: translateY(-50%);
+}</code></pre>
+
+<h3><span class="step">6</span>Bevægelse, navn og dødt CSS <span class="small">— <code>c78be7d</code></span></h3>
+<ul>
+  <li><b>Varigheder.</b> Målerens fyld 480&nbsp;ms → <b>260&nbsp;ms</b>, nudge 480&nbsp;ms → <b>300&nbsp;ms</b>. Gulvet er under 300&nbsp;ms medmindre afstand eller kurve retfærdiggør mere.</li>
+  <li><b>Reduced motion.</b> Blokken var et fladt <code>0.01ms</code> på alt, hvilket også dræber de opacity- og farveovergange man skal <i>beholde</i>. Nu falder bevægelsen væk og fades bliver.</li>
+  <li><b>Gruppenavn.</b> Trinlisten mistede sit navn da den forlod sin <code>&lt;aside aria-label="Setup checklist"&gt;</code>. Den er nu <code>role="group" aria-label="Quote steps"</code>.</li>
+  <li><b>Dødt CSS.</b> Flytningen efterlod 11 forældreløse klasser — <code>.v3-rail</code>, <code>.v3-grid</code>, <code>.v3-task</code> og resten, 43 linjer.</li>
+</ul>
+<pre><code>@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
+    transition-duration: 120ms !important;
+  }
+  .side-step[data-nudge] { animation: none !important; }
+  .v3-meter-bar i { transition: none !important; }
+}</code></pre>
+
+<h3><span class="step">7</span>Progressen på kortet <span class="small">— <code>4557547</code>, <code>3bcebb7</code></span></h3>
+<p>Sidemenuen sagde den samme kendsgerning fire gange i én 224&nbsp;px kolonne: to af fire udfyldte prikker, teksten "2 of 4 done", tallet "50%", og baren. Det numeriske resumé flytter ud; prikkerne bliver og bærer trin-for-trin-tilstanden.</p>
+<p>Første forsøg lagde det øverst til højre i headeren. Det var forkert — det flugtede med ingenting. Det ender direkte over kortet, i kortets egen bredde:</p>
+<pre><code><span class="file">Pages/NewQuote.razor — inde i .v3-single, før panelet</span>&lt;div class="v3-progress"&gt;
+    &lt;div class="v3-progress-top"&gt;
+        &lt;span class="v3-progress-n"&gt;@S.DoneCount of @Content.Tasks.Length done&lt;/span&gt;
+        &lt;span class="v3-progress-pct"&gt;@Pct%&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class="v3-meter-bar" role="progressbar" aria-label="Setup progress"
+         aria-valuemin="0" aria-valuemax="@Content.Tasks.Length" aria-valuenow="@S.DoneCount"&gt;
+        &lt;i style="transform:scaleX(@Fraction)"&gt;&lt;/i&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<pre><code>.v3-progress { max-width: 620px; margin-bottom: 14px; }</code></pre>
+<p class="why">Den ligger <i>uden for</i> panelet, ikke inde i det. Panelet er nøglet på det aktive trin og kører sin entré-animation forfra ved hvert skift — indeni ville en stabil størrelse glide ind på ny hver gang du klikker et trin.</p>
+<p><b>Finish setup</b> var samtidig det eneste indrammede felt i en søjle af rammeløse rækker. Den deler nu én erklæring med menupunkterne:</p>
+<pre><code>.side-nav-item,
+.side-finish-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  /* … */
+}</code></pre>
+<p class="why">Den beholder sin lave vægt. Panelets Save-knap er den eneste fyldte primærknap på skærmen — én primær handling pr. skærmbillede.</p>
+
+<h3><span class="step">8</span>Kør den</h3>
+<pre><code>dotnet run</code></pre>
+<ul class="check">
+  <li>Sidemenu i venstre kant med <b>Sent quotes</b> (med tallet 8) og <b>New quote</b></li>
+  <li>Sent quotes: tabel med fem sorterbare kolonner, søgning, og en tom tilstand med "Clear search"</li>
+  <li>New quote: trinnene indrykket under menupunktet, progressbar over kortet i kortets bredde</li>
+  <li>Klik et trin i menuen → panelet skifter; klik <b>Back</b> i panelet → menuen følger med</li>
+  <li>Vælg en rolle → måleren går fra 2 of 4 til 3 of 4 <i>med det samme</i></li>
+  <li><b>Finish setup</b> med manglende rolle → springer til "What do you do?" med rød besked</li>
+</ul>
+<div class="callout warn"><b>Ser du gammel styling?</b> Blazors dev-server sender kun <code>ETag</code> og <code>Last-Modified</code> på <code>app.css</code> — ingen <code>Cache-Control</code>. Browseren genbruger sin kopi uden at spørge. Hard reload med <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>, eller slå <b>Disable cache</b> til i DevTools' Network-fane.</div>
+
+<h2 class="part"><span class="n">3</span>Publish og host</h2>
 <p><code>dotnet run</code> er et Debug-build: 193 separate <code>.wasm</code>-filer, 8,5 MB, ingen trimming. Det er fint til udvikling og forkert til alt andet. En Release-publish trimmer klassebiblioteket ned til det der faktisk bruges og komprimerer det.</p>
 
 <h3><span class="step">1</span>Publicér</h3>
@@ -261,25 +464,31 @@ window.app = {
 
 <h2 class="part"><span class="n">A</span>Appendiks: filerne i det færdige projekt</h2>
 <div class="tree"><pre><code>OnboardingChecklist/
-├── OnboardingChecklist.csproj   ← trin 2
-├── Program.cs                   ← trin 3
-├── _Imports.razor               ← trin 4
-├── Onboarding.razor             ← trin 7 (= Checklist.razor)
+├── OnboardingChecklist.csproj   ← D1 trin 2
+├── Program.cs                   ← D1 trin 3, D2 trin 2
+├── _Imports.razor               ← D1 trin 4, D2 trin 2
+├── Shell.razor                  ← D2 trin 2
 ├── Model/
-│   ├── Content.cs               ← trin 5
-│   └── OnboardingState.cs       ← trin 5, trimmet
+│   ├── AppState.cs              ← D2 trin 2
+│   ├── Content.cs               ← D1 trin 5
+│   ├── OnboardingState.cs       ← D1 trin 5, D2 trin 4
+│   └── Quote.cs                 ← D2 trin 2
+├── Pages/
+│   ├── NewQuote.razor           ← D1 trin 7, omdøbt i D2
+│   └── Sent.razor               ← D2 trin 2
 ├── Components/
-│   ├── Fields.razor             ← trin 6, én linje rettet
-│   ├── Icons.cs                 ← trin 6
-│   └── Recap.razor              ← trin 6
+│   ├── Fields.razor             ← D1 trin 6
+│   ├── Icons.cs                 ← D1 trin 6
+│   ├── Recap.razor              ← D1 trin 6
+│   └── StepRail.razor           ← D2 trin 4
 ├── Properties/
 │   └── launchSettings.json      (fra templaten)
 └── wwwroot/
-    ├── index.html               ← trin 8
+    ├── index.html               ← D1 trin 8
     ├── favicon.png
-    ├── css/app.css              ← trin 8, tre sektioner
-    └── js/app.js                ← trin 8</code></pre></div>
-<p class="small">Filer fra prototypen der <i>ikke</i> skal med: <code>Proto.razor</code>, <code>Components/Picker.razor</code>, <code>Variants/Stepper.razor</code>, <code>Variants/Conversational.razor</code>, <code>wwwroot/js/picker.js</code>.</p>
+    ├── css/app.css              ← D1 trin 8, så D2 trin 3–7
+    └── js/app.js                ← D1 trin 8</code></pre></div>
+<p class="small">CSS'en har fire sektioner når du er færdig: <code>MATERIALS</code>, <code>VARIANT 3 — CHECKLIST</code>, <code>APP SHELL</code> og <code>SENT QUOTES</code>. Filer fra prototypen der <i>ikke</i> skal med: <code>Proto.razor</code>, <code>Components/Picker.razor</code>, <code>Variants/Stepper.razor</code>, <code>Variants/Conversational.razor</code>, <code>wwwroot/js/picker.js</code>.</p>
 
 </body>
 </html>
