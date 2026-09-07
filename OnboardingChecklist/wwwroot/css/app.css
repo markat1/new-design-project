@@ -110,11 +110,18 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Movement goes; opacity and colour stay, so state changes are still legible
+     rather than snapping in with no transition at all. */
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
+    transition-duration: 120ms !important;
   }
+
+  /* Purely decorative movement: no substitute needed. */
+  .side-step[data-nudge] { animation: none !important; }
+  .v3-meter-bar i { transition: none !important; }
 }
 
 /* ---------- shared controls (used by Stepper + Checklist) ---------- */
@@ -387,63 +394,16 @@ body {
 .v3-h1 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
 .v3-lede { margin: 8px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); max-width: 56ch; }
 
-.v3-grid {
-  display: grid;
-  grid-template-columns: 296px minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-  margin-top: 30px;
-}
-@media (max-width: 880px) { .v3-grid { grid-template-columns: minmax(0, 1fr); } }
-
-.v3-rail {
-  position: sticky;
-  top: 24px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 6px;
-}
-@media (max-width: 880px) { .v3-rail { position: static; } }
-
-.v3-meter { padding: 14px 12px 15px; }
-.v3-meter-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.v3-meter-n { font-size: 13px; font-weight: 500; color: var(--ink-1); font-variant-numeric: tabular-nums; }
-.v3-meter-pct { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .v3-meter-bar { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
 .v3-meter-bar i {
   display: block;
   height: 100%;
   background: var(--accent);
   transform-origin: left center;
-  transition: transform 480ms var(--ease);
+  /* A short bar travelling a short distance; 480ms read as lag. */
+  transition: transform 260ms var(--ease);
 }
 
-.v3-tasks { padding: 0 4px 4px; }
-.v3-task {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  gap: 10px;
-  width: 100%;
-  padding: 9px 9px 10px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 130ms ease;
-}
-.v3-task:hover { background: #f6f6f7; }
-.v3-task:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
-.v3-task[data-active] { background: var(--accent-soft); }
-.v3-task[data-nudge] { animation: nudge 480ms var(--ease) both; }
 @keyframes nudge {
   0%, 100% { transform: translateX(0); }
   22% { transform: translateX(-4px); }
@@ -474,15 +434,6 @@ body {
   animation: draw 300ms var(--ease) 40ms forwards;
 }
 @keyframes draw { to { stroke-dashoffset: 0; } }
-.v3-task-t {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--ink-1);
-}
-.v3-task[data-active] .v3-task-t { color: var(--accent-2); }
 .v3-pill {
   flex: none;
   padding: 2px 6px;
@@ -494,20 +445,6 @@ body {
   color: var(--ink-3);
   text-transform: uppercase;
 }
-.v3-task-s {
-  display: block;
-  margin-top: 3px;
-  font-size: 12.5px;
-  color: var(--ink-3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.v3-task-s[data-unset] { color: #c0c0c6; }
-
-.v3-finish { padding: 6px 10px 10px; }
-.v3-finish .btn { width: 100%; }
-.v3-finish-note { margin: 8px 2px 0; font-size: 12px; line-height: 1.45; color: var(--ink-3); text-align: center; }
 
 .v3-panel {
   background: var(--surface);
@@ -660,7 +597,7 @@ body {
 .side-step:hover { background: #f6f6f7; }
 .side-step:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 .side-step[data-active] { background: var(--accent-soft); }
-.side-step[data-nudge] { animation: nudge 480ms var(--ease) both; }
+.side-step[data-nudge] { animation: nudge 300ms var(--ease) both; }
 
 .side-step-txt { min-width: 0; }
 .side-step-t {
