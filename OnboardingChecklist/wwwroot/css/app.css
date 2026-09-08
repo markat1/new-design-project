@@ -470,6 +470,27 @@ body {
   gap: 10px;
   margin-left: auto;
 }
+
+/* Fills the middle the footer used to leave empty, and says which end of the
+   flow you are standing on — the bar above counts what's filled, not where you are. */
+.v3-step-pos {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 700px) { .v3-step-pos { display: none; } }
+
+/* A dedicated muted colour, not opacity: opacity passes contrast on one
+   background and fails on another. */
+.btn:disabled {
+  color: var(--line-2);
+  cursor: default;
+  pointer-events: none;
+}
+.btn:disabled svg { opacity: 0.55; }
 .v3-saved {
   display: inline-flex;
   align-items: center;
@@ -718,9 +739,39 @@ body {
 
 /* The quote form shares the split shell but scrolls as one column rather than
    holding a fixed header over a scrolling table. */
-.split-form { overflow-y: auto; padding: 26px 24px 48px; }
-.split-form .v3-progress { max-width: 880px; margin-bottom: 14px; }
-.split-form .v3-panel { max-width: 880px; }
+/* Edge to edge, like the table on the other page: progress as a band across
+   the top, the step scrolling under it, the actions pinned to the bottom. */
+.split-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+}
+.split-form .v3-progress {
+  flex: none;
+  max-width: none;
+  margin: 0;
+  padding: 13px 24px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.split-form .v3-panel {
+  flex: 1;
+  min-height: 0;
+  max-width: none;
+  overflow-y: auto;
+  padding: 24px 24px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.split-form .v3-panel-f {
+  position: sticky;
+  bottom: 0;
+  margin: 24px -24px 0;
+  padding: 14px 24px;
+  background: var(--surface);
+}
+.v3-panel-f { position: relative; }
 
 /* The card fills the pane, the fields don't follow it. A company name typed
    into an 850px box is a worse form than a card with room to spare. */

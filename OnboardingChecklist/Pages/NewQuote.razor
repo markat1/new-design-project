@@ -36,13 +36,15 @@
                     <Fields TaskKey="@Task.Key" Changed="S.NotifyChanged" Submit="() => Commit(false)" @ref="fields" />
                 </div>
                 <div class="v3-panel-f">
-                    @* Back is hidden on the first task rather than disabled: a control
-                       that can never do anything shouldn't be on screen. The right-hand
-                       group is anchored with margin-left:auto so the primary never moves. *@
-                    @if (Prev is { } prev)
-                    {
-                        <button type="button" class="btn btn-ghost" data-act="back" @onclick="() => S.Open(prev.Key)">@Icons.ArrowL Tilbage</button>
-                    }
+                    @* Back stays put and goes disabled at the start. An absent control
+                       says nothing; a dimmed one says you are at the beginning — and the
+                       footer keeps one shape across all four steps. *@
+                    <button type="button" class="btn btn-ghost" data-act="back"
+                            disabled="@(Prev is null)"
+                            @onclick="() => S.Open(Prev!.Key)">@Icons.ArrowL Tilbage</button>
+
+                    <span class="v3-step-pos">Trin @(Index + 1) af @Content.Tasks.Length</span>
+
                     <div class="v3-panel-f-end">
                         @if (justSaved == Task.Key)
                         {
