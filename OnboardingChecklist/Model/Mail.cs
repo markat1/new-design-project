@@ -53,11 +53,14 @@ public record Mail(string Ref, string Subject, string Note, MailStatus Status, s
 
     public int CountOf(RecipientStatus s) => Recipients.Count(r => r.Status == s);
 
-    /// "3 set · 1 accepteret", or nothing worth saying yet.
+    /// "3 set · 1 accepteret". A draft has not asked anybody, so it is not
+    /// waiting on anything — saying "no replies yet" would imply it went out.
     public string Responses
     {
         get
         {
+            if (Status == MailStatus.Draft) return "Ikke sendt";
+
             var parts = new List<string>();
             if (CountOf(RecipientStatus.Viewed) > 0) parts.Add($"{CountOf(RecipientStatus.Viewed)} set");
             if (CountOf(RecipientStatus.Accepted) > 0) parts.Add($"{CountOf(RecipientStatus.Accepted)} accepteret");

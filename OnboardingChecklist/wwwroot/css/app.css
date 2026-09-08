@@ -1090,6 +1090,14 @@ body {
 .pick-row[data-on] { border-color: var(--accent); background: var(--accent-soft); }
 .pick-row:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+.pick-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .pick-txt { min-width: 0; }
 .pick-name {
   display: block;
@@ -1165,6 +1173,7 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.rcp-state { display: inline-flex; }
 .rcp-sum { font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rcp-chev { display: inline-flex; color: var(--ink-3); transition: transform 180ms var(--ease); }
 .rcp-chev[data-open] { transform: rotate(180deg); }

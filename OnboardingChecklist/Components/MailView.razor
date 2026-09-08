@@ -84,23 +84,28 @@
                         var open = expanded == rec.Email;
                         <li class="rcp-item" @key="rec.Email">
                             <button type="button" class="rcp-head" aria-expanded="@(open ? "true" : "false")"
+                                    aria-controls="@($"sheet-{rec.Email}")"
                                     @onclick="() => expanded = open ? null : rec.Email">
                                 <span class="rcp-av" aria-hidden="true">@rec.Initials</span>
                                 <span class="rcp-txt">
                                     <span class="rcp-name" title="@rec.Name">@rec.Name</span>
                                     <span class="rcp-co" title="@rec.Company">@rec.Company</span>
                                 </span>
-                                @if (!Preview)
-                                {
-                                    <span class="t-pill" data-s="@rec.Status.ToString().ToLowerInvariant()">@rec.Status.Label()</span>
-                                }
+                                @* The track stays even when there is no pill: removing the
+                                   child shifts everything after it into the wrong column. *@
+                                <span class="rcp-state">
+                                    @if (!Preview)
+                                    {
+                                        <span class="t-pill" data-s="@rec.Status.ToString().ToLowerInvariant()">@rec.Status.Label()</span>
+                                    }
+                                </span>
                                 <span class="rcp-sum num">@rec.Total.ToString("N0")</span>
                                 <span class="rcp-chev" data-open="@(open ? "" : null)">@Icons.Chevron</span>
                             </button>
 
                             @if (open)
                             {
-                                <div class="rcp-sheet">
+                                <div class="rcp-sheet" id="@($"sheet-{rec.Email}")">
                                     <div class="d-file">
                                         @Icons.Sheet
                                         <span class="d-file-txt">
