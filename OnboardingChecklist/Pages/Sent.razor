@@ -5,20 +5,21 @@
 <div class="split-page">
 
     <header class="split-head">
-        <div>
-            <h1 class="page-h1">Sent quotes</h1>
-            <p class="page-lede">Every priced mail you've sent, newest first.</p>
-        </div>
-        <div class="page-search">
-            <input class="f-input" type="search" placeholder="Search client or reference"
-                   aria-label="Search quotes"
-                   @bind="query" @bind:event="oninput" @bind:after="KeepSelectionVisible" />
-        </div>
+        <h1 class="page-h1">Sent quotes</h1>
+        <p class="page-lede">Every priced mail you've sent, newest first.</p>
     </header>
 
     <div class="split" @ref="split">
 
         <div class="split-list">
+            @* Sits over the list it filters, and moves with the divider. In the
+               page header it ended up above the detail pane instead. *@
+            <div class="list-bar">
+                <input class="f-input" type="search" placeholder="Search client or reference"
+                       aria-label="Search quotes"
+                       @bind="query" @bind:event="oninput" @bind:after="KeepSelectionVisible" />
+            </div>
+
             @if (Rows.Length == 0)
             {
                 <div class="t-empty">

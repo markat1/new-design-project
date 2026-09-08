@@ -660,16 +660,15 @@ body {
 
 .split-head {
   flex: none;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 26px 24px 20px;
+  padding: 22px 24px 18px;
   border-bottom: 1px solid var(--line);
 }
 .page-h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
 .page-lede { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
-.page-search { flex: none; width: 260px; }
+/* Left-aligned with the table's first column, capped so it doesn't stretch
+   to whatever width the divider happens to leave. */
+.list-bar { flex: none; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.list-bar .f-input { max-width: 320px; }
 
 .split { --detail-w: 400px; flex: 1; display: flex; min-height: 0; }
 
