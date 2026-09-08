@@ -1,7 +1,8 @@
-@* The list of priced mails already sent. Sorting and filtering are plain LINQ —
-   the vanilla prototype needed 90 lines of JS for what C# does inline. *@
-<div class="page">
-    <header class="page-head">
+@* Master–detail: the list on the left, the mail that was actually sent on the
+   right. Sorting and filtering are plain LINQ. *@
+<div class="split-page">
+
+    <header class="split-head">
         <div>
             <h1 class="page-h1">Sent quotes</h1>
             <p class="page-lede">Every priced mail you've sent, newest first.</p>
@@ -9,53 +10,128 @@
         <div class="page-search">
             <input class="f-input" type="search" placeholder="Search client or reference"
                    aria-label="Search quotes"
-                   @bind="query" @bind:event="oninput" />
+                   @bind="query" @bind:event="oninput" @bind:after="KeepSelectionVisible" />
         </div>
     </header>
 
-    @if (Rows.Length == 0)
-    {
-        <div class="t-empty">
-            <p class="t-empty-h">No quotes match &ldquo;@query&rdquo;</p>
-            <p class="t-empty-b">Try a shorter search, or clear it to see all @Quote.All.Length quotes.</p>
-            <button type="button" class="btn btn-outline" @onclick="() => query = string.Empty">Clear search</button>
+    <div class="split">
+
+        <div class="split-list">
+            @if (Rows.Length == 0)
+            {
+                <div class="t-empty">
+                    <p class="t-empty-h">No quotes match &ldquo;@query&rdquo;</p>
+                    <p class="t-empty-b">Try a shorter search, or clear it to see all @Quote.All.Length quotes.</p>
+                    <button type="button" class="btn btn-outline" @onclick="ClearSearch">Clear search</button>
+                </div>
+            }
+            else
+            {
+                <div class="split-scroll">
+                    <table class="t" role="grid">
+                        <thead>
+                            <tr>
+                                @foreach (var c in Columns)
+                                {
+                                    var col = c;
+                                    <th scope="col" class="@(col.Num ? "num" : null)"
+                                        aria-sort="@(sort == col.Key ? (asc ? "ascending" : "descending") : "none")">
+                                        <button type="button" class="t-th" @onclick="() => Sort(col.Key)">
+                                            @col.Label
+                                            <span class="t-sort" data-on="@(sort == col.Key ? "" : null)" data-asc="@(sort == col.Key && asc ? "" : null)">@Icons.Chevron</span>
+                                        </button>
+                                    </th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Rows)
+                            {
+                                var row = r;
+                                <tr @key="row.Ref" tabindex="0"
+                                    data-picked="@(picked == row.Ref ? "" : null)"
+                                    aria-selected="@(picked == row.Ref ? "true" : "false")"
+                                    @onclick="() => picked = row.Ref"
+                                    @onkeydown="e => RowKey(e, row.Ref)">
+                                    <td class="t-ref">@row.Ref</td>
+                                    <td><span class="t-client" title="@row.Client">@row.Client</span></td>
+                                    <td><span class="t-pill" data-s="@row.Status.ToString().ToLowerInvariant()">@row.Label</span></td>
+                                    <td class="num">@(row.Lines.Length == 0 ? "—" : row.Amount.ToString("N0"))</td>
+                                    <td class="num t-muted">@row.Sent</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <p class="t-foot">@Rows.Length of @Quote.All.Length quotes</p>
+            }
         </div>
-    }
-    else
-    {
-        <div class="t-wrap">
-            <table class="t">
-                <thead>
-                    <tr>
-                        @foreach (var c in Columns)
-                        {
-                            var col = c;
-                            <th scope="col" class="@(col.Num ? "num" : null)"
-                                aria-sort="@(sort == col.Key ? (asc ? "ascending" : "descending") : "none")">
-                                <button type="button" class="t-th" @onclick="() => Sort(col.Key)">
-                                    @col.Label
-                                    <span class="t-sort" data-on="@(sort == col.Key ? "" : null)" data-asc="@(sort == col.Key && asc ? "" : null)">@Icons.Chevron</span>
-                                </button>
-                            </th>
-                        }
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var r in Rows)
+
+        <aside class="split-detail" aria-label="Sent mail">
+            @if (Picked is { } q)
+            {
+                <div class="d" @key="q.Ref">
+                    <div class="d-top">
+                        <span class="t-pill" data-s="@q.Status.ToString().ToLowerInvariant()">@q.Label</span>
+                        <span class="d-ref">@q.Ref</span>
+                    </div>
+
+                    <h2 class="d-subject">@q.Subject</h2>
+
+                    <dl class="d-meta">
+                        <div><dt>Til</dt><dd class="d-to" title="@q.To">@q.To</dd></div>
+                        <div><dt>Kunde</dt><dd title="@q.Client">@q.Client</dd></div>
+                        <div><dt>Sendt</dt><dd class="num">@q.Sent</dd></div>
+                    </dl>
+
+                    @if (q.Lines.Length == 0)
                     {
-                        <tr @key="r.Ref">
-                            <td class="t-ref">@r.Ref</td>
-                            <td><span class="t-client" title="@r.Client">@r.Client</span></td>
-                            <td><span class="t-pill" data-s="@r.Status.ToString().ToLowerInvariant()">@r.Label</span></td>
-                            <td class="num">@(r.Amount == 0 ? "—" : r.Amount.ToString("N0"))</td>
-                            <td class="num t-muted">@r.Sent</td>
-                        </tr>
+                        <div class="d-none">
+                            <p>Kladden er ikke sendt endnu.</p>
+                            <p class="d-none-b">Der er hverken vedhæftning eller priser på den.</p>
+                        </div>
                     }
-                </tbody>
-            </table>
-        </div>
-        <p class="t-foot">@Rows.Length of @Quote.All.Length quotes</p>
-    }
+                    else
+                    {
+                        <div class="d-file">
+                            @Icons.Sheet
+                            <span class="d-file-txt">
+                                <span class="d-file-n" title="@q.Attachment">@q.Attachment</span>
+                                <span class="d-file-s">Regneark · @q.AttachmentSize</span>
+                            </span>
+                        </div>
+
+                        <h3 class="d-h3">Priser i regnearket</h3>
+                        <table class="d-lines">
+                            <tbody>
+                                @foreach (var l in q.Lines)
+                                {
+                                    <tr>
+                                        <td>@l.Description</td>
+                                        <td class="num d-qty">@l.Qty ×</td>
+                                        <td class="num">@l.Unit.ToString("N0")</td>
+                                        <td class="num d-tot">@l.Total.ToString("N0")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr><td colspan="3">I alt</td><td class="num">@q.Amount.ToString("N0")</td></tr>
+                            </tfoot>
+                        </table>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="d-empty">
+                    @Icons.Sheet
+                    <p class="d-empty-h">Ingen mail valgt</p>
+                    <p class="d-empty-b">Vælg en række til venstre for at se modtager, emne og priserne i den vedhæftede fil.</p>
+                </div>
+            }
+        </aside>
+
+    </div>
 </div>
 
 @code {
@@ -73,6 +149,9 @@
     private string query = "";
     private string sort = "sent";
     private bool asc;
+    private string? picked;
+
+    private Quote? Picked => picked is null ? null : Array.Find(Quote.All, q => q.Ref == picked);
 
     private Quote[] Rows
     {
@@ -97,10 +176,10 @@
                 _ => r => r.Sent,
             };
 
-            // A draft has no sent date. Sorting "—" as text puts it above every
-            // real date descending, so undated rows are pushed out to the end
-            // in both directions instead of leading the list.
             var ordered = asc ? rows.OrderBy(key) : rows.OrderByDescending(key);
+
+            // A draft has no date. "—" sorts above every real date descending, so
+            // undated rows get pushed to the bottom in both directions.
             return ordered.OrderBy(r => r.Sent == "—" ? 1 : 0).ToArray();
         }
     }
@@ -110,5 +189,23 @@
         if (sort == key) { asc = !asc; return; }
         sort = key;
         asc = false;
+    }
+
+    private void ClearSearch()
+    {
+        query = "";
+        KeepSelectionVisible();
+    }
+
+    /// A selection the filter has hidden would leave the detail pane showing
+    /// something the list no longer offers.
+    private void KeepSelectionVisible()
+    {
+        if (picked is not null && !Rows.Any(r => r.Ref == picked)) picked = null;
+    }
+
+    private void RowKey(KeyboardEventArgs e, string reference)
+    {
+        if (e.Key is "Enter" or " ") picked = reference;
     }
 }
