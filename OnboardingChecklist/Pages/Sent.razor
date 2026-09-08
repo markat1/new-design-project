@@ -155,12 +155,12 @@
         if (focusSearchBox)
         {
             focusSearchBox = false;
-            await searchBox.FocusAsync();
+            await searchBox.FocusAsync(preventScroll: true);
         }
         else if (focusOpener)
         {
             focusOpener = false;
-            await searchOpener.FocusAsync();
+            await searchOpener.FocusAsync(preventScroll: true);
         }
 
         if (!first) return;

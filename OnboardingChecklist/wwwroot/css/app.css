@@ -385,7 +385,15 @@ body {
   margin-bottom: 8px;
 }
 .v3-progress-n { font-size: 13px; font-weight: 500; color: var(--ink-1); font-variant-numeric: tabular-nums; }
-.v3-progress-pct { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+/* Right-aligned, so 0% -> 25% -> 100% grows leftwards and shifts on every step
+   change. tabular-nums keeps digits even width; this reserves room for four. */
+.v3-progress-pct {
+  min-width: 4ch;
+  text-align: right;
+  font-size: 12px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
 
 .v3-h1 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
 .v3-lede { margin: 8px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); max-width: 56ch; }

@@ -4,7 +4,7 @@ window.app = {
   focusFirst(container) {
     if (!container) return;
     const el = container.querySelector('input:not([type=hidden]), textarea');
-    (el || container).focus();
+    (el || container).focus({ preventScroll: true });
   },
 
   // The drag lives in JS, not Blazor: a re-render per pointermove would be a
