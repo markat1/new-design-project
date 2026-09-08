@@ -723,7 +723,175 @@ catch (JSException)
 - [ ] Træk stregen — bredden huskes efter reload
 - [ ] Søg "vela" med en anden række valgt → ruden går tom i stedet for at lyve
 
-## 4. Publish og host
+## 4. Fra to sider til ét værktøj
+
+Indtil her er de to sider naboer. Nu bliver de ét flow: trinnene laver et tilbud, tilbuddet lander i listen, og man skriver ved siden af en levende forhåndsvisning af mailen.
+
+### 1. Søgningen finder sin plads — `ef0be59`, `79b4bbe`, `332b530`
+
+Tre commits på samme problem, fordi de to første kun flyttede symptomet.
+
+**Den stod over den forkerte rude.** I et fuldbredde-sidehoved bliver et højrestillet felt skubbet ud over *detaljeruden* — den filtrerede listen til venstre fra en position over den til højre:
+
+| Vindue | Søgefelt | Detaljerude starter |
+|---|---|---|
+| 1440px | 1156–1416px | 1040px |
+| 2000px | 1716–1976px | 1600px |
+
+Den flyttede ind i listeruden, med venstrekanten præcis på Reference-kolonnens tekst (262 px).
+
+**Den manglede lup og en vej ud.** Uden lup var det eneste signal en pladsholder, der forsvinder når man skriver. Og havde man søgt sig ned til ét resultat, var markér-alt-og-slet den eneste udvej — `Clear search` findes kun i den *tomme* tilstand.
+
+> [!NOTE]
+> **Ryd-knappen skal give fokus tilbage.** Den forsvinder sammen med den tekst der kaldte den frem, så uden en `FocusAsync()` lander fokus på `<body>` og næste Tab starter forfra.
+
+**Til sidst foldede den sig sammen.** Et helt bånd brugt på et tomt felt tjener ingenting:
+
+*Pages/Sent.razor*
+
+```
+@if (searchOpen || query.Length > 0)
+{
+    <div class="search">…</div>
+}
+else
+{
+    <button class="search-open" aria-label="Søg i tilbud" @ref="searchOpener"
+            @onclick="OpenSearch">@Icons.Search</button>
+}
+```
+
+> Den folder sig *aldrig* sammen mens der er en søgning i gang. En filtreret liste uden synlig grund til at være kort er værre end et felt der fylder. Escape rydder og folder sammen i én bevægelse — sikkert netop fordi rydningen også fjerner filtret. Ikon-knappen har samme 44 px kasse som feltet, så båndet er 69 px højt i begge tilstande.
+
+### 2. Flowet laver et tilbud — `601abbd`
+
+De to sider kunne ikke forbindes, fordi flowet ikke lavede noget at forbinde. Trinnene spurgte stadig om navn, rolle, invitationer og notifikationer. De fire trin bliver de fire felter et tilbud består af — som `Quote`-recorden allerede havde:
+
+*Model/Content.cs*
+
+```
+new("client", "Kunde",      true,  "Hvem er tilbuddet til?", …),
+new("mail",   "Modtager",   true,  "Hvor skal det sendes hen?", …),
+new("lines",  "Prislinjer", true,  "Hvad koster det?", …),
+new("note",   "Besked",     false, "Vil du skrive noget med?", …),
+```
+
+Forbindelsen er én delt liste. Begge sider læser den, flowet skriver til den:
+
+*Model/QuoteStore.cs*
+
+```
+public class QuoteStore
+{
+    private readonly List<Quote> quotes = [.. Quote.Seed];
+    public IReadOnlyList<Quote> All => quotes;
+    public event Action? Changed;
+
+    public Quote Send(QuoteDraft draft)
+    {
+        var quote = draft.ToQuote(NextRef(), DateTime.Now.ToString("yyyy-MM-dd"));
+        Add(quote);
+        draft.Reset();
+        return quote;
+    }
+}
+```
+
+*Components/StepRail.razor — Send()*
+
+```
+if (!S.ReadyToSend()) return;
+
+var quote = Store.Send(S);
+App.SelectOnArrival = quote.Ref;
+App.Page = AppPage.Sent;
+S.NotifyChanged();
+```
+
+> Afsendelse fører hen til listen med den nye række allerede åben. Derfor er "You're all set"-skærmen væk: når kvitteringen er at *se* tilbuddet, er en skærm der påstår det overflødig. `Recap.razor` gik med.
+
+> [!NOTE]
+> **`OnboardingState` hedder nu `QuoteDraft`.** Det gamle navn beskrev den app det her voksede ud af, ikke den det blev — og hver linje der rørte den blev alligevel skrevet om.
+
+### 3. Beskeden der forsvandt — `94a8a0a`
+
+Spørgsmålet var hvor vedhæftningen skulle ligge. Svaret var at mailen ingen krop havde at ligge under:
+
+```
+Quote-recorden:            Ref, Client, To, Subject, Status, Sent, Lines
+ToQuote sender med:        (ikke Note)
+Sent.razor nævner Note:    0 gange
+```
+
+> [!WARNING]
+> **Et trin der stiltiende kasserer det man skriver er værre end et trin der ikke findes.** "Besked" samlede tekst op i udkastet, og den forsvandt i det øjeblik man trykkede send.
+
+Med `Note` på recorden bliver rækkefølgen den man læser en mail i: hoved → emne → modtager → besked → vedhæftning → priser. `white-space: pre-wrap`, så skribentens linjeskift overlever. En mail sendt uden besked siger det i dæmpet kursiv; en kladde viser ingen krop, fordi den aldrig blev sendt.
+
+### 4. Skriv ved siden af mailen — `2b1cd39`
+
+Formularen sad som et 620 px kort i en ellers tom side. Den deler nu den delte skal med listesiden: formular til venstre, mailen som den bliver til højre.
+
+*Pages/NewQuote.razor*
+
+```
+<aside class="split-detail" aria-label="Sådan bliver mailen">
+    <MailView Q="S.Preview(Store.NextRef())" Preview="true" />
+</aside>
+```
+
+> Det er *den samme* `MailView` som listen bruger, trukket ud af `Sent.razor` frem for skrevet to gange. Man komponerer i den visning man får bagefter, og to kopier ville drive fra hinanden.
+
+- Tomme felter siger hvad der mangler — "Ingen modtager endnu" — i stedet for at efterlade huller der ligner noget der ikke blev tegnet.
+- Pillen siger **Udkast**. En forhåndsvisning der påstår *Sent* på en mail ingen har sendt er det ene den aldrig må gøre.
+- Stregen husker sin bredde pr. side, så en bred forhåndsvisning under skrivning ikke gør listen smal bagefter — 566 px mod 400 px hen over et sideskift.
+
+*wwwroot/js/app.js*
+
+```
+attach(handle, split, key) {
+  const KEY = key || 'sent.detailWidth';   // hver side sin nøgle
+```
+
+### 5. Bredden, og en fod der holder formen — `607e39c`, `aef95c4`
+
+Kortet stod på 620 px i en 951 px rude. Det fylder nu ruden — men felterne følger ikke med:
+
+```
+.v3-panel .f-group .f-input    { max-width: 460px; }
+.v3-panel .f-group .f-textarea { max-width: 620px; }
+```
+
+> Et firmanavn tastet ind i en 850 px boks er en dårligere formular end et kort med luft til overs. Trinnet der faktisk havde brug for bredden er prislinjerne: rækken bruger 822 px til fire kolonner og en fjern-knap.
+
+> [!NOTE]
+> **Specificitet:** `.f-textarea`-reglen skal ligge på samme dybde som `.f-group .f-input` ovenover, ellers taber den og tekstfeltet bliver hængende på 460 px.
+
+Til sidst går formularen helt ud til begge sider — og det afslørede foden. Den skiftede form tre gange:
+
+```
+1: [                        Gem og fortsæt]
+2: [Tilbage                 Gem og fortsæt]
+4: [Tilbage   Spring over   Send tilbud   ]
+```
+
+> [!WARNING]
+> **En knap der ikke er der, siger ingenting.** *Tilbage* var skjult på første trin, med den begrundelse at en kontrol der aldrig kan handle ikke hører til på skærmen. Her var det forkert: man kan ikke se forskel på "du er ved begyndelsen" og "knappen blev ikke tegnet".
+
+Den bliver stående og bliver slørret — ægte `disabled`, så den ikke kan tabbes til, og farvet med et token frem for opacity, som klarer kontrastkravet på én baggrund og falder på en anden. Et **Trin x af 4** fylder midten foden lod stå tom; det er ikke fremdriftsbjælken gentaget, for den tæller hvad der er *udfyldt*, ikke hvor man *står*.
+
+### 6. Kør den
+
+- [ ] Søgeikonet folder sig ud til feltet og tilbage igen med Escape — men aldrig mens der er søgt
+- [ ] Udfyld de fire trin: forhåndsvisningen til højre bygger sig op mens du skriver
+- [ ] *Send tilbud* → du lander på Sent quotes med den nye række valgt, og tallet i menuen tæller op
+- [ ] Beskeden står i detaljeruden med sine linjeskift, over vedhæftningen
+- [ ] Foden har samme venstrekant på alle fire trin; *Tilbage* er slørret på det første
+
+> [!WARNING]
+> **Brug ikke `pkill -f "blazor-devserver"` til at stoppe serveren.** Mønsteret matcher sin egen kommandolinje og slår processen ihjel med kode 144. Stop på porten i stedet: `lsof -ti:5210 -sTCP:LISTEN | xargs -r kill`
+
+## 5. Publish og host
 
 `dotnet run` er et Debug-build: 193 separate `.wasm`-filer, 8,5 MB, ingen trimming. Det er fint til udvikling og forkert til alt andet. En Release-publish trimmer klassebiblioteket ned til det der faktisk bruges og komprimerer det.
 
@@ -789,24 +957,25 @@ OnboardingChecklist/
 ├── Shell.razor                  ← D2 trin 2
 ├── Model/
 │   ├── AppState.cs              ← D2 trin 2
-│   ├── Content.cs               ← D1 trin 5
-│   ├── OnboardingState.cs       ← D1 trin 5, D2 trin 4
-│   └── Quote.cs                 ← D2 trin 2, D3 trin 1
+│   ├── Content.cs               ← D1 trin 5, D4 trin 2
+│   ├── QuoteDraft.cs            ← D1 trin 5, omdøbt i D4 trin 2
+│   ├── Quote.cs                 ← D2 trin 2, D3 trin 1, D4 trin 3
+│   └── QuoteStore.cs            ← D4 trin 2
 ├── Pages/
-│   ├── NewQuote.razor           ← D1 trin 7, omdøbt i D2
-│   └── Sent.razor               ← D2 trin 2, D3 trin 1–3
+│   ├── NewQuote.razor           ← D1 trin 7, omdøbt i D2, D4 trin 4–5
+│   └── Sent.razor               ← D2 trin 2, D3, D4 trin 1
 ├── Components/
 │   ├── Fields.razor             ← D1 trin 6
 │   ├── Icons.cs                 ← D1 trin 6
-│   ├── Recap.razor              ← D1 trin 6
-│   └── StepRail.razor           ← D2 trin 4
+│   ├── MailView.razor           ← D4 trin 4
+│   └── StepRail.razor           ← D2 trin 4, D4 trin 2
 ├── Properties/
 │   └── launchSettings.json      (fra templaten)
 └── wwwroot/
     ├── index.html               ← D1 trin 8, D3 trin 3
     ├── favicon.png
-    ├── css/app.css              ← D1 trin 8, så D2 og D3
-    └── js/app.js                ← D1 trin 8, D3 trin 2
+    ├── css/app.css              ← D1 trin 8, så D2, D3 og D4
+    └── js/app.js                ← D1 trin 8, D3 trin 2, D4 trin 4
 ```
 
 CSS'en har fire sektioner når du er færdig: `MATERIALS`, `VARIANT 3 — CHECKLIST`, `APP SHELL` og `SENT QUOTES — full-bleed master–detail`. Filer fra prototypen der *ikke* skal med: `Proto.razor`, `Components/Picker.razor`, `Variants/Stepper.razor`, `Variants/Conversational.razor`, `wwwroot/js/picker.js`.
@@ -819,22 +988,23 @@ OnboardingChecklist/
 ├── Shell.razor                  ← D2 trin 2
 ├── Model/
 │   ├── AppState.cs              ← D2 trin 2
-│   ├── Content.cs               ← D1 trin 5
-│   ├── OnboardingState.cs       ← D1 trin 5, D2 trin 4
-│   └── Quote.cs                 ← D2 trin 2, D3 trin 1
+│   ├── Content.cs               ← D1 trin 5, D4 trin 2
+│   ├── QuoteDraft.cs            ← D1 trin 5, omdøbt i D4 trin 2
+│   ├── Quote.cs                 ← D2 trin 2, D3 trin 1, D4 trin 3
+│   └── QuoteStore.cs            ← D4 trin 2
 ├── Pages/
-│   ├── NewQuote.razor           ← D1 trin 7, omdøbt i D2
-│   └── Sent.razor               ← D2 trin 2, D3 trin 1–3
+│   ├── NewQuote.razor           ← D1 trin 7, omdøbt i D2, D4 trin 4–5
+│   └── Sent.razor               ← D2 trin 2, D3, D4 trin 1
 ├── Components/
 │   ├── Fields.razor             ← D1 trin 6
 │   ├── Icons.cs                 ← D1 trin 6
-│   ├── Recap.razor              ← D1 trin 6
-│   └── StepRail.razor           ← D2 trin 4
+│   ├── MailView.razor           ← D4 trin 4
+│   └── StepRail.razor           ← D2 trin 4, D4 trin 2
 ├── Properties/
 │   └── launchSettings.json      (fra templaten)
 └── wwwroot/
     ├── index.html               ← D1 trin 8, D3 trin 3
     ├── favicon.png
-    ├── css/app.css              ← D1 trin 8, så D2 og D3
-    └── js/app.js                ← D1 trin 8, D3 trin 2
+    ├── css/app.css              ← D1 trin 8, så D2, D3 og D4
+    └── js/app.js                ← D1 trin 8, D3 trin 2, D4 trin 4
 ```
