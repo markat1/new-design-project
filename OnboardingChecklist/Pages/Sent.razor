@@ -162,7 +162,17 @@
 
     protected override async Task OnAfterRenderAsync(bool first)
     {
-        if (first) await JS.InvokeVoidAsync("app.splitter.attach", handle, split);
+        if (!first) return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("app.splitter.attach", handle, split);
+        }
+        catch (JSException)
+        {
+            // A resizable divider is an enhancement — without it the pane is
+            // simply fixed-width. Losing the whole page over it is worse.
+        }
     }
 
     private Quote? Picked => picked is null ? null : Array.Find(Quote.All, q => q.Ref == picked);
