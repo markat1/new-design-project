@@ -29,37 +29,42 @@
                 </div>
             </div>
 
-            <section class="v3-panel" aria-labelledby="v3-panel-h" @key="S.StepKey">
-                <h2 class="v3-panel-h" id="v3-panel-h">@Task.Title</h2>
-                <p class="v3-panel-s">@Task.Sub</p>
-                <div class="v3-panel-body">
-                    <Fields TaskKey="@Task.Key" Changed="S.NotifyChanged" Submit="() => Commit(false)" @ref="fields" />
-                </div>
-                <div class="v3-panel-f">
-                    @* Back stays put and goes disabled at the start. An absent control
-                       says nothing; a dimmed one says you are at the beginning — and the
-                       footer keeps one shape across all four steps. *@
-                    <button type="button" class="btn btn-ghost" data-act="back"
-                            disabled="@(Prev is null)"
-                            @onclick="() => S.Open(Prev!.Key)">@Icons.ArrowL Tilbage</button>
-
-                    <span class="v3-step-pos">Trin @(Index + 1) af @Content.Tasks.Length</span>
-
-                    <div class="v3-panel-f-end">
-                        @if (justSaved == Task.Key)
-                        {
-                            <span class="v3-saved">@Icons.TickSm Gemt</span>
-                        }
-                        @if (!Task.Required)
-                        {
-                            <button type="button" class="btn btn-ghost" data-act="skip" @onclick="() => Commit(true)">Spring over</button>
-                        }
-                        <button type="button" class="btn btn-primary" data-act="save" @onclick="() => Commit(false)">
-                            @(Next is not null ? "Gem og fortsæt" : "Send tilbud")
-                        </button>
+            @* Only the step content scrolls. The footer is a sibling band, exactly as
+               .t-foot is on the list page — a sticky footer inside the scroller
+               repaints against the scrollbar and jitters. *@
+            <div class="v3-scroll">
+                <section class="v3-panel" aria-labelledby="v3-panel-h" @key="S.StepKey">
+                    <h2 class="v3-panel-h" id="v3-panel-h">@Task.Title</h2>
+                    <p class="v3-panel-s">@Task.Sub</p>
+                    <div class="v3-panel-body">
+                        <Fields TaskKey="@Task.Key" Changed="S.NotifyChanged" Submit="() => Commit(false)" @ref="fields" />
                     </div>
+                </section>
+            </div>
+
+            <div class="v3-panel-f">
+                @* Back stays put and goes disabled at the start. An absent control says
+                   nothing; a dimmed one says you are at the beginning. *@
+                <button type="button" class="btn btn-ghost" data-act="back"
+                        disabled="@(Prev is null)"
+                        @onclick="() => S.Open(Prev!.Key)">@Icons.ArrowL Tilbage</button>
+
+                <span class="v3-step-pos">Trin @(Index + 1) af @Content.Tasks.Length</span>
+
+                <div class="v3-panel-f-end">
+                    @if (justSaved == Task.Key)
+                    {
+                        <span class="v3-saved">@Icons.TickSm Gemt</span>
+                    }
+                    @if (!Task.Required)
+                    {
+                        <button type="button" class="btn btn-ghost" data-act="skip" @onclick="() => Commit(true)">Spring over</button>
+                    }
+                    <button type="button" class="btn btn-primary" data-act="save" @onclick="() => Commit(false)">
+                        @(Next is not null ? "Gem og fortsæt" : "Send tilbud")
+                    </button>
                 </div>
-            </section>
+            </div>
 
         </div>
 

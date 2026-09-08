@@ -762,22 +762,29 @@ body {
   padding: 13px 24px 14px;
   border-bottom: 1px solid var(--line);
 }
-.split-form .v3-panel {
+/* One scroller, one fixed band above, one below — the same three parts the
+   list page has. The footer used to live inside the scroller held down by
+   position:sticky, which repaints against the scrollbar on every step. */
+.v3-scroll {
   flex: 1;
   min-height: 0;
-  max-width: none;
   overflow-y: auto;
   scrollbar-gutter: stable;
-  padding: 24px 24px 0;
+  padding: 24px 24px 28px;
+}
+.split-form .v3-panel {
+  min-height: 0;
+  max-width: none;
+  padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
 }
 .split-form .v3-panel-f {
-  position: sticky;
-  bottom: 0;
-  margin: 24px -24px 0;
+  flex: none;
+  margin: 0;
   padding: 14px 24px;
+  border-top: 1px solid var(--line);
   background: var(--surface);
 }
 .v3-panel-f { position: relative; }
