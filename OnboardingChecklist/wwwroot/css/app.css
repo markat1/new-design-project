@@ -1175,12 +1175,61 @@ body {
 }
 .rcp-state { display: inline-flex; }
 .rcp-sum { font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rcp-chev { display: inline-flex; color: var(--ink-3); transition: transform 180ms var(--ease); }
-.rcp-chev[data-open] { transform: rotate(180deg); }
+/* Points into the sheet, so the row reads as a way in rather than a toggle. */
+.rcp-go { display: inline-flex; color: var(--ink-3); transform: rotate(-90deg); transition: color 130ms ease; }
+.rcp-head:hover .rcp-go { color: var(--accent); }
 
-.rcp-sheet { padding: 2px 0 18px; }
-.rcp-sheet .d-file { margin-bottom: 14px; }
 .rcp-none { margin: 0; font-size: 13px; color: var(--ink-3); font-style: italic; }
+
+/* Who the open sheet belongs to, with a way to step through the others. */
+.sheet-for {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet-nav { display: inline-flex; align-items: center; gap: 2px; }
+
+.sheet-step {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background-color 130ms ease, color 130ms ease;
+}
+.sheet-step:hover:not(:disabled) { background: #f0f0f1; color: var(--ink-1); }
+.sheet-step:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sheet-step:disabled { color: var(--line-2); cursor: default; }
+/* The same arrow, turned around — one icon, two directions. */
+.sheet-next svg { transform: rotate(180deg); }
+/* Same 44px floor as the other small controls. */
+.sheet-step::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+.sheet-count {
+  min-width: 5ch;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
 
 /* A row's second line in the list: what came back from the send. */
 .t-sub {

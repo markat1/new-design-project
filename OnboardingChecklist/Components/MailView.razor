@@ -8,7 +8,7 @@
         <span class="d-ref">@M.Ref</span>
     </div>
 
-    <div class="d-tabs" role="tablist" aria-label="Mail og modtagere" @onkeydown="TabKey">
+    <div class="d-tabs" role="tablist" aria-label="Mail, modtagere og vedhæftning" @onkeydown="TabKey">
         <button type="button" class="d-tab" role="tab" id="d-tab-mail"
                 aria-selected="@(tab == 0 ? "true" : "false")" aria-controls="d-panel-mail"
                 tabindex="@(tab == 0 ? 0 : -1)" @onclick="() => tab = 0">Mail</button>
@@ -21,6 +21,9 @@
                 <span class="d-tab-n">@M.Recipients.Length</span>
             }
         </button>
+        <button type="button" class="d-tab" role="tab" id="d-tab-file"
+                aria-selected="@(tab == 2 ? "true" : "false")" aria-controls="d-panel-file"
+                tabindex="@(tab == 2 ? 0 : -1)" @onclick="() => tab = 2">Vedhæftning</button>
     </div>
 
     @if (tab == 0)
@@ -62,7 +65,7 @@
             </div>
         </div>
     }
-    else
+    else if (tab == 1)
     {
         <div class="d-panel" role="tabpanel" id="d-panel-rcp" aria-labelledby="d-tab-rcp">
             @if (M.Recipients.Length == 0)
@@ -81,18 +84,15 @@
                     @foreach (var r in M.Recipients)
                     {
                         var rec = r;
-                        var open = expanded == rec.Email;
                         <li class="rcp-item" @key="rec.Email">
-                            <button type="button" class="rcp-head" aria-expanded="@(open ? "true" : "false")"
-                                    aria-controls="@($"sheet-{rec.Email}")"
-                                    @onclick="() => expanded = open ? null : rec.Email">
+                            @* Opens the sheet in its own tab rather than under the row,
+                               where four columns had to share a strip. *@
+                            <button type="button" class="rcp-head" @onclick="() => Show(rec.Email)">
                                 <span class="rcp-av" aria-hidden="true">@rec.Initials</span>
                                 <span class="rcp-txt">
                                     <span class="rcp-name" title="@rec.Name">@rec.Name</span>
                                     <span class="rcp-co" title="@rec.Company">@rec.Company</span>
                                 </span>
-                                @* The track stays even when there is no pill: removing the
-                                   child shifts everything after it into the wrong column. *@
                                 <span class="rcp-state">
                                     @if (!Preview)
                                     {
@@ -100,47 +100,86 @@
                                     }
                                 </span>
                                 <span class="rcp-sum num">@rec.Total.ToString("N0")</span>
-                                <span class="rcp-chev" data-open="@(open ? "" : null)">@Icons.Chevron</span>
+                                <span class="rcp-go" aria-hidden="true">@Icons.Chevron</span>
                             </button>
-
-                            @if (open)
-                            {
-                                <div class="rcp-sheet" id="@($"sheet-{rec.Email}")">
-                                    <div class="d-file">
-                                        @Icons.Sheet
-                                        <span class="d-file-txt">
-                                            <span class="d-file-n" title="@rec.Attachment">@rec.Attachment</span>
-                                            <span class="d-file-s">Regneark · @rec.AttachmentSize</span>
-                                        </span>
-                                    </div>
-                                    @if (rec.Lines.Length == 0)
-                                    {
-                                        <p class="rcp-none">Ingen prisliste i regnskabssystemet for @rec.Company.</p>
-                                    }
-                                    else
-                                    {
-                                        <table class="d-lines">
-                                            <tbody>
-                                                @foreach (var l in rec.Lines)
-                                                {
-                                                    <tr>
-                                                        <td>@l.Description</td>
-                                                        <td class="num d-qty">@l.Qty</td>
-                                                        <td class="num">@l.Unit.ToString("N0")</td>
-                                                        <td class="num d-tot">@l.Total.ToString("N0")</td>
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                            <tfoot>
-                                                <tr><td colspan="3">I alt</td><td class="num">@rec.Total.ToString("N0")</td></tr>
-                                            </tfoot>
-                                        </table>
-                                    }
-                                </div>
-                            }
                         </li>
                     }
                 </ul>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="d-panel" role="tabpanel" id="d-panel-file" aria-labelledby="d-tab-file">
+            @if (Current is { } rec)
+            {
+                <div class="sheet-for">
+                    <span class="rcp-av" aria-hidden="true">@rec.Initials</span>
+                    <span class="rcp-txt">
+                        <span class="rcp-name" title="@rec.Name">@rec.Name</span>
+                        <span class="rcp-co" title="@rec.Company">@rec.Company</span>
+                    </span>
+                    @if (M.Recipients.Length > 1)
+                    {
+                        <span class="sheet-nav">
+                            <button type="button" class="sheet-step" aria-label="Forrige modtager"
+                                    disabled="@(Index <= 0)" @onclick="() => Step(-1)">@Icons.ArrowL</button>
+                            <span class="sheet-count">@(Index + 1) / @M.Recipients.Length</span>
+                            <button type="button" class="sheet-step sheet-next" aria-label="Næste modtager"
+                                    disabled="@(Index >= M.Recipients.Length - 1)" @onclick="() => Step(1)">@Icons.ArrowL</button>
+                        </span>
+                    }
+                </div>
+
+                <div class="d-file">
+                    @Icons.Sheet
+                    <span class="d-file-txt">
+                        <span class="d-file-n" title="@rec.Attachment">@rec.Attachment</span>
+                        <span class="d-file-s">Regneark · @rec.AttachmentSize</span>
+                    </span>
+                </div>
+
+                @if (rec.Lines.Length == 0)
+                {
+                    <p class="rcp-none">Ingen prisliste i regnskabssystemet for @rec.Company.</p>
+                }
+                else
+                {
+                    <table class="d-lines">
+                        <thead>
+                            <tr>
+                                <th scope="col">Beskrivelse</th>
+                                <th scope="col" class="num">Antal</th>
+                                <th scope="col" class="num">Stykpris</th>
+                                <th scope="col" class="num">I alt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var l in rec.Lines)
+                            {
+                                <tr>
+                                    <td>@l.Description</td>
+                                    <td class="num d-qty">@l.Qty</td>
+                                    <td class="num">@l.Unit.ToString("N0")</td>
+                                    <td class="num d-tot">@l.Total.ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr><td colspan="3">I alt</td><td class="num">@rec.Total.ToString("N0")</td></tr>
+                        </tfoot>
+                    </table>
+                }
+            }
+            else
+            {
+                <div class="d-file" data-empty>
+                    @Icons.Sheet
+                    <span class="d-file-txt">
+                        <span class="d-file-n">Ingen vedhæftning endnu</span>
+                        <span class="d-file-s">Vælg modtagere, så bygges arkene her</span>
+                    </span>
+                </div>
             }
         </div>
     }
@@ -155,7 +194,26 @@
     [Parameter] public bool Preview { get; set; }
 
     private int tab;
-    private string? expanded;
+    private string? shown;
+
+    /// The recipient whose sheet the third tab shows. Defaults to the first, so
+    /// the tab is never blank when there is something to show.
+    private Recipient? Current =>
+        M.Recipients.FirstOrDefault(r => r.Email == shown) ?? M.Recipients.FirstOrDefault();
+
+    private int Index => Current is null ? -1 : Array.FindIndex(M.Recipients, r => r.Email == Current.Email);
+
+    private void Show(string email)
+    {
+        shown = email;
+        tab = 2;
+    }
+
+    private void Step(int by)
+    {
+        var next = Index + by;
+        if (next >= 0 && next < M.Recipients.Length) shown = M.Recipients[next].Email;
+    }
 
     private static bool Blank(string s) => s.Trim().Length == 0;
 
@@ -164,7 +222,9 @@
 
     private void TabKey(KeyboardEventArgs e)
     {
-        if (e.Key is "ArrowRight" or "End") tab = 1;
-        else if (e.Key is "ArrowLeft" or "Home") tab = 0;
+        if (e.Key == "ArrowRight") tab = Math.Min(tab + 1, 2);
+        else if (e.Key == "ArrowLeft") tab = Math.Max(tab - 1, 0);
+        else if (e.Key == "Home") tab = 0;
+        else if (e.Key == "End") tab = 2;
     }
 }
