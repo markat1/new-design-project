@@ -759,6 +759,7 @@ body {
   min-height: 0;
   max-width: none;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   padding: 24px 24px 0;
   border: 0;
   border-radius: 0;
@@ -777,13 +778,14 @@ body {
    into an 850px box is a worse form than a card with room to spare. */
 .v3-panel .f-group .f-input { max-width: 460px; }
 .v3-panel .f-group .f-textarea { max-width: 620px; }
-.split-scroll { flex: 1; min-height: 0; overflow: auto; }
+.split-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
 
 .split-detail {
   flex: 0 0 var(--detail-w);
   min-width: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   background: var(--sunk);
   border-left: 1px solid var(--line);
 }
@@ -905,6 +907,67 @@ body {
 .d-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .d-ref { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
+/* The mail and the file it carries are two documents, so they get two tabs
+   rather than one long column. */
+.d-tabs {
+  display: flex;
+  gap: 2px;
+  margin: 14px 0 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.d-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 130ms ease;
+}
+.d-tab:hover { color: var(--ink-1); }
+.d-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 4px; }
+.d-tab[aria-selected="true"] { color: var(--accent); }
+/* The underline sits on the tablist's own rule, not below it. */
+.d-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--accent);
+}
+/* Same 44px floor as the other small controls. */
+.d-tab::before {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 44px;
+  transform: translateY(-50%);
+}
+
+.d-tab-n {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #f0f0f1;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.d-tab[aria-selected="true"] .d-tab-n { background: var(--accent-soft); color: var(--accent); }
+
+.d-panel { animation: v3In 160ms var(--ease) both; }
+
 .d-subject { margin: 0 0 18px; font-size: 17px; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; }
 
 .d-meta { margin: 0 0 22px; display: grid; gap: 11px; }
@@ -950,9 +1013,19 @@ body {
 .d-file-n { display: block; font-size: 13px; font-weight: 500; color: var(--ink-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .d-file-s { display: block; margin-top: 1px; font-size: 12px; color: var(--ink-3); }
 
-.d-h3 { margin: 0 0 8px; font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
 
-.d-lines { width: 100%; border-collapse: collapse; font-size: 13px; }
+.d-lines { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 22px; }
+.d-lines th {
+  padding: 0 0 7px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: left;
+}
+.d-lines th.num { text-align: right; padding-left: 12px; }
 .d-lines td { padding: 8px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
 .d-lines .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .d-lines .d-qty { color: var(--ink-3); padding-left: 12px; }
