@@ -641,7 +641,95 @@ Sent.razor nævner Note:    0 gange</code></pre>
 </ul>
 <div class="callout warn"><b>Brug ikke <code>pkill -f "blazor-devserver"</code> til at stoppe serveren.</b> Mønsteret matcher sin egen kommandolinje og slår processen ihjel med kode 144. Stop på porten i stedet: <code>lsof -ti:5210 -sTCP:LISTEN | xargs -r kill</code></div>
 
-<h2 class="part"><span class="n">5</span>Publish og host</h2>
+<h2 class="part"><span class="n">5</span>En række er en udsendelse</h2>
+<div class="callout warn"><b>Denne del erstatter datamodellen fra del 2–4.</b> Følger du guiden forfra for at genskabe appen som den er nu, bygger du prislinje-editoren i del 4 og sletter den her. Vil du springe over, så byg del 1, og hop derefter til <a href="#model">appendiks B</a> som viser sluttilstanden direkte.</div>
+
+<h3><span class="step">1</span>Jagten på et hop <span class="small">— <code>71e1056</code>, <code>97e27c7</code>, <code>c6058a3</code></span></h3>
+<p>Tre commits på ét symptom: den lodrette streg mellem ruderne så ud til at hoppe ved hvert trinskift. To af dem var forkerte. De står her, fordi fejlslutningerne er en del af oplysningen.</p>
+<p><b>Første gæt: scrollbaren.</b> Trinnene har forskellig højde, så en klassisk scrollbar dukker op og forsvinder ved siden af stregen. <code>scrollbar-gutter: stable</code> på de rullende ruder reserverer pladsen. Det er en rigtig rettelse — bare ikke på det her.</p>
+<div class="callout"><b>Headless Chromium skjuler den slags.</b> Den bruger overlay-scrollbars med bredde 0. Vil du reproducere hvad Edge på Windows viser, så start browseren med <code>--disable-features=OverlayScrollbar</code>.</div>
+<p><b>Andet gæt: procenttallet.</b> Ved at måle hvert eneste elements kasse før og efter et trinskift dukkede det op:</p>
+<pre><code>.v3-progress-pct   venstre [958, 951]   højre [975, 975]</code></pre>
+<p>Højrestillet tekst vokser mod venstre, så <code>0%</code> → <code>25%</code> → <code>100%</code> flytter sin egen venstrekant. <code>tabular-nums</code> gør cifrene lige brede; det der manglede var plads til at <i>antallet</i> af cifre ændrer sig:</p>
+<pre><code>.v3-progress-pct { min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }</code></pre>
+<p class="why">Også en rigtig rettelse, og værd at beholde. Stadig ikke årsagen.</p>
+<p><b>Årsagen: strukturen.</b> Svaret lå i spørgsmålet "hvorfor gør vi ikke bare som den første side?"</p>
+<pre><code>Sent quotes:  .list-bar     | .split-scroll ← scroller | .t-foot
+New quote:    .v3-progress  | .v3-panel     ← scroller | .v3-panel-f ← sticky INDE i den</code></pre>
+<div class="callout warn"><b>En sticky fod inde i en scrollende container tegnes om mod scrollbaren.</b> Med <code>margin: 0 -24px</code> rækker den oven i købet ud over scrollbarens plads. Listesiden hakkede aldrig, fordi dens fod altid har ligget udenfor.</div>
+<p>Foden bliver et søskende-bånd, og kun trinnets indhold scroller:</p>
+<pre><code><span class="file">Pages/NewMail.razor</span>&lt;div class="v3-scroll"&gt;
+    &lt;section class="v3-panel" @key="S.StepKey"&gt;…&lt;/section&gt;
+&lt;/div&gt;
+
+&lt;div class="v3-panel-f"&gt;…&lt;/div&gt;</code></pre>
+<pre><code>.v3-scroll        { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
+.split-form .v3-panel-f { flex: none; border-top: 1px solid var(--line); }</code></pre>
+<p class="why">Foden ligger nu også uden for den nøglede sektion, så den ikke kører entré-animation om ved hvert trinskift.</p>
+
+<h3><span class="step">2</span>Modellen vendes om <span class="small">— <code>296606d</code></span></h3>
+<p>En række er ikke én mail. Den er én udsendelse til en hel marketinggruppe — mennesker fra forskellige firmaer — og <b>hver kunde får sin egen prisliste</b>.</p>
+<pre><code>Mail (én udsendelse)
+  reference, emne, besked, dato, status
+  Recipients[]
+    person + firma + status
+    QuoteLine[]        ← kundens ark</code></pre>
+<p><b>Priserne laves i regnskabssystemet</b>, ikke her. Prislinje-editoren slettes: et trin der lod dig taste priser skrev på noget appen ikke ejer. Trin 1 bliver marketinggruppen, og vælger du en person, trækker hun sit firmas ark med sig.</p>
+<pre><code><span class="file">Model/Accounting.cs</span>/// Stands in for the accounting system. One class to swap for a call.
+public static class Accounting
+{
+    private static readonly Dictionary&lt;string, QuoteLine[]&gt; Sheets = new()
+    {
+        ["Vela Robotics"] = [new("Servicebesøg", 12, 850m), …],
+    };
+
+    public static QuoteLine[] SheetFor(string company) =&gt;
+        Sheets.TryGetValue(company, out var lines) ? lines : [];
+}</code></pre>
+<div class="callout"><b>Arkene kopieres ned på mailen når den sendes.</b> Det der blev sendt forbliver det der blev sendt, også når regnskabssystemet ændrer priser bagefter. <code>Recipient</code> bærer sine egne <code>Lines</code> — den slår ikke op.</div>
+<p><b>Status flytter ned på modtageren.</b> Fire mennesker svarer fire forskellige ting, så én status på udsendelsen ville lyve. Rækken viser sammendraget, detaljen viser hvem der gjorde hvad:</p>
+<pre><code><span class="file">Model/Mail.cs</span>public string Responses
+{
+    get
+    {
+        if (Status == MailStatus.Draft) return "Ikke sendt";
+        // "2 set · 1 accepteret", ellers "Ingen svar endnu"
+    }
+}</code></pre>
+<p class="why">En kladde siger <i>"Ikke sendt"</i>, ikke <i>"Ingen svar endnu"</i> — den venter ikke på noget, den har ikke spurgt nogen.</p>
+<p>Trinnene bliver tre: <b>Modtagere</b>, <b>Emne</b>, <b>Besked</b> (valgfri). Og navnene skifter: <code>Quote</code> → <code>Mail</code>, <i>Sent quotes</i> → <b>Mails</b>, <i>New quote</i> → <b>Ny mail</b>.</p>
+<div class="callout warn"><b>Ikke "Inbox".</b> En indbakke er det man modtager. Det her er det du har sendt.</div>
+
+<h3><span class="step">3</span>Tre faner i detaljeruden <span class="small">— <code>71e1056</code>, <code>3f869ec</code></span></h3>
+<p>Mailen, modtagerne og det enkelte ark er tre ting. Først blev vedhæftningen skilt fra mailen; siden fik den enkelte modtagers ark sin egen fane, fordi det lå klemt under den række det hørte til.</p>
+<pre><code>[ Mail ]  [ Modtagere ④ ]  [ Vedhæftning ]</code></pre>
+<ul>
+  <li>Klik på en modtager åbner <i>hendes</i> ark i tredje fane — chevronen peger ind i det i stedet for at rotere, så rækken læses som en vej videre.</li>
+  <li>Pilene i arket træder mellem modtagerne med positionen imellem (<code>1 / 4</code>), slørret i hver ende.</li>
+  <li>Fanen starter på den første modtager, så den aldrig står tom når der er noget at vise.</li>
+  <li>Piletaster går gennem alle tre faner; hver fane har 44 px hit-areal gennem et pseudo-element.</li>
+</ul>
+
+<h3><span class="step">4</span>Hvad review'et fangede <span class="small">— <code>c043afe</code></span></h3>
+<table>
+  <tr><th>Fund</th><th>Årsag</th><th>Rettelse</th></tr>
+  <tr><td>Beløbet stod 49 px fra kanten i udkast, 28 px når sendt</td><td>Pillen blev udeladt i preview, men gitteret havde stadig fem spor</td><td>Reservér sporet med et tomt element frem for at fjerne barnet</td></tr>
+  <tr><td>Kladden sagde "Ingen svar endnu"</td><td>Antyder at den gik ud og ingen svarede</td><td>"Ikke sendt"</td></tr>
+  <tr><td>Checkboksen var 11×13 px i browserens blå</td><td>Det eneste kontrolelement uden projektets farver</td><td><code>16px</code> og <code>accent-color: var(--accent)</code></td></tr>
+  <tr><td><code>priser-halden--co.xlsx</code></td><td>"Halden &amp; Co." har tre ikke-bogstaver i træk; ét <code>Replace("--","-")</code> fjerner kun det første par</td><td>Kollaps hele løbet med <code>-{2,}</code></td></tr>
+</table>
+
+<h3><span class="step">5</span>Kør den</h3>
+<ul class="check">
+  <li>Listen viser udsendelser: <code>M-2418 · 4 · 4 kunder · 82.200</code> med "2 set · 1 accepteret" under emnet</li>
+  <li>Fanen <b>Modtagere</b> viser de fire med hver sin status og sit beløb</li>
+  <li>Klik en modtager → <b>Vedhæftning</b> åbner med netop hendes ark, og pilene bladrer</li>
+  <li>Under <b>Ny mail</b>: vælg to personer hos samme kunde — de får det samme ark</li>
+  <li>Send → du lander på listen med udsendelsen valgt, og tallet i menuen tæller op</li>
+  <li>Skift trin: intet flytter sig vandret</li>
+</ul>
+
+<h2 class="part"><span class="n">6</span>Publish og host</h2>
 <p><code>dotnet run</code> er et Debug-build: 193 separate <code>.wasm</code>-filer, 8,5 MB, ingen trimming. Det er fint til udvikling og forkert til alt andet. En Release-publish trimmer klassebiblioteket ned til det der faktisk bruges og komprimerer det.</p>
 
 <h3><span class="step">1</span>Publicér</h3>
@@ -679,34 +767,82 @@ Sent.razor nævner Note:    0 gange</code></pre>
 <pre><code>sudo dotnet workload install wasm-tools</code></pre>
 <p>Med denne workload relinker publish selve .NET-runtimen (<code>dotnet.native.wasm</code>, den største enkelte fil på 2,8 MB) og fjerner det appen ikke bruger. Du behøver ikke ændre noget i projektet — næste <code>dotnet publish</code> bruger den automatisk. Kræver sudo, fordi SDK'en ligger i <code>/usr/lib/dotnet</code>.</p>
 
-<h2 class="part"><span class="n">A</span>Appendiks: filerne i det færdige projekt</h2>
+<h2 class="part"><span class="n">A</span>Appendiks A: filerne i det færdige projekt</h2>
 <div class="tree"><pre><code>OnboardingChecklist/
 ├── OnboardingChecklist.csproj   ← D1 trin 2
 ├── Program.cs                   ← D1 trin 3, D2 trin 2
 ├── _Imports.razor               ← D1 trin 4, D2 trin 2
-├── Shell.razor                  ← D2 trin 2
+├── Shell.razor                  ← D2 trin 2, D5 trin 2
 ├── Model/
+│   ├── Accounting.cs            ← D5 trin 2
 │   ├── AppState.cs              ← D2 trin 2
-│   ├── Content.cs               ← D1 trin 5, D4 trin 2
-│   ├── QuoteDraft.cs            ← D1 trin 5, omdøbt i D4 trin 2
-│   ├── Quote.cs                 ← D2 trin 2, D3 trin 1, D4 trin 3
-│   └── QuoteStore.cs            ← D4 trin 2
+│   ├── Content.cs               ← D1 trin 5, D5 trin 2
+│   ├── Mail.cs                  ← D5 trin 2
+│   ├── MailDraft.cs             ← D5 trin 2
+│   ├── MailStore.cs             ← D4 trin 2, D5 trin 2
+│   └── MarketingGroup.cs        ← D5 trin 2
 ├── Pages/
-│   ├── NewQuote.razor           ← D1 trin 7, omdøbt i D2, D4 trin 4–5
-│   └── Sent.razor               ← D2 trin 2, D3, D4 trin 1
+│   ├── Mails.razor              ← D2–D3, D5 trin 2
+│   └── NewMail.razor            ← D1 trin 7, D4–D5
 ├── Components/
-│   ├── Fields.razor             ← D1 trin 6
+│   ├── Fields.razor             ← D1 trin 6, D5 trin 2
 │   ├── Icons.cs                 ← D1 trin 6
-│   ├── MailView.razor           ← D4 trin 4
-│   └── StepRail.razor           ← D2 trin 4, D4 trin 2
+│   ├── MailView.razor           ← D4 trin 4, D5 trin 3
+│   └── StepRail.razor           ← D2 trin 4, D5 trin 2
 ├── Properties/
 │   └── launchSettings.json      (fra templaten)
 └── wwwroot/
     ├── index.html               ← D1 trin 8, D3 trin 3
     ├── favicon.png
-    ├── css/app.css              ← D1 trin 8, så D2, D3 og D4
+    ├── css/app.css              ← D1 trin 8, så D2–D5
     └── js/app.js                ← D1 trin 8, D3 trin 2, D4 trin 4</code></pre></div>
-<p class="small">CSS'en har fire sektioner når du er færdig: <code>MATERIALS</code>, <code>VARIANT 3 — CHECKLIST</code>, <code>APP SHELL</code> og <code>SENT QUOTES — full-bleed master–detail</code>. Filer fra prototypen der <i>ikke</i> skal med: <code>Proto.razor</code>, <code>Components/Picker.razor</code>, <code>Variants/Stepper.razor</code>, <code>Variants/Conversational.razor</code>, <code>wwwroot/js/picker.js</code>.</p>
+<p class="small">CSS'en har fire sektioner når du er færdig: <code>MATERIALS</code>, <code>VARIANT 3 — CHECKLIST</code>, <code>APP SHELL</code> og <code>SENT QUOTES — full-bleed master–detail</code>. <code>Recap.razor</code>, <code>Quote.cs</code> og <code>QuoteStore.cs</code> findes ikke længere — de blev afløst i del 4 og 5. Filer fra prototypen der <i>ikke</i> skal med: <code>Proto.razor</code>, <code>Components/Picker.razor</code>, <code>Variants/Stepper.razor</code>, <code>Variants/Conversational.razor</code>, <code>wwwroot/js/picker.js</code>.</p>
+
+
+<h2 class="part" id="model"><span class="n">B</span>Appendiks B: modellen som den ser ud nu</h2>
+<p>Sluttilstanden, samlet ét sted, så den kan bygges direkte uden at spille historien igennem.</p>
+
+<pre><code><span class="file">Model/Mail.cs</span>public enum MailStatus { Draft, Sent }
+public enum RecipientStatus { Sent, Viewed, Accepted, Declined }
+
+public record QuoteLine(string Description, int Qty, decimal Unit)
+{
+    public decimal Total =&gt; Qty * Unit;
+}
+
+public partial record Recipient(string Name, string Email, string Company,
+                               QuoteLine[] Lines, RecipientStatus Status)
+{
+    public decimal Total =&gt; Lines.Sum(l =&gt; l.Total);
+    public string Attachment =&gt; $"priser-{Slug(Company)}.xlsx";
+    public string Initials =&gt; …;
+}
+
+public record Mail(string Ref, string Subject, string Note,
+                   MailStatus Status, string Sent, Recipient[] Recipients)
+{
+    public decimal Total =&gt; Recipients.Sum(r =&gt; r.Total);
+    public int Companies =&gt; Recipients.Select(r =&gt; r.Company).Distinct().Count();
+    public string Responses =&gt; …;   // "Ikke sendt" | "2 set · 1 accepteret"
+}</code></pre>
+
+<table>
+  <tr><th>Fil</th><th>Ansvar</th></tr>
+  <tr><td><code>Model/Mail.cs</code></td><td>Udsendelsen, modtageren og linjen</td></tr>
+  <tr><td><code>Model/Accounting.cs</code></td><td>Stedfortræder for regnskabssystemet — firma → prisliste</td></tr>
+  <tr><td><code>Model/MarketingGroup.cs</code></td><td>De personer en mail kan gå til</td></tr>
+  <tr><td><code>Model/MailStore.cs</code></td><td>Den ene liste begge sider læser; <code>Send()</code> lægger udkastet i den</td></tr>
+  <tr><td><code>Model/MailDraft.cs</code></td><td>Mailen der skrives — valgte modtagere, emne, besked, trin-navigation</td></tr>
+  <tr><td><code>Model/AppState.cs</code></td><td>Hvilken side der vises, og hvilken række listen skal åbne på</td></tr>
+  <tr><td><code>Model/Content.cs</code></td><td>De tre trin</td></tr>
+  <tr><td><code>Components/MailView.razor</code></td><td>Mail / Modtagere / Vedhæftning — delt af begge sider</td></tr>
+  <tr><td><code>Components/Fields.razor</code></td><td>Ét trins felter: modtager-vælger, emne, besked</td></tr>
+  <tr><td><code>Components/StepRail.razor</code></td><td>Trinnene i sidemenuen, og Send-knappen</td></tr>
+  <tr><td><code>Pages/Mails.razor</code></td><td>Listen over udsendelser, delt visning</td></tr>
+  <tr><td><code>Pages/NewMail.razor</code></td><td>Flowet, med levende forhåndsvisning</td></tr>
+</table>
+
+<p class="why">De tre singletons i <code>Program.cs</code> er <code>MailDraft</code>, <code>AppState</code> og <code>MailStore</code>. Alt andet er komponenter uden egen tilstand ud over den fane eller række de har åben.</p>
 
 </body>
 </html>
