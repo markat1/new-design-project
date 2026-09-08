@@ -17,18 +17,27 @@
         <div class="split-list">
             @* Sits over the list it filters, and moves with the divider. In the
                page header it ended up above the detail pane instead. *@
+            @* Collapsed to its icon while idle, because a whole band spent on an
+               empty field earns nothing. It never collapses while filtering: a
+               filtered list with no visible reason is worse than a wide field. *@
             <div class="list-bar">
-                <div class="search">
-                    @Icons.Search
-                    <input class="f-input" type="search" placeholder="Search client or reference"
-                           aria-label="Search quotes" @ref="searchBox"
-                           @bind="query" @bind:event="oninput" @bind:after="KeepSelectionVisible" />
-                    @if (query.Length > 0)
-                    {
-                        <button type="button" class="search-clear" aria-label="Clear search"
+                @if (searchOpen || query.Length > 0)
+                {
+                    <div class="search">
+                        @Icons.Search
+                        <input class="f-input" type="search" placeholder="Søg på kunde eller reference"
+                               aria-label="Søg i tilbud" @ref="searchBox"
+                               @bind="query" @bind:event="oninput" @bind:after="KeepSelectionVisible"
+                               @onkeydown="SearchKey" />
+                        <button type="button" class="search-clear" aria-label="Ryd søgning"
                                 @onclick="ClearSearch">@Icons.X</button>
-                    }
-                </div>
+                    </div>
+                }
+                else
+                {
+                    <button type="button" class="search-open" aria-label="Søg i tilbud"
+                            @ref="searchOpener" @onclick="OpenSearch">@Icons.Search</button>
+                }
             </div>
 
             @if (Rows.Length == 0)
@@ -36,7 +45,7 @@
                 <div class="t-empty">
                     <p class="t-empty-h">No quotes match &ldquo;@query&rdquo;</p>
                     <p class="t-empty-b">Try a shorter search, or clear it to see all @Store.All.Count quotes.</p>
-                    <button type="button" class="btn btn-outline" @onclick="ClearSearch">Clear search</button>
+                    <button type="button" class="btn btn-outline" @onclick="ClearSearch">Ryd søgning</button>
                 </div>
             }
             else
@@ -197,8 +206,21 @@
     private ElementReference handle;
     private ElementReference split;
 
+    private ElementReference searchOpener;
+
     protected override async Task OnAfterRenderAsync(bool first)
     {
+        if (focusSearchBox)
+        {
+            focusSearchBox = false;
+            await searchBox.FocusAsync();
+        }
+        else if (focusOpener)
+        {
+            focusOpener = false;
+            await searchOpener.FocusAsync();
+        }
+
         if (!first) return;
 
         try
@@ -252,13 +274,29 @@
         asc = false;
     }
 
-    /// Async because the clear button unmounts with the text that summoned it —
-    /// without handing focus back, it would land on the body.
-    private async Task ClearSearch()
+    private bool searchOpen;
+    private bool focusSearchBox;
+    private bool focusOpener;
+
+    private void OpenSearch()
+    {
+        searchOpen = true;
+        focusSearchBox = true;
+    }
+
+    /// Clearing collapses the field back to its icon, so focus has to follow it
+    /// to the button that replaces it — otherwise it lands on the body.
+    private void ClearSearch()
     {
         query = "";
+        searchOpen = false;
+        focusOpener = true;
         KeepSelectionVisible();
-        await searchBox.FocusAsync();
+    }
+
+    private void SearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") ClearSearch();
     }
 
     /// A selection the filter has hidden would leave the detail pane showing

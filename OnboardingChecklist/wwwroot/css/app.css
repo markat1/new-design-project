@@ -670,6 +670,23 @@ body {
 .list-bar { flex: none; padding: 12px 14px; border-bottom: 1px solid var(--line); }
 
 .search { position: relative; max-width: 320px; }
+
+/* Same 44px box as the field it replaces, so opening search shifts nothing. */
+.search-open {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background-color 130ms ease, color 130ms ease, border-color 130ms ease;
+}
+.search-open:hover { border-color: var(--ink-3); color: var(--ink-1); }
+.search-open:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 /* The magnifier is what says "search" once the placeholder is gone. */
 .search > svg {
   position: absolute;
