@@ -424,7 +424,123 @@ public void Dispose() =&gt; S.Changed -= StateHasChanged;</code></pre>
 </ul>
 <div class="callout warn"><b>Ser du gammel styling?</b> Blazors dev-server sender kun <code>ETag</code> og <code>Last-Modified</code> på <code>app.css</code> — ingen <code>Cache-Control</code>. Browseren genbruger sin kopi uden at spørge. Hard reload med <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>, eller slå <b>Disable cache</b> til i DevTools' Network-fane.</div>
 
-<h2 class="part"><span class="n">3</span>Publish og host</h2>
+<h2 class="part"><span class="n">3</span>Listen som master-detail</h2>
+<p>Sent quotes bliver en delt visning: tabellen løber helt ud til sidemenuen, og ruden til højre viser den mail der faktisk blev sendt — modtager, emne, den vedhæftede <code>.xlsx</code>, og priserne inde i den.</p>
+
+<h3><span class="step">1</span>Mailen ved siden af listen <span class="small">— <code>63fd3ea</code></span></h3>
+<p>Først skal datamodellen kunne bære det. En pris uden sine linjer kan ikke vises:</p>
+<pre><code><span class="file">Model/Quote.cs</span>public record QuoteLine(string Description, int Qty, decimal Unit)
+{
+    public decimal Total =&gt; Qty * Unit;
+}
+
+public record Quote(string Ref, string Client, string To, string Subject,
+                    QuoteStatus Status, string Sent, QuoteLine[] Lines)
+{
+    /// Udledt, aldrig gemt — en total der kan komme ud af trit med sine linjer
+    /// er en fejl der venter på at ske.
+    public decimal Amount =&gt; Lines.Sum(l =&gt; l.Total);
+
+    public string Attachment =&gt; $"priser-{Ref}.xlsx";
+}</code></pre>
+<p class="why">Bemærk at <code>Amount</code> ikke længere er et felt. Tallene i listen ændrer sig derfor: <code>Q-2416</code> går fra 940 til 9.400, fordi den er otte konsulenttimer à 1.175. Det er linjerne der har ret.</p>
+
+<p>Layoutet fylder skærmen i stedet for at kappe ved <code>--page-w</code>:</p>
+<pre><code><span class="file">wwwroot/css/app.css</span>.split-page { height: 100vh; display: flex; flex-direction: column; }
+.split { --detail-w: 400px; flex: 1; display: flex; min-height: 0; }
+.split-list { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.split-scroll { flex: 1; min-height: 0; overflow: auto; }
+.split-detail { flex: 0 0 var(--detail-w); overflow-y: auto; border-left: 1px solid var(--line); }</code></pre>
+<div class="callout"><b><code>min-height: 0</code> to steder.</b> Uden den kan en flex-boks ikke krympe under sit indhold, og så scroller hele siden i stedet for ruderne hver for sig.</div>
+<p class="why">Det er en bevidst afvigelse: New quote beholder sin kappede, centrerede bredde, mens denne side fylder alt. En delt visning <i>er</i> en anden layoutklasse. De to sider flugter ikke længere.</p>
+
+<p>Selve valget er én variabel — det er hele forskellen på Blazor og prototypens 90 linjer JavaScript:</p>
+<pre><code><span class="file">Pages/Sent.razor</span>&lt;tr @key="row.Ref" tabindex="0"
+    data-picked="@(picked == row.Ref ? "" : null)"
+    aria-selected="@(picked == row.Ref ? "true" : "false")"
+    @onclick="() =&gt; picked = row.Ref"
+    @onkeydown="e =&gt; RowKey(e, row.Ref)"&gt;</code></pre>
+<div class="callout warn"><b>En bar <code>&lt;tr onclick&gt;</code> kan hverken nås med tastatur eller annonceres.</b> Rækkerne skal have <code>tabindex</code>, <code>aria-selected</code> og reagere på Enter og mellemrum, ellers er listen kun brugbar med mus.</div>
+<p>Og filtrerer man det valgte væk, skal markeringen ryddes — ellers viser ruden en mail listen ikke længere tilbyder:</p>
+<pre><code>private void KeepSelectionVisible()
+{
+    if (picked is not null &amp;&amp; !Rows.Any(r =&gt; r.Ref == picked)) picked = null;
+}</code></pre>
+
+<h3><span class="step">2</span>Stregen der kan trækkes <span class="small">— <code>71ec6ef</code></span></h3>
+<p>Grebet er 11 px bredt, men den synlige streg er 1 px og lander præcis på kanten mellem ruderne — <code>margin: 0 -5px</code> gør forskellen:</p>
+<pre><code>.splitter {
+  flex: none; position: relative; z-index: 1;
+  width: 11px; margin: 0 -5px;
+  border: 0; background: transparent;
+  cursor: col-resize; touch-action: none;
+}
+.splitter::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 50%;
+  width: 1px; transform: translateX(-50%);
+  background: var(--line);
+  transition: background-color 150ms ease;
+}
+.splitter:hover::before,
+.splitter[data-dragging]::before { background: var(--accent); }</code></pre>
+<p class="why">Trækket ligger i <code>app.js</code>, ikke i Blazor. En <code>pointermove</code> gennem Blazor ville betyde en gentegning pr. billede for noget der kun er en layoutændring. JS skriver <code>--detail-w</code>, og CSS gør resten.</p>
+<pre><code><span class="file">wwwroot/js/app.js</span>const MIN = 280;        // detaljeruden aldrig smallere
+const LIST_MIN = 660;   // svarer til .t's min-width, så tabellen aldrig klippes
+
+const write = w =&gt; {
+  const c = Math.round(clamp(w));
+  split.style.setProperty('--detail-w', c + 'px');
+  handle.setAttribute('aria-valuenow', String(c));
+  try { localStorage.setItem(KEY, String(c)); } catch { /* private mode */ }
+};</code></pre>
+<div class="callout"><b>Bind grænsen til noget virkeligt.</b> Først satte jeg listens minimum til 420 px — et tal jeg fandt på. Trak man langt nok, blev "Sent"-kolonnen klippet af midt i datoen. Bundet til tabellens egen <code>min-width</code> kan det ikke ske.</div>
+<p>Piletaster flytter 16 px, Home og End går til yderpunkterne, og elementet er <code>role="separator"</code> med <code>aria-valuenow</code>. At trække med mus er ikke en mulighed for alle.</p>
+
+<h3><span class="step">3</span>Cachen der lignede ødelagt kode <span class="small">— <code>ba070d7</code></span></h3>
+<p>Dev-serveren sender hverken <code>Cache-Control</code> på <code>css/app.css</code> eller <code>js/app.js</code>. Browseren genbruger derfor sine gamle kopier efter en genopbygning. Det kostede tre sessioner:</p>
+<ul>
+  <li>Gammel CSS ligner et ødelagt layout — man leder efter fejlen i regler der er i orden.</li>
+  <li>Gammel JS <i>styrter appen</i>: den cachede <code>app.js</code> havde ingen <code>app.splitter</code>, så interop-kaldet kastede, og Blazor viste sin fejlbjælke på et sundt build.</li>
+</ul>
+<pre><code><span class="file">wwwroot/index.html — i &lt;head&gt;</span>&lt;script&gt;
+    (function () {
+        var v = Date.now();
+
+        var css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'css/app.css?v=' + v;
+        document.head.appendChild(css);
+
+        var js = document.createElement('script');
+        js.src = 'js/app.js?v=' + v;
+        js.async = false;
+        document.head.appendChild(js);
+    })();
+&lt;/script&gt;</code></pre>
+<p>Læg boot-skærmens CSS inline i samme <code>&lt;head&gt;</code>, ellers når det dynamisk indsatte stylesheet at vise et ustylet glimt.</p>
+<p class="why">Prisen er at de to filer aldrig caches — 20 KB pr. indlæsning. Det er intet mod at fejlsøge et layout der i virkeligheden var i orden.</p>
+<p>Til sidst: lad ikke en forbedring tage siden med sig, når den fejler.</p>
+<pre><code><span class="file">Pages/Sent.razor</span>try
+{
+    await JS.InvokeVoidAsync("app.splitter.attach", handle, split);
+}
+catch (JSException)
+{
+    // En træk-bar streg er en forbedring — uden den er ruden bare fastbredde.
+    // At miste hele siden over den er værre.
+}</code></pre>
+
+<h3><span class="step">4</span>Kør den</h3>
+<ul class="check">
+  <li>Tabellen starter præcis hvor sidemenuen slutter, og detaljeruden går ud til skærmkanten</li>
+  <li>Siden scroller ikke selv — listen og detaljeruden scroller hver for sig, og tabelhovedet bliver stående</li>
+  <li>Klik en række → modtager, emne, <code>.xlsx</code> og priserne med sum</li>
+  <li><code>Q-2414</code> er en kladde: ingen vedhæftning, ingen linjer, og den siger det</li>
+  <li>Træk stregen — bredden huskes efter reload</li>
+  <li>Søg "vela" med en anden række valgt → ruden går tom i stedet for at lyve</li>
+</ul>
+
+<h2 class="part"><span class="n">4</span>Publish og host</h2>
 <p><code>dotnet run</code> er et Debug-build: 193 separate <code>.wasm</code>-filer, 8,5 MB, ingen trimming. Det er fint til udvikling og forkert til alt andet. En Release-publish trimmer klassebiblioteket ned til det der faktisk bruges og komprimerer det.</p>
 
 <h3><span class="step">1</span>Publicér</h3>
@@ -472,10 +588,10 @@ public void Dispose() =&gt; S.Changed -= StateHasChanged;</code></pre>
 │   ├── AppState.cs              ← D2 trin 2
 │   ├── Content.cs               ← D1 trin 5
 │   ├── OnboardingState.cs       ← D1 trin 5, D2 trin 4
-│   └── Quote.cs                 ← D2 trin 2
+│   └── Quote.cs                 ← D2 trin 2, D3 trin 1
 ├── Pages/
 │   ├── NewQuote.razor           ← D1 trin 7, omdøbt i D2
-│   └── Sent.razor               ← D2 trin 2
+│   └── Sent.razor               ← D2 trin 2, D3 trin 1–3
 ├── Components/
 │   ├── Fields.razor             ← D1 trin 6
 │   ├── Icons.cs                 ← D1 trin 6
@@ -484,11 +600,11 @@ public void Dispose() =&gt; S.Changed -= StateHasChanged;</code></pre>
 ├── Properties/
 │   └── launchSettings.json      (fra templaten)
 └── wwwroot/
-    ├── index.html               ← D1 trin 8
+    ├── index.html               ← D1 trin 8, D3 trin 3
     ├── favicon.png
-    ├── css/app.css              ← D1 trin 8, så D2 trin 3–7
-    └── js/app.js                ← D1 trin 8</code></pre></div>
-<p class="small">CSS'en har fire sektioner når du er færdig: <code>MATERIALS</code>, <code>VARIANT 3 — CHECKLIST</code>, <code>APP SHELL</code> og <code>SENT QUOTES</code>. Filer fra prototypen der <i>ikke</i> skal med: <code>Proto.razor</code>, <code>Components/Picker.razor</code>, <code>Variants/Stepper.razor</code>, <code>Variants/Conversational.razor</code>, <code>wwwroot/js/picker.js</code>.</p>
+    ├── css/app.css              ← D1 trin 8, så D2 og D3
+    └── js/app.js                ← D1 trin 8, D3 trin 2</code></pre></div>
+<p class="small">CSS'en har fire sektioner når du er færdig: <code>MATERIALS</code>, <code>VARIANT 3 — CHECKLIST</code>, <code>APP SHELL</code> og <code>SENT QUOTES — full-bleed master–detail</code>. Filer fra prototypen der <i>ikke</i> skal med: <code>Proto.razor</code>, <code>Components/Picker.razor</code>, <code>Variants/Stepper.razor</code>, <code>Variants/Conversational.razor</code>, <code>wwwroot/js/picker.js</code>.</p>
 
 </body>
 </html>
