@@ -29,8 +29,8 @@ public record Quote(
     public string AttachmentSize => Lines.Length == 0 ? "—" : $"{12 + Lines.Length * 2} KB";
 
     // Worst content on purpose: a very long client and recipient, a draft with
-    // nothing in it, and a declined row.
-    public static readonly Quote[] All =
+    // nothing in it, and a declined row. The store starts from these.
+    public static readonly Quote[] Seed =
     [
         new("Q-2418", "Featherstonehaugh-Villanueva International Systems",
             "bartholomew.featherstonehaugh-villanueva@internationalsystems-engineering.co.uk",

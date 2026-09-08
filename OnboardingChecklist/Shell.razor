@@ -1,6 +1,7 @@
 @implements IDisposable
 @inject AppState App
-@inject OnboardingState S
+@inject QuoteDraft S
+@inject QuoteStore Store
 
 @* App shell: a persistent side menu on the left, one page at a time on the right.
    No Router — two pages don't earn URL routing yet, and adding it would mean
@@ -17,7 +18,7 @@
                     @onclick="() => Go(AppPage.Sent)">
                 @Icons.Inbox
                 <span>Sent quotes</span>
-                <span class="side-nav-count">@Quote.All.Length</span>
+                <span class="side-nav-count">@Store.All.Count</span>
             </button>
 
             <button type="button" class="side-nav-item"
@@ -28,7 +29,7 @@
                 <span>New quote</span>
             </button>
 
-            @if (App.Page == AppPage.Quote && !S.ChecklistDone)
+            @if (App.Page == AppPage.Quote)
             {
                 <StepRail />
             }
@@ -51,8 +52,17 @@
 @code {
     private void Go(AppPage page) => App.Page = page;
 
-    // The steps nested under New quote have to appear and disappear as the
-    // flow's own state changes, not just when the page switches.
-    protected override void OnInitialized() => S.Changed += StateHasChanged;
-    public void Dispose() => S.Changed -= StateHasChanged;
+    // The steps nested under New quote appear and disappear as the draft's own
+    // state changes, and the count changes when a quote is sent.
+    protected override void OnInitialized()
+    {
+        S.Changed += StateHasChanged;
+        Store.Changed += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        S.Changed -= StateHasChanged;
+        Store.Changed -= StateHasChanged;
+    }
 }

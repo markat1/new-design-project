@@ -7,8 +7,9 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 // Side menu + one page at a time; Shell owns that switch.
 builder.RootComponents.Add<Shell>("#app");
 
-// Singleton so answers survive re-renders.
-builder.Services.AddSingleton<OnboardingState>();
+// Singletons: the draft survives re-renders, the store is shared by both pages.
+builder.Services.AddSingleton<QuoteDraft>();
 builder.Services.AddSingleton<AppState>();
+builder.Services.AddSingleton<QuoteStore>();
 
 await builder.Build().RunAsync();

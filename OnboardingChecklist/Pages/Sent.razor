@@ -1,4 +1,7 @@
+@implements IDisposable
 @inject IJSRuntime JS
+@inject QuoteStore Store
+@inject AppState App
 
 @* Master–detail: the list on the left, the mail that was actually sent on the
    right. Sorting and filtering are plain LINQ. *@
@@ -32,7 +35,7 @@
             {
                 <div class="t-empty">
                     <p class="t-empty-h">No quotes match &ldquo;@query&rdquo;</p>
-                    <p class="t-empty-b">Try a shorter search, or clear it to see all @Quote.All.Length quotes.</p>
+                    <p class="t-empty-b">Try a shorter search, or clear it to see all @Store.All.Count quotes.</p>
                     <button type="button" class="btn btn-outline" @onclick="ClearSearch">Clear search</button>
                 </div>
             }
@@ -74,7 +77,7 @@
                         </tbody>
                     </table>
                 </div>
-                <p class="t-foot">@Rows.Length of @Quote.All.Length quotes</p>
+                <p class="t-foot">@Rows.Length of @Store.All.Count quotes</p>
             }
         </div>
 
@@ -166,6 +169,21 @@
     private bool asc;
     private string? picked;
 
+    /// A quote sent from the other page arrives with its row already chosen, so
+    /// the reader sees what they just sent instead of hunting for it.
+    protected override void OnInitialized()
+    {
+        Store.Changed += StateHasChanged;
+
+        if (App.SelectOnArrival is { } reference)
+        {
+            picked = reference;
+            App.SelectOnArrival = null;
+        }
+    }
+
+    public void Dispose() => Store.Changed -= StateHasChanged;
+
     private ElementReference searchBox;
     private ElementReference handle;
     private ElementReference split;
@@ -185,14 +203,14 @@
         }
     }
 
-    private Quote? Picked => picked is null ? null : Array.Find(Quote.All, q => q.Ref == picked);
+    private Quote? Picked => picked is null ? null : Store.All.FirstOrDefault(q => q.Ref == picked);
 
     private Quote[] Rows
     {
         get
         {
             var q = query.Trim();
-            IEnumerable<Quote> rows = Quote.All;
+            IEnumerable<Quote> rows = Store.All;
 
             if (q.Length > 0)
             {

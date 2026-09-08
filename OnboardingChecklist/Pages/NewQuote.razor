@@ -1,76 +1,62 @@
 @implements IDisposable
-@inject OnboardingState S
+@inject QuoteDraft S
+@inject QuoteStore Store
+@inject AppState App
 
 <div class="v3-wrap">
     <div class="v3-shell">
 
-        @if (S.ChecklistDone)
-        {
-            <div class="v3-done">
-                <div class="v1-tick" style="margin-inline:auto">@Icons.CheckBig</div>
-                <h2>You're all set, @S.FirstName.</h2>
-                <p>@Content.Workspace is ready when you are.</p>
-                <Recap />
-                <div style="display:flex;gap:10px;justify-content:center;margin-top:24px">
-                    <button type="button" class="btn btn-outline" data-act="restart" @onclick="Restart">Start over</button>
-                    <button type="button" class="btn btn-primary">Open workspace</button>
+        <span class="v3-eyebrow" title="@Content.Workspace">@Content.Workspace</span>
+        <h1 class="v3-h1">Nyt tilbud</h1>
+        <p class="v3-lede">Fire trin. Det sidste kan springes over — resten skal udfyldes, før tilbuddet kan sendes.</p>
+
+        <div class="v3-single">
+
+            @* Sits on the card rather than in the header's empty corner, where it
+               lined up with nothing. Outside the panel, so it doesn't re-animate
+               on every step change with the keyed panel. *@
+            <div class="v3-progress">
+                <div class="v3-progress-top">
+                    <span class="v3-progress-n">@S.DoneCount af @Content.Tasks.Length udfyldt</span>
+                    <span class="v3-progress-pct">@Pct%</span>
+                </div>
+                <div class="v3-meter-bar" role="progressbar" aria-label="Fremdrift"
+                     aria-valuemin="0" aria-valuemax="@Content.Tasks.Length" aria-valuenow="@S.DoneCount">
+                    <i style="transform:scaleX(@Fraction)"></i>
                 </div>
             </div>
-        }
-        else
-        {
-            <span class="v3-eyebrow" title="@Content.Workspace">@Content.Workspace</span>
-            <h1 class="v3-h1">Finish setting up</h1>
-            <p class="v3-lede">Four things, in any order. The two optional ones can wait — you can finish as soon as your name and role are in.</p>
 
-            <div class="v3-single">
-
-                @* Sits on the card rather than in the header's empty corner, where it
-                   lined up with nothing. Outside the panel, so it doesn't re-animate
-                   on every step change with the keyed panel. *@
-                <div class="v3-progress">
-                    <div class="v3-progress-top">
-                        <span class="v3-progress-n">@S.DoneCount of @Content.Tasks.Length done</span>
-                        <span class="v3-progress-pct">@Pct%</span>
-                    </div>
-                    <div class="v3-meter-bar" role="progressbar" aria-label="Setup progress"
-                         aria-valuemin="0" aria-valuemax="@Content.Tasks.Length" aria-valuenow="@S.DoneCount">
-                        <i style="transform:scaleX(@Fraction)"></i>
-                    </div>
+            <section class="v3-panel" aria-labelledby="v3-panel-h" @key="S.StepKey">
+                <h2 class="v3-panel-h" id="v3-panel-h">@Task.Title</h2>
+                <p class="v3-panel-s">@Task.Sub</p>
+                <div class="v3-panel-body">
+                    <Fields TaskKey="@Task.Key" Changed="S.NotifyChanged" Submit="() => Commit(false)" @ref="fields" />
                 </div>
-
-                <section class="v3-panel" aria-labelledby="v3-panel-h" @key="S.ChecklistKey">
-                    <h2 class="v3-panel-h" id="v3-panel-h">@Task.Title</h2>
-                    <p class="v3-panel-s">@Task.Sub</p>
-                    <div class="v3-panel-body">
-                        <Fields TaskKey="@Task.Key" Changed="S.NotifyChanged" Submit="() => Commit(false)" @ref="fields" />
-                    </div>
-                    <div class="v3-panel-f">
-                        @* Back is hidden on the first task rather than disabled: a control
-                           that can never do anything shouldn't be on screen. The right-hand
-                           group is anchored with margin-left:auto so the primary never moves. *@
-                        @if (Prev is { } prev)
+                <div class="v3-panel-f">
+                    @* Back is hidden on the first task rather than disabled: a control
+                       that can never do anything shouldn't be on screen. The right-hand
+                       group is anchored with margin-left:auto so the primary never moves. *@
+                    @if (Prev is { } prev)
+                    {
+                        <button type="button" class="btn btn-ghost" data-act="back" @onclick="() => S.Open(prev.Key)">@Icons.ArrowL Tilbage</button>
+                    }
+                    <div class="v3-panel-f-end">
+                        @if (justSaved == Task.Key)
                         {
-                            <button type="button" class="btn btn-ghost" data-act="back" @onclick="() => S.Open(prev.Key)">@Icons.ArrowL Back</button>
+                            <span class="v3-saved">@Icons.TickSm Gemt</span>
                         }
-                        <div class="v3-panel-f-end">
-                            @if (justSaved == Task.Key)
-                            {
-                                <span class="v3-saved">@Icons.TickSm Saved</span>
-                            }
-                            @if (!Task.Required)
-                            {
-                                <button type="button" class="btn btn-ghost" data-act="skip" @onclick="() => Commit(true)">Skip this</button>
-                            }
-                            <button type="button" class="btn btn-primary" data-act="save" @onclick="() => Commit(false)">
-                                @(Next is not null ? "Save and continue" : "Save and finish")
-                            </button>
-                        </div>
+                        @if (!Task.Required)
+                        {
+                            <button type="button" class="btn btn-ghost" data-act="skip" @onclick="() => Commit(true)">Spring over</button>
+                        }
+                        <button type="button" class="btn btn-primary" data-act="save" @onclick="() => Commit(false)">
+                            @(Next is not null ? "Gem og fortsæt" : "Send tilbud")
+                        </button>
                     </div>
-                </section>
+                </div>
+            </section>
 
-            </div>
-        }
+        </div>
 
     </div>
 </div>
@@ -79,13 +65,12 @@
     private Fields? fields;
     private string? justSaved;
 
-    private TaskDef Task => Content.Task(S.ChecklistKey);
-    private TaskDef[] Left => S.RequiredLeft;
+    private TaskDef Task => Content.Task(S.StepKey);
     private int Pct => (int)Math.Round(S.DoneCount / (double)Content.Tasks.Length * 100);
     private double Fraction => S.DoneCount / (double)Content.Tasks.Length;
 
-    // Linear neighbours. The rail still allows any order; Back/Next walk the list.
-    private int Index => Content.IndexOf(S.ChecklistKey);
+    // Linear neighbours. The sidebar still allows any order; these walk the list.
+    private int Index => Content.IndexOf(S.StepKey);
     private TaskDef? Prev => Index > 0 ? Content.Tasks[Index - 1] : null;
     private TaskDef? Next => Index < Content.Tasks.Length - 1 ? Content.Tasks[Index + 1] : null;
 
@@ -96,7 +81,7 @@
     {
         S.Nudge = null;
 
-        if (S.FocusNext && fields is not null && !S.ChecklistDone)
+        if (S.FocusNext && fields is not null)
         {
             S.FocusNext = false;
             await fields.FocusFirstAsync();
@@ -105,7 +90,7 @@
 
     private void Commit(bool skipped)
     {
-        var key = S.ChecklistKey;
+        var key = S.StepKey;
 
         if (!skipped && !S.Validate(key))
         {
@@ -117,25 +102,27 @@
         S.MarkVisited(key);
         justSaved = key;
 
-        // Next task in order, done or not. On the last one, saving is finishing —
-        // Finish() walks back to a blocking step if a required answer is missing.
         if (Next is { } next)
         {
-            S.ChecklistKey = next.Key;
+            S.StepKey = next.Key;
             justSaved = null;
             S.FocusNext = true;
             S.NotifyChanged();
+            return;
         }
-        else
-        {
-            S.Finish();
-        }
+
+        Send();
     }
 
-    private void Restart()
+    /// The one place the two pages meet: the draft becomes a row in the list,
+    /// and the list opens on it.
+    private void Send()
     {
-        S.ResetFlow();
-        S.FocusNext = true;
+        if (!S.ReadyToSend()) return;
+
+        var quote = Store.Send(S);
+        App.SelectOnArrival = quote.Ref;
+        App.Page = AppPage.Sent;
         S.NotifyChanged();
     }
 }

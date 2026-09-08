@@ -1,106 +1,116 @@
-@inject OnboardingState S
+@inject QuoteDraft S
 @inject IJSRuntime JS
 
+@* One step's fields. Which step is the only thing that changes; validation and
+   state live on the draft. *@
 <div class="f-fields" @ref="root" @onkeydown="RootKey">
 
-    @if (TaskKey == "name")
+    @if (TaskKey == "client")
     {
         <div class="f-group">
-            <label class="f-label" for="f-name">Full name</label>
-            <input class="f-input" id="f-name" type="text" autocomplete="name"
-                   @bind="S.Name" @bind:event="oninput" @bind:after="NotifyChanged"
-                   aria-invalid="@Invalid("name")"
-                   aria-describedby="@(S.Errors.ContainsKey("name") ? "f-name-err" : null)" />
-            @if (S.Errors.TryGetValue("name", out var nameErr))
+            <label class="f-label" for="f-client">Kundens navn</label>
+            <input class="f-input" id="f-client" type="text" autocomplete="organization"
+                   @bind="S.Client" @bind:event="oninput" @bind:after="NotifyChanged"
+                   aria-invalid="@Invalid("client")"
+                   aria-describedby="@(S.Errors.ContainsKey("client") ? "f-client-err" : null)" />
+            @if (S.Errors.TryGetValue("client", out var clientErr))
             {
-                <p class="f-err" id="f-name-err">@Icons.Warn @nameErr</p>
+                <p class="f-err" id="f-client-err">@Icons.Warn @clientErr</p>
             }
-        </div>
-        <div class="f-group">
-            <label class="f-label" for="f-pref">Preferred name <span class="f-opt">— optional</span></label>
-            <input class="f-input" id="f-pref" type="text" placeholder="What should we call you?"
-                   @bind="S.Preferred" @bind:event="oninput" @bind:after="NotifyChanged" />
-            <p class="f-help">Used in greetings and email subject lines.</p>
+            <p class="f-help">Sådan står det i listen over sendte tilbud.</p>
         </div>
     }
 
-    else if (TaskKey == "role")
-    {
-        <fieldset class="f-fieldset">
-            <legend class="sr-only">Your role</legend>
-            @foreach (var r in Content.Roles)
-            {
-                var role = r;
-                <label class="f-radio">
-                    <input type="radio" name="role" value="@role"
-                           checked="@(S.Role == role)"
-                           @onchange="() => PickRole(role)" />
-                    <span>@role</span>
-                </label>
-            }
-        </fieldset>
-        @if (S.Errors.TryGetValue("role", out var roleErr))
-        {
-            <p class="f-err">@Icons.Warn @roleErr</p>
-        }
-    }
-
-    else if (TaskKey == "invites")
+    else if (TaskKey == "mail")
     {
         <div class="f-group">
-            <label class="f-label" for="f-mail">Email address</label>
-            <div class="f-row">
-                <input class="f-input" id="f-mail" type="email" autocomplete="off"
-                       placeholder="teammate@@company.com"
-                       @bind="mailDraft" @bind:event="oninput"
-                       @onkeydown="MailKey" @onkeydown:stopPropagation="true"
-                       aria-invalid="@Invalid("mail")"
-                       aria-describedby="@(S.Errors.ContainsKey("mail") ? "f-mail-err" : null)" />
-                <button type="button" class="btn btn-outline" data-act="add"
-                        @onclick="Add" @onkeydown:stopPropagation="true">Add</button>
-            </div>
-            @if (S.Errors.TryGetValue("mail", out var mailErr))
+            <label class="f-label" for="f-to">Modtager</label>
+            <input class="f-input" id="f-to" type="email" autocomplete="email"
+                   placeholder="indkoeb@kunde.dk"
+                   @bind="S.To" @bind:event="oninput" @bind:after="NotifyChanged"
+                   aria-invalid="@Invalid("to")"
+                   aria-describedby="@(S.Errors.ContainsKey("to") ? "f-to-err" : null)" />
+            @if (S.Errors.TryGetValue("to", out var toErr))
             {
-                <p class="f-err" id="f-mail-err">@Icons.Warn @mailErr</p>
+                <p class="f-err" id="f-to-err">@Icons.Warn @toErr</p>
             }
         </div>
+        <div class="f-group">
+            <label class="f-label" for="f-subject">Emne</label>
+            <input class="f-input" id="f-subject" type="text"
+                   placeholder="Priser på …"
+                   @bind="S.Subject" @bind:event="oninput" @bind:after="NotifyChanged"
+                   aria-invalid="@Invalid("subject")"
+                   aria-describedby="@(S.Errors.ContainsKey("subject") ? "f-subject-err" : null)" />
+            @if (S.Errors.TryGetValue("subject", out var subjErr))
+            {
+                <p class="f-err" id="f-subject-err">@Icons.Warn @subjErr</p>
+            }
+        </div>
+    }
 
-        @if (S.Invites.Count > 0)
+    else if (TaskKey == "lines")
+    {
+        @if (S.Lines.Count == 0)
         {
-            <ul class="f-chips" aria-label="Pending invitations">
-                @foreach (var m in S.Invites)
-                {
-                    var mail = m;
-                    <li class="f-chip" @key="mail">
-                        <span class="f-chip-mail" title="@mail">@mail</span>
-                        <button type="button" class="f-chip-x" data-act="remove" aria-label="Remove @mail"
-                                @onclick="() => Remove(mail)" @onkeydown:stopPropagation="true">@Icons.X</button>
-                    </li>
-                }
-            </ul>
+            <p class="f-empty">Ingen linjer endnu.<br />Hver linje bliver en række i det regneark der vedhæftes.</p>
         }
         else
         {
-            <p class="f-empty">No invites yet.<br />You can add teammates any time from Settings → Members.</p>
+            <div class="lines">
+                <div class="lines-head" aria-hidden="true">
+                    <span>Beskrivelse</span>
+                    <span class="num">Antal</span>
+                    <span class="num">Stykpris</span>
+                    <span class="num">I alt</span>
+                    <span></span>
+                </div>
+
+                @for (var i = 0; i < S.Lines.Count; i++)
+                {
+                    var idx = i;
+                    var line = S.Lines[idx];
+                    <div class="lines-row" @key="idx">
+                        <input class="f-input" type="text" aria-label="Beskrivelse, linje @(idx + 1)"
+                               value="@line.Description"
+                               @onchange="e => SetDescription(idx, e.Value?.ToString() ?? string.Empty)"
+                               @oninput="e => SetDescription(idx, e.Value?.ToString() ?? string.Empty)" />
+                        <input class="f-input num" type="number" min="1" step="1" aria-label="Antal, linje @(idx + 1)"
+                               value="@line.Qty"
+                               @oninput="e => SetQty(idx, e.Value?.ToString())" />
+                        <input class="f-input num" type="number" min="0" step="1" aria-label="Stykpris, linje @(idx + 1)"
+                               value="@line.Unit"
+                               @oninput="e => SetUnit(idx, e.Value?.ToString())" />
+                        <span class="lines-total num">@line.Total.ToString("N0")</span>
+                        <button type="button" class="lines-x" aria-label="Fjern linje @(idx + 1)"
+                                @onclick="() => Remove(idx)" @onkeydown:stopPropagation="true">@Icons.X</button>
+                    </div>
+                }
+
+                <div class="lines-foot">
+                    <span>I alt</span>
+                    <span class="num">@S.Total.ToString("N0")</span>
+                </div>
+            </div>
         }
+
+        @if (S.Errors.TryGetValue("lines", out var linesErr))
+        {
+            <p class="f-err">@Icons.Warn @linesErr</p>
+        }
+
+        <button type="button" class="btn btn-outline" data-act="add-line"
+                @onclick="AddLine" @onkeydown:stopPropagation="true">@Icons.Plus Tilføj linje</button>
     }
 
-    else if (TaskKey == "prefs")
+    else if (TaskKey == "note")
     {
-        <div class="f-switches">
-            @foreach (var p in Content.Prefs)
-            {
-                var pref = p;
-                <label class="f-switch">
-                    <input type="checkbox" checked="@S.Prefs[pref.Key]"
-                           @onchange="e => TogglePref(pref.Key, e.Value is bool b && b)" />
-                    <span class="f-track" aria-hidden="true"><span class="f-knob"></span></span>
-                    <span>
-                        <span class="f-sw-title">@pref.Title</span>
-                        <span class="f-sw-desc">@pref.Desc</span>
-                    </span>
-                </label>
-            }
+        <div class="f-group">
+            <label class="f-label" for="f-note">Besked <span class="f-opt">— valgfri</span></label>
+            <textarea class="f-input f-textarea" id="f-note" rows="4"
+                      placeholder="Hej — her er priserne vi talte om."
+                      @bind="S.Note" @bind:event="oninput" @bind:after="NoteChanged"></textarea>
+            <p class="f-help">Står i selve mailen, over vedhæftningen.</p>
         </div>
     }
 
@@ -109,53 +119,60 @@
 @code {
     [Parameter, EditorRequired] public string TaskKey { get; set; } = "";
 
-    /// Raised when the answer changed, so a parent showing a summary
-    /// (the Checklist rail) can repaint.
+    /// Raised when the answer changed, so the sidebar's summaries repaint.
     [Parameter] public EventCallback Changed { get; set; }
 
-    /// Enter pressed in a field — the email box handles its own Enter instead.
+    /// Enter pressed in a field.
     [Parameter] public EventCallback Submit { get; set; }
 
     private ElementReference root;
-    private string mailDraft = "";
 
     private string? Invalid(string key) => S.Errors.ContainsKey(key) ? "true" : null;
 
-    // @bind:after wants an Action/Func<Task>, not an EventCallback
     private Task NotifyChanged() => Changed.InvokeAsync();
 
     public ValueTask FocusFirstAsync() => JS.InvokeVoidAsync("app.focusFirst", root);
 
-    private async Task PickRole(string role)
+    private async Task NoteChanged()
     {
-        S.Role = role;
-        S.Errors.Remove("role");
-        // No manual re-render plumbing: Blazor diffs, so the radio the user is
-        // standing on keeps focus and its arrow-key navigation still works.
+        S.TouchedNote = true;
         await Changed.InvokeAsync();
     }
 
-    private async Task TogglePref(string key, bool on)
+    private async Task SetDescription(int i, string value)
     {
-        S.Prefs[key] = on;
-        S.TouchedPrefs = true;
+        S.SetLine(i, S.Lines[i] with { Description = value });
+        S.Errors.Remove("lines");
         await Changed.InvokeAsync();
     }
 
-    private async Task Add()
+    private async Task SetQty(int i, string? raw)
     {
-        if (S.AddInvite(mailDraft)) mailDraft = "";
+        if (int.TryParse(raw, out var n) && n > 0) S.SetLine(i, S.Lines[i] with { Qty = n });
         await Changed.InvokeAsync();
     }
 
-    private async Task Remove(string mail)
+    private async Task SetUnit(int i, string? raw)
     {
-        S.RemoveInvite(mail);
+        if (decimal.TryParse(raw, out var v) && v >= 0) S.SetLine(i, S.Lines[i] with { Unit = v });
+        S.Errors.Remove("lines");
         await Changed.InvokeAsync();
     }
 
-    private Task MailKey(KeyboardEventArgs e) => e.Key == "Enter" ? Add() : Task.CompletedTask;
+    private async Task AddLine()
+    {
+        S.AddLine();
+        await Changed.InvokeAsync();
+    }
 
+    private async Task Remove(int i)
+    {
+        S.RemoveLine(i);
+        await Changed.InvokeAsync();
+    }
+
+    // The number and description inputs handle their own keys; Enter anywhere
+    // else in the panel means "next step".
     private Task RootKey(KeyboardEventArgs e) =>
         e.Key == "Enter" ? Submit.InvokeAsync() : Task.CompletedTask;
 }

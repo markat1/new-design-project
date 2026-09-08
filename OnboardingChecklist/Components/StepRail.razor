@@ -1,5 +1,7 @@
 @implements IDisposable
-@inject OnboardingState S
+@inject QuoteDraft S
+@inject QuoteStore Store
+@inject AppState App
 
 @* The quote flow's steps, rendered inside the app side menu rather than as a
    second navigation column beside it. Lives next to the app nav it belongs to. *@
@@ -11,8 +13,8 @@
         var sum = S.Summary(task.Key);
         <button type="button" class="side-step" @key="task.Key"
                 data-task="@task.Key"
-                data-active="@(S.ChecklistKey == task.Key ? "" : null)"
-                aria-current="@(S.ChecklistKey == task.Key ? "step" : null)"
+                data-active="@(S.StepKey == task.Key ? "" : null)"
+                aria-current="@(S.StepKey == task.Key ? "step" : null)"
                 data-nudge="@(S.Nudge == task.Key ? "" : null)"
                 @onclick="() => S.Open(task.Key)">
             <span class="v3-dot" data-done="@(done ? "" : null)">
@@ -41,20 +43,32 @@
            primary on screen. Still genuinely enabled — it walks you to what's missing. *@
         <button type="button" class="side-nav-item side-finish-btn" id="v3-finish"
                 aria-describedby="@(Left.Length > 0 ? "side-finish-note" : null)"
-                @onclick="() => S.Finish()">
+                @onclick="Send">
             @Icons.CheckRow
-            <span>Finish setup</span>
+            <span>Send tilbud</span>
         </button>
         <p class="side-finish-note" id="side-finish-note">
             @(Left.Length > 0
-                ? $"{Left.Length} required step{(Left.Length > 1 ? "s" : "")} left"
-                : "Everything required is done")
+                ? $"{Left.Length} trin mangler"
+                : $"{S.Lines.Count} linjer · {S.Total:N0}")
         </p>
     </div>
 </div>
 
 @code {
     private TaskDef[] Left => S.RequiredLeft;
+
+    /// The one place the two pages meet: the draft becomes a row in the list,
+    /// and the list opens on it.
+    private void Send()
+    {
+        if (!S.ReadyToSend()) return;
+
+        var quote = Store.Send(S);
+        App.SelectOnArrival = quote.Ref;
+        App.Page = AppPage.Sent;
+        S.NotifyChanged();
+    }
 
     protected override void OnInitialized() => S.Changed += StateHasChanged;
     public void Dispose() => S.Changed -= StateHasChanged;

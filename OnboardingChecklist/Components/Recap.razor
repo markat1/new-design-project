@@ -1,8 +1,0 @@
-@inject OnboardingState S
-
-<ul class="recap">
-    <li><b>Name</b><span title="@S.Name">@(string.IsNullOrWhiteSpace(S.Name) ? "—" : S.Name)</span></li>
-    <li><b>Role</b><span title="@S.Role">@(S.Role ?? "Not set")</span></li>
-    <li><b>Invites</b><span>@(S.Invites.Count > 0 ? $"{S.Invites.Count} sent" : "None")</span></li>
-    <li><b>Email</b><span>@(S.Summary("prefs") ?? "Defaults kept")</span></li>
-</ul>

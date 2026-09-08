@@ -895,3 +895,83 @@ body {
 }
 .d-empty-h { margin: 6px 0 0; font-size: 14px; font-weight: 500; color: var(--ink-1); }
 .d-empty-b { margin: 0; font-size: 13px; color: var(--ink-2); max-width: 34ch; line-height: 1.5; }
+
+/* ============================================================
+   PRICE LINES — the editor that becomes the attached spreadsheet
+   ============================================================ */
+.lines { margin-bottom: 14px; }
+
+.lines-head,
+.lines-row,
+.lines-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px 108px 92px 34px;
+  gap: 8px;
+  align-items: center;
+}
+
+.lines-head {
+  padding: 0 0 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.lines-head .num { text-align: right; }
+
+.lines-row { padding: 4px 0; }
+.lines-row .f-input { min-height: 38px; padding: 6px 9px; font-size: 14px; }
+.lines-row .f-input.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.lines-total {
+  text-align: right;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.lines-x {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background-color 130ms ease, color 130ms ease;
+}
+.lines-x:hover { background: var(--danger-soft); color: var(--danger); }
+.lines-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Same 44px floor as the other small controls, without a 44px box in a 38px row. */
+.lines-x::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+.lines-foot {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 600;
+}
+.lines-foot span:first-child { grid-column: 1 / 4; }
+.lines-foot .num { grid-column: 4; text-align: right; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 620px) {
+  .lines-head { display: none; }
+  .lines-row { grid-template-columns: minmax(0, 1fr) 34px; grid-auto-rows: auto; }
+  .lines-row .f-input.num { grid-column: 1; }
+  .lines-total { grid-column: 1; text-align: left; }
+}
+
+.f-textarea { min-height: 96px; resize: vertical; line-height: 1.5; padding: 10px 11px; }
