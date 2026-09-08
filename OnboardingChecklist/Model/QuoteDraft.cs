@@ -144,7 +144,7 @@ public partial class QuoteDraft
     /// Everything the flow collected, as the thing the list stores.
     public Quote ToQuote(string reference, string sentOn) =>
         new(reference, Client.Trim(), To.Trim().ToLowerInvariant(), Subject.Trim(),
-            QuoteStatus.Sent, sentOn,
+            Note.Trim(), QuoteStatus.Sent, sentOn,
             [.. Lines.Where(l => l.Description.Trim().Length > 0 && l.Unit > 0)]);
 
     public void Reset()

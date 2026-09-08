@@ -852,6 +852,19 @@ body {
 .d-meta dd.num { font-variant-numeric: tabular-nums; }
 .d-to { font-variant-numeric: tabular-nums; }
 
+/* The message, above the attachment it was sent with. pre-wrap so the line
+   breaks the writer typed survive. */
+.d-body {
+  margin-bottom: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.d-body[data-empty] { color: var(--ink-3); font-style: italic; }
+
 /* The attachment is the thing that was actually sent, so it gets a surface. */
 .d-file {
   display: flex;

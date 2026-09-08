@@ -102,6 +102,15 @@
                         <div><dt>Sendt</dt><dd class="num">@q.Sent</dd></div>
                     </dl>
 
+                    @* Header, then the message, then what was attached to it —
+                       the order an email is read in. *@
+                    @if (q.Status != QuoteStatus.Draft)
+                    {
+                        <div class="d-body" data-empty="@(q.Note.Length == 0 ? "" : null)">
+                            @(q.Note.Length > 0 ? q.Note : "Sendt uden besked.")
+                        </div>
+                    }
+
                     @if (q.Lines.Length == 0)
                     {
                         <div class="d-none">
