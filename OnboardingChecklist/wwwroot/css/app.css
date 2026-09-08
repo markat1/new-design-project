@@ -668,7 +668,49 @@ body {
 /* Left-aligned with the table's first column, capped so it doesn't stretch
    to whatever width the divider happens to leave. */
 .list-bar { flex: none; padding: 12px 14px; border-bottom: 1px solid var(--line); }
-.list-bar .f-input { max-width: 320px; }
+
+.search { position: relative; max-width: 320px; }
+/* The magnifier is what says "search" once the placeholder is gone. */
+.search > svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.search .f-input { padding-left: 35px; padding-right: 38px; }
+/* Chrome's own ✕ is unstyled and absent in other browsers — ours replaces it. */
+.search .f-input::-webkit-search-cancel-button { display: none; }
+
+.search-clear {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background-color 130ms ease, color 130ms ease;
+}
+.search-clear:hover { background: #f0f0f1; color: var(--ink-1); }
+.search-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Same 44px floor as .btn, without inflating a 30px control inside a 44px field. */
+.search-clear::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
 
 .split { --detail-w: 400px; flex: 1; display: flex; min-height: 0; }
 

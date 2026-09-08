@@ -15,9 +15,17 @@
             @* Sits over the list it filters, and moves with the divider. In the
                page header it ended up above the detail pane instead. *@
             <div class="list-bar">
-                <input class="f-input" type="search" placeholder="Search client or reference"
-                       aria-label="Search quotes"
-                       @bind="query" @bind:event="oninput" @bind:after="KeepSelectionVisible" />
+                <div class="search">
+                    @Icons.Search
+                    <input class="f-input" type="search" placeholder="Search client or reference"
+                           aria-label="Search quotes" @ref="searchBox"
+                           @bind="query" @bind:event="oninput" @bind:after="KeepSelectionVisible" />
+                    @if (query.Length > 0)
+                    {
+                        <button type="button" class="search-clear" aria-label="Clear search"
+                                @onclick="ClearSearch">@Icons.X</button>
+                    }
+                </div>
             </div>
 
             @if (Rows.Length == 0)
@@ -158,6 +166,7 @@
     private bool asc;
     private string? picked;
 
+    private ElementReference searchBox;
     private ElementReference handle;
     private ElementReference split;
 
@@ -216,10 +225,13 @@
         asc = false;
     }
 
-    private void ClearSearch()
+    /// Async because the clear button unmounts with the text that summoned it —
+    /// without handing focus back, it would land on the body.
+    private async Task ClearSearch()
     {
         query = "";
         KeepSelectionVisible();
+        await searchBox.FocusAsync();
     }
 
     /// A selection the filter has hidden would leave the detail pane showing
