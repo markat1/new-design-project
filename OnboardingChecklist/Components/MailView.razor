@@ -1,24 +1,24 @@
-@* The sent mail, rendered the same way whether it has been sent or is still
-   being written. The spreadsheet is a separate tab: it is a different document,
-   not a section of the mail. *@
-<div class="d" @key="Q.Ref">
+@* The send-out, rendered the same way whether it went out or is still being
+   written. The recipients are a tab of their own: each customer gets a
+   different sheet, so they are a list, not a line in the header. *@
+<div class="d" @key="M.Ref">
 
     <div class="d-top">
-        <span class="t-pill" data-s="@Q.Status.ToString().ToLowerInvariant()">@(Preview ? "Udkast" : Q.Label)</span>
-        <span class="d-ref">@Q.Ref</span>
+        <span class="t-pill" data-s="@M.Status.ToString().ToLowerInvariant()">@(Preview ? "Udkast" : M.Label)</span>
+        <span class="d-ref">@M.Ref</span>
     </div>
 
-    <div class="d-tabs" role="tablist" aria-label="Mail og vedhæftning" @onkeydown="TabKey">
+    <div class="d-tabs" role="tablist" aria-label="Mail og modtagere" @onkeydown="TabKey">
         <button type="button" class="d-tab" role="tab" id="d-tab-mail"
                 aria-selected="@(tab == 0 ? "true" : "false")" aria-controls="d-panel-mail"
                 tabindex="@(tab == 0 ? 0 : -1)" @onclick="() => tab = 0">Mail</button>
-        <button type="button" class="d-tab" role="tab" id="d-tab-file"
-                aria-selected="@(tab == 1 ? "true" : "false")" aria-controls="d-panel-file"
+        <button type="button" class="d-tab" role="tab" id="d-tab-rcp"
+                aria-selected="@(tab == 1 ? "true" : "false")" aria-controls="d-panel-rcp"
                 tabindex="@(tab == 1 ? 0 : -1)" @onclick="() => tab = 1">
-            Vedhæftning
-            @if (Q.Lines.Length > 0)
+            Modtagere
+            @if (M.Recipients.Length > 0)
             {
-                <span class="d-tab-n">@Q.Lines.Length</span>
+                <span class="d-tab-n">@M.Recipients.Length</span>
             }
         </button>
     </div>
@@ -26,82 +26,116 @@
     @if (tab == 0)
     {
         <div class="d-panel" role="tabpanel" id="d-panel-mail" aria-labelledby="d-tab-mail">
-            <h2 class="d-subject" data-empty="@(Blank(Q.Subject) ? "" : null)">
-                @Show(Q.Subject, "Ingen emnelinje endnu")
+            <h2 class="d-subject" data-empty="@(Blank(M.Subject) ? "" : null)">
+                @Show(M.Subject, "Ingen emnelinje endnu")
             </h2>
 
             <dl class="d-meta">
                 <div>
                     <dt>Til</dt>
-                    <dd class="d-to" title="@Q.To" data-empty="@(Blank(Q.To) ? "" : null)">@Show(Q.To, "Ingen modtager endnu")</dd>
+                    <dd data-empty="@(M.Recipients.Length == 0 ? "" : null)">
+                        @(M.Recipients.Length == 0
+                            ? "Ingen modtagere endnu"
+                            : M.Companies == 1
+                                ? $"{M.Recipients.Length} hos 1 kunde"
+                                : $"{M.Recipients.Length} hos {M.Companies} kunder")
+                    </dd>
                 </div>
                 <div>
-                    <dt>Kunde</dt>
-                    <dd title="@Q.Client" data-empty="@(Blank(Q.Client) ? "" : null)">@Show(Q.Client, "Ingen kunde endnu")</dd>
+                    <dt>Ark</dt>
+                    <dd data-empty="@(M.Recipients.Length == 0 ? "" : null)">
+                        @(M.Recipients.Length == 0 ? "Ingen endnu" : $"{M.Companies} prislister · {M.Total:N0} i alt")
+                    </dd>
                 </div>
                 <div>
                     <dt>@(Preview ? "Sendes" : "Sendt")</dt>
-                    <dd class="num">@Q.Sent</dd>
+                    <dd class="num">@M.Sent</dd>
                 </div>
+                @if (!Preview && M.Status == MailStatus.Sent)
+                {
+                    <div><dt>Svar</dt><dd>@M.Responses</dd></div>
+                }
             </dl>
 
-            @if (Preview || Q.Status != QuoteStatus.Draft)
-            {
-                <div class="d-body" data-empty="@(Blank(Q.Note) ? "" : null)">
-                    @(Blank(Q.Note) ? (Preview ? "Ingen besked — den kan springes over." : "Sendt uden besked.") : Q.Note)
-                </div>
-            }
+            <div class="d-body" data-empty="@(Blank(M.Note) ? "" : null)">
+                @(Blank(M.Note) ? (Preview ? "Ingen besked — den kan springes over." : "Sendt uden besked.") : M.Note)
+            </div>
         </div>
     }
     else
     {
-        <div class="d-panel" role="tabpanel" id="d-panel-file" aria-labelledby="d-tab-file">
-            @if (Q.Lines.Length == 0)
+        <div class="d-panel" role="tabpanel" id="d-panel-rcp" aria-labelledby="d-tab-rcp">
+            @if (M.Recipients.Length == 0)
             {
                 <div class="d-file" data-empty>
                     @Icons.Sheet
                     <span class="d-file-txt">
-                        <span class="d-file-n">Ingen vedhæftning endnu</span>
-                        <span class="d-file-s">
-                            @(Preview ? "Prislinjerne bliver til regnearket" : "Kladden er ikke sendt endnu")
-                        </span>
+                        <span class="d-file-n">Ingen modtagere endnu</span>
+                        <span class="d-file-s">Hver kunde får sin egen prisliste vedhæftet</span>
                     </span>
                 </div>
             }
             else
             {
-                <div class="d-file">
-                    @Icons.Sheet
-                    <span class="d-file-txt">
-                        <span class="d-file-n" title="@Q.Attachment">@Q.Attachment</span>
-                        <span class="d-file-s">Regneark · @Q.AttachmentSize</span>
-                    </span>
-                </div>
+                <ul class="rcp">
+                    @foreach (var r in M.Recipients)
+                    {
+                        var rec = r;
+                        var open = expanded == rec.Email;
+                        <li class="rcp-item" @key="rec.Email">
+                            <button type="button" class="rcp-head" aria-expanded="@(open ? "true" : "false")"
+                                    @onclick="() => expanded = open ? null : rec.Email">
+                                <span class="rcp-av" aria-hidden="true">@rec.Initials</span>
+                                <span class="rcp-txt">
+                                    <span class="rcp-name" title="@rec.Name">@rec.Name</span>
+                                    <span class="rcp-co" title="@rec.Company">@rec.Company</span>
+                                </span>
+                                @if (!Preview)
+                                {
+                                    <span class="t-pill" data-s="@rec.Status.ToString().ToLowerInvariant()">@rec.Status.Label()</span>
+                                }
+                                <span class="rcp-sum num">@rec.Total.ToString("N0")</span>
+                                <span class="rcp-chev" data-open="@(open ? "" : null)">@Icons.Chevron</span>
+                            </button>
 
-                <table class="d-lines">
-                    <thead>
-                        <tr>
-                            <th scope="col">Beskrivelse</th>
-                            <th scope="col" class="num">Antal</th>
-                            <th scope="col" class="num">Stykpris</th>
-                            <th scope="col" class="num">I alt</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var l in Q.Lines)
-                        {
-                            <tr>
-                                <td>@l.Description</td>
-                                <td class="num d-qty">@l.Qty</td>
-                                <td class="num">@l.Unit.ToString("N0")</td>
-                                <td class="num d-tot">@l.Total.ToString("N0")</td>
-                            </tr>
-                        }
-                    </tbody>
-                    <tfoot>
-                        <tr><td colspan="3">I alt</td><td class="num">@Q.Amount.ToString("N0")</td></tr>
-                    </tfoot>
-                </table>
+                            @if (open)
+                            {
+                                <div class="rcp-sheet">
+                                    <div class="d-file">
+                                        @Icons.Sheet
+                                        <span class="d-file-txt">
+                                            <span class="d-file-n" title="@rec.Attachment">@rec.Attachment</span>
+                                            <span class="d-file-s">Regneark · @rec.AttachmentSize</span>
+                                        </span>
+                                    </div>
+                                    @if (rec.Lines.Length == 0)
+                                    {
+                                        <p class="rcp-none">Ingen prisliste i regnskabssystemet for @rec.Company.</p>
+                                    }
+                                    else
+                                    {
+                                        <table class="d-lines">
+                                            <tbody>
+                                                @foreach (var l in rec.Lines)
+                                                {
+                                                    <tr>
+                                                        <td>@l.Description</td>
+                                                        <td class="num d-qty">@l.Qty</td>
+                                                        <td class="num">@l.Unit.ToString("N0")</td>
+                                                        <td class="num d-tot">@l.Total.ToString("N0")</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                            <tfoot>
+                                                <tr><td colspan="3">I alt</td><td class="num">@rec.Total.ToString("N0")</td></tr>
+                                            </tfoot>
+                                        </table>
+                                    }
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
             }
         </div>
     }
@@ -109,25 +143,23 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public Quote Q { get; set; } = default!;
+    [Parameter, EditorRequired] public Mail M { get; set; } = default!;
 
-    /// A quote still being written: empty fields say what is still missing
-    /// rather than leaving a gap that reads as a rendering fault.
+    /// A mail still being written: empty fields say what is still missing rather
+    /// than leaving a gap that reads as a rendering fault.
     [Parameter] public bool Preview { get; set; }
 
     private int tab;
+    private string? expanded;
 
     private static bool Blank(string s) => s.Trim().Length == 0;
 
     private static string Show(string value, string fallback) =>
         value.Trim().Length > 0 ? value : fallback;
 
-    // Arrow keys move between tabs, as the tablist pattern expects.
     private void TabKey(KeyboardEventArgs e)
     {
-        if (e.Key == "ArrowRight") tab = 1;
-        else if (e.Key == "ArrowLeft") tab = 0;
-        else if (e.Key == "Home") tab = 0;
-        else if (e.Key == "End") tab = 1;
+        if (e.Key is "ArrowRight" or "End") tab = 1;
+        else if (e.Key is "ArrowLeft" or "Home") tab = 0;
     }
 }

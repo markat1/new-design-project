@@ -1,6 +1,6 @@
 @implements IDisposable
 @inject IJSRuntime JS
-@inject QuoteStore Store
+@inject MailStore Store
 @inject AppState App
 
 @* Master–detail: the list on the left, the mail that was actually sent on the
@@ -8,8 +8,8 @@
 <div class="split-page">
 
     <header class="split-head">
-        <h1 class="page-h1">Sent quotes</h1>
-        <p class="page-lede">Every priced mail you've sent, newest first.</p>
+        <h1 class="page-h1">Mails</h1>
+        <p class="page-lede">Hver udsendelse går til flere kunder — én prisliste hver.</p>
     </header>
 
     <div class="split" @ref="split">
@@ -25,8 +25,8 @@
                 {
                     <div class="search">
                         @Icons.Search
-                        <input class="f-input" type="search" placeholder="Søg på kunde eller reference"
-                               aria-label="Søg i tilbud" @ref="searchBox"
+                        <input class="f-input" type="search" placeholder="Søg på emne, kunde eller reference"
+                               aria-label="Søg i mails" @ref="searchBox"
                                @bind="query" @bind:event="oninput" @bind:after="KeepSelectionVisible"
                                @onkeydown="SearchKey" />
                         <button type="button" class="search-clear" aria-label="Ryd søgning"
@@ -35,7 +35,7 @@
                 }
                 else
                 {
-                    <button type="button" class="search-open" aria-label="Søg i tilbud"
+                    <button type="button" class="search-open" aria-label="Søg i mails"
                             @ref="searchOpener" @onclick="OpenSearch">@Icons.Search</button>
                 }
             </div>
@@ -43,8 +43,8 @@
             @if (Rows.Length == 0)
             {
                 <div class="t-empty">
-                    <p class="t-empty-h">No quotes match &ldquo;@query&rdquo;</p>
-                    <p class="t-empty-b">Try a shorter search, or clear it to see all @Store.All.Count quotes.</p>
+                    <p class="t-empty-h">Ingen mails matcher &ldquo;@query&rdquo;</p>
+                    <p class="t-empty-b">Prøv en kortere søgning, eller ryd den for at se alle @Store.All.Count udsendelser.</p>
                     <button type="button" class="btn btn-outline" @onclick="ClearSearch">Ryd søgning</button>
                 </div>
             }
@@ -77,16 +77,19 @@
                                     @onclick="() => picked = row.Ref"
                                     @onkeydown="e => RowKey(e, row.Ref)">
                                     <td class="t-ref">@row.Ref</td>
-                                    <td><span class="t-client" title="@row.Client">@row.Client</span></td>
-                                    <td><span class="t-pill" data-s="@row.Status.ToString().ToLowerInvariant()">@row.Label</span></td>
-                                    <td class="num">@(row.Lines.Length == 0 ? "—" : row.Amount.ToString("N0"))</td>
+                                    <td>
+                                        <span class="t-client" title="@row.Subject">@row.Subject</span>
+                                        <span class="t-sub">@row.Responses</span>
+                                    </td>
+                                    <td class="num">@(row.Recipients.Length == 0 ? "—" : $"{row.Recipients.Length} · {row.Companies} {(row.Companies == 1 ? "kunde" : "kunder")}")</td>
+                                    <td class="num">@(row.Recipients.Length == 0 ? "—" : row.Total.ToString("N0"))</td>
                                     <td class="num t-muted">@row.Sent</td>
                                 </tr>
                             }
                         </tbody>
                     </table>
                 </div>
-                <p class="t-foot">@Rows.Length of @Store.All.Count quotes</p>
+                <p class="t-foot">@Rows.Length af @Store.All.Count udsendelser</p>
             }
         </div>
 
@@ -94,17 +97,17 @@
              aria-label="Resize the detail pane" aria-valuemin="280" aria-valuenow="400"
              @ref="handle"></div>
 
-        <aside class="split-detail" aria-label="Sent mail">
+        <aside class="split-detail" aria-label="Den valgte mail">
             @if (Picked is { } q)
             {
-                <MailView Q="q" />
+                <MailView M="q" />
             }
             else
             {
                 <div class="d-empty">
                     @Icons.Sheet
                     <p class="d-empty-h">Ingen mail valgt</p>
-                    <p class="d-empty-b">Vælg en række til venstre for at se modtager, emne og priserne i den vedhæftede fil.</p>
+                    <p class="d-empty-b">Vælg en udsendelse til venstre for at se modtagerne og den prisliste hver enkelt fik.</p>
                 </div>
             }
         </aside>
@@ -118,10 +121,10 @@
     private static readonly Col[] Columns =
     [
         new("ref", "Reference"),
-        new("client", "Client"),
-        new("status", "Status"),
-        new("amount", "Amount", true),
-        new("sent", "Sent", true),
+        new("subject", "Emne"),
+        new("recipients", "Modtagere", true),
+        new("total", "I alt", true),
+        new("sent", "Sendt", true),
     ];
 
     private string query = "";
@@ -176,28 +179,32 @@
         }
     }
 
-    private Quote? Picked => picked is null ? null : Store.All.FirstOrDefault(q => q.Ref == picked);
+    private Mail? Picked => picked is null ? null : Store.All.FirstOrDefault(m => m.Ref == picked);
 
-    private Quote[] Rows
+    private Mail[] Rows
     {
         get
         {
             var q = query.Trim();
-            IEnumerable<Quote> rows = Store.All;
+            IEnumerable<Mail> rows = Store.All;
 
             if (q.Length > 0)
             {
+                // A send has many customers, so the search has to look inside it.
                 rows = rows.Where(r =>
-                    r.Client.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                    r.Ref.Contains(q, StringComparison.OrdinalIgnoreCase));
+                    r.Subject.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                    r.Ref.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                    r.Recipients.Any(x =>
+                        x.Company.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                        x.Name.Contains(q, StringComparison.OrdinalIgnoreCase)));
             }
 
-            Func<Quote, IComparable> key = sort switch
+            Func<Mail, IComparable> key = sort switch
             {
                 "ref" => r => r.Ref,
-                "client" => r => r.Client,
-                "status" => r => r.Status.ToString(),
-                "amount" => r => r.Amount,
+                "subject" => r => r.Subject,
+                "recipients" => r => r.Recipients.Length,
+                "total" => r => r.Total,
                 _ => r => r.Sent,
             };
 

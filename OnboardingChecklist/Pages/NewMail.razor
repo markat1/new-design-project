@@ -1,14 +1,14 @@
 @implements IDisposable
-@inject QuoteDraft S
-@inject QuoteStore Store
+@inject MailDraft S
+@inject MailStore Store
 @inject AppState App
 @inject IJSRuntime JS
 
 <div class="split-page">
 
     <header class="split-head">
-        <h1 class="page-h1">Nyt tilbud</h1>
-        <p class="page-lede">Fire trin. Det sidste kan springes over — resten skal udfyldes, før tilbuddet kan sendes.</p>
+        <h1 class="page-h1">Ny mail</h1>
+        <p class="page-lede">Tre trin. Beskeden kan springes over — resten skal udfyldes, før mailen kan sendes.</p>
     </header>
 
     <div class="split" @ref="split">
@@ -61,7 +61,7 @@
                         <button type="button" class="btn btn-ghost" data-act="skip" @onclick="() => Commit(true)">Spring over</button>
                     }
                     <button type="button" class="btn btn-primary" data-act="save" @onclick="() => Commit(false)">
-                        @(Next is not null ? "Gem og fortsæt" : "Send tilbud")
+                        @(Next is not null ? "Gem og fortsæt" : "Send mail")
                     </button>
                 </div>
             </div>
@@ -75,7 +75,7 @@
         @* Composing in the same view the sent list shows afterwards, so the thing
            you are making looks like the thing you will get. *@
         <aside class="split-detail" aria-label="Sådan bliver mailen">
-            <MailView Q="S.Preview(Store.NextRef())" Preview="true" />
+            <MailView M="S.Preview(Store.NextRef())" Preview="true" />
         </aside>
 
     </div>
@@ -155,8 +155,8 @@
     {
         if (!S.ReadyToSend()) return;
 
-        var quote = Store.Send(S);
-        App.SelectOnArrival = quote.Ref;
+        var mail = Store.Send(S);
+        App.SelectOnArrival = mail.Ref;
         App.Page = AppPage.Sent;
         S.NotifyChanged();
     }

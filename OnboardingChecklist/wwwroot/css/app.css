@@ -1066,82 +1066,117 @@ body {
 .d-empty-h { margin: 6px 0 0; font-size: 14px; font-weight: 500; color: var(--ink-1); }
 .d-empty-b { margin: 0; font-size: 13px; color: var(--ink-2); max-width: 34ch; line-height: 1.5; }
 
+.f-textarea { min-height: 96px; resize: vertical; line-height: 1.5; padding: 10px 11px; }
+
 /* ============================================================
-   PRICE LINES — the editor that becomes the attached spreadsheet
+   RECIPIENT PICKER — the marketing group
    ============================================================ */
-.lines { margin-bottom: 14px; }
+.pick { list-style: none; margin: 0 0 4px; padding: 0; }
 
-.lines-head,
-.lines-row,
-.lines-foot {
+.pick-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 84px 108px 92px 34px;
-  gap: 8px;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
+  gap: 11px;
+  min-height: 56px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: border-color 130ms ease, background-color 130ms ease;
 }
+.pick-row:hover { border-color: var(--line-2); background: var(--sunk); }
+.pick-row[data-on] { border-color: var(--accent); background: var(--accent-soft); }
+.pick-row:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-.lines-head {
-  padding: 0 0 6px;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.lines-head .num { text-align: right; }
-
-.lines-row { padding: 4px 0; }
-.lines-row .f-input { min-height: 38px; padding: 6px 9px; font-size: 14px; }
-.lines-row .f-input.num { text-align: right; font-variant-numeric: tabular-nums; }
-
-.lines-total {
-  text-align: right;
+.pick-txt { min-width: 0; }
+.pick-name {
+  display: block;
   font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-2);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+.pick-co {
+  display: block;
+  margin-top: 1px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pick-sum { font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pick-none { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
 
-.lines-x {
-  position: relative;
+/* ============================================================
+   RECIPIENTS IN THE DETAIL PANE
+   ============================================================ */
+.rcp { list-style: none; margin: 0; padding: 0; }
+.rcp-item + .rcp-item { border-top: 1px solid var(--line); }
+
+.rcp-head {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto 16px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 9px 2px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rcp-head:hover .rcp-name { color: var(--accent); }
+.rcp-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+
+.rcp-av {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--ink-3);
-  cursor: pointer;
-  transition: background-color 130ms ease, color 130ms ease;
-}
-.lines-x:hover { background: var(--danger-soft); color: var(--danger); }
-.lines-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-/* Same 44px floor as the other small controls, without a 44px box in a 38px row. */
-.lines-x::after {
-  content: "";
-  position: absolute;
-  inset: 50% auto auto 50%;
-  width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
-}
-
-.lines-foot {
-  margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-  font-size: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
   font-weight: 600;
 }
-.lines-foot span:first-child { grid-column: 1 / 4; }
-.lines-foot .num { grid-column: 4; text-align: right; font-variant-numeric: tabular-nums; }
 
-@media (max-width: 620px) {
-  .lines-head { display: none; }
-  .lines-row { grid-template-columns: minmax(0, 1fr) 34px; grid-auto-rows: auto; }
-  .lines-row .f-input.num { grid-column: 1; }
-  .lines-total { grid-column: 1; text-align: left; }
+.rcp-txt { min-width: 0; }
+.rcp-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 130ms ease;
 }
+.rcp-co {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rcp-sum { font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rcp-chev { display: inline-flex; color: var(--ink-3); transition: transform 180ms var(--ease); }
+.rcp-chev[data-open] { transform: rotate(180deg); }
 
-.f-textarea { min-height: 96px; resize: vertical; line-height: 1.5; padding: 10px 11px; }
+.rcp-sheet { padding: 2px 0 18px; }
+.rcp-sheet .d-file { margin-bottom: 14px; }
+.rcp-none { margin: 0; font-size: 13px; color: var(--ink-3); font-style: italic; }
+
+/* A row's second line in the list: what came back from the send. */
+.t-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-3);
+}

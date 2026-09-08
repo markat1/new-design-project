@@ -1,7 +1,7 @@
 @implements IDisposable
 @inject AppState App
-@inject QuoteDraft S
-@inject QuoteStore Store
+@inject MailDraft S
+@inject MailStore Store
 
 @* App shell: a persistent side menu on the left, one page at a time on the right.
    No Router — two pages don't earn URL routing yet, and adding it would mean
@@ -17,7 +17,7 @@
                     aria-current="@(App.Page == AppPage.Sent ? "page" : null)"
                     @onclick="() => Go(AppPage.Sent)">
                 @Icons.Inbox
-                <span>Sent quotes</span>
+                <span>Mails</span>
                 <span class="side-nav-count">@Store.All.Count</span>
             </button>
 
@@ -26,7 +26,7 @@
                     aria-current="@(App.Page == AppPage.Quote ? "page" : null)"
                     @onclick="() => Go(AppPage.Quote)">
                 @Icons.Plus
-                <span>New quote</span>
+                <span>Ny mail</span>
             </button>
 
             @if (App.Page == AppPage.Quote)
@@ -39,11 +39,11 @@
     <main class="main">
         @if (App.Page == AppPage.Sent)
         {
-            <Sent />
+            <Mails />
         }
         else
         {
-            <NewQuote />
+            <NewMail />
         }
     </main>
 

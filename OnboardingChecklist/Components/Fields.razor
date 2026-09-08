@@ -1,40 +1,50 @@
-@inject QuoteDraft S
+@inject MailDraft S
 @inject IJSRuntime JS
 
 @* One step's fields. Which step is the only thing that changes; validation and
    state live on the draft. *@
 <div class="f-fields" @ref="root" @onkeydown="RootKey">
 
-    @if (TaskKey == "client")
+    @if (TaskKey == "recipients")
     {
-        <div class="f-group">
-            <label class="f-label" for="f-client">Kundens navn</label>
-            <input class="f-input" id="f-client" type="text" autocomplete="organization"
-                   @bind="S.Client" @bind:event="oninput" @bind:after="NotifyChanged"
-                   aria-invalid="@Invalid("client")"
-                   aria-describedby="@(S.Errors.ContainsKey("client") ? "f-client-err" : null)" />
-            @if (S.Errors.TryGetValue("client", out var clientErr))
+        <ul class="pick" aria-label="Marketinggruppen">
+            @foreach (var p in MarketingGroup.All)
             {
-                <p class="f-err" id="f-client-err">@Icons.Warn @clientErr</p>
+                var person = p;
+                var on = S.Picked.Contains(person.Email);
+                var total = Accounting.SheetFor(person.Company).Sum(l => l.Total);
+                <li @key="person.Email">
+                    <label class="pick-row" data-on="@(on ? "" : null)">
+                        <input type="checkbox" checked="@on" @onchange="() => Toggle(person.Email)" />
+                        <span class="pick-txt">
+                            <span class="pick-name" title="@person.Name">@person.Name</span>
+                            <span class="pick-co" title="@person.Company">@person.Company</span>
+                        </span>
+                        @if (person.HasSheet)
+                        {
+                            <span class="pick-sum num">@total.ToString("N0")</span>
+                        }
+                        else
+                        {
+                            <span class="pick-none">Ingen prisliste</span>
+                        }
+                    </label>
+                </li>
             }
-            <p class="f-help">Sådan står det i listen over sendte tilbud.</p>
-        </div>
+        </ul>
+
+        @if (S.Errors.TryGetValue("recipients", out var rcpErr))
+        {
+            <p class="f-err">@Icons.Warn @rcpErr</p>
+        }
+
+        <p class="f-help">
+            Beløbene kommer fra regnskabssystemet. To personer hos samme kunde får den samme prisliste.
+        </p>
     }
 
-    else if (TaskKey == "mail")
+    else if (TaskKey == "subject")
     {
-        <div class="f-group">
-            <label class="f-label" for="f-to">Modtager</label>
-            <input class="f-input" id="f-to" type="email" autocomplete="email"
-                   placeholder="indkoeb@kunde.dk"
-                   @bind="S.To" @bind:event="oninput" @bind:after="NotifyChanged"
-                   aria-invalid="@Invalid("to")"
-                   aria-describedby="@(S.Errors.ContainsKey("to") ? "f-to-err" : null)" />
-            @if (S.Errors.TryGetValue("to", out var toErr))
-            {
-                <p class="f-err" id="f-to-err">@Icons.Warn @toErr</p>
-            }
-        </div>
         <div class="f-group">
             <label class="f-label" for="f-subject">Emne</label>
             <input class="f-input" id="f-subject" type="text"
@@ -46,61 +56,8 @@
             {
                 <p class="f-err" id="f-subject-err">@Icons.Warn @subjErr</p>
             }
+            <p class="f-help">Den samme emnelinje går til alle modtagere.</p>
         </div>
-    }
-
-    else if (TaskKey == "lines")
-    {
-        @if (S.Lines.Count == 0)
-        {
-            <p class="f-empty">Ingen linjer endnu.<br />Hver linje bliver en række i det regneark der vedhæftes.</p>
-        }
-        else
-        {
-            <div class="lines">
-                <div class="lines-head" aria-hidden="true">
-                    <span>Beskrivelse</span>
-                    <span class="num">Antal</span>
-                    <span class="num">Stykpris</span>
-                    <span class="num">I alt</span>
-                    <span></span>
-                </div>
-
-                @for (var i = 0; i < S.Lines.Count; i++)
-                {
-                    var idx = i;
-                    var line = S.Lines[idx];
-                    <div class="lines-row" @key="idx">
-                        <input class="f-input" type="text" aria-label="Beskrivelse, linje @(idx + 1)"
-                               value="@line.Description"
-                               @onchange="e => SetDescription(idx, e.Value?.ToString() ?? string.Empty)"
-                               @oninput="e => SetDescription(idx, e.Value?.ToString() ?? string.Empty)" />
-                        <input class="f-input num" type="number" min="1" step="1" aria-label="Antal, linje @(idx + 1)"
-                               value="@line.Qty"
-                               @oninput="e => SetQty(idx, e.Value?.ToString())" />
-                        <input class="f-input num" type="number" min="0" step="1" aria-label="Stykpris, linje @(idx + 1)"
-                               value="@line.Unit"
-                               @oninput="e => SetUnit(idx, e.Value?.ToString())" />
-                        <span class="lines-total num">@line.Total.ToString("N0")</span>
-                        <button type="button" class="lines-x" aria-label="Fjern linje @(idx + 1)"
-                                @onclick="() => Remove(idx)" @onkeydown:stopPropagation="true">@Icons.X</button>
-                    </div>
-                }
-
-                <div class="lines-foot">
-                    <span>I alt</span>
-                    <span class="num">@S.Total.ToString("N0")</span>
-                </div>
-            </div>
-        }
-
-        @if (S.Errors.TryGetValue("lines", out var linesErr))
-        {
-            <p class="f-err">@Icons.Warn @linesErr</p>
-        }
-
-        <button type="button" class="btn btn-outline" data-act="add-line"
-                @onclick="AddLine" @onkeydown:stopPropagation="true">@Icons.Plus Tilføj linje</button>
     }
 
     else if (TaskKey == "note")
@@ -133,46 +90,20 @@
 
     public ValueTask FocusFirstAsync() => JS.InvokeVoidAsync("app.focusFirst", root);
 
+    private async Task Toggle(string email)
+    {
+        S.Toggle(email);
+        await Changed.InvokeAsync();
+    }
+
     private async Task NoteChanged()
     {
         S.TouchedNote = true;
         await Changed.InvokeAsync();
     }
 
-    private async Task SetDescription(int i, string value)
-    {
-        S.SetLine(i, S.Lines[i] with { Description = value });
-        S.Errors.Remove("lines");
-        await Changed.InvokeAsync();
-    }
-
-    private async Task SetQty(int i, string? raw)
-    {
-        if (int.TryParse(raw, out var n) && n > 0) S.SetLine(i, S.Lines[i] with { Qty = n });
-        await Changed.InvokeAsync();
-    }
-
-    private async Task SetUnit(int i, string? raw)
-    {
-        if (decimal.TryParse(raw, out var v) && v >= 0) S.SetLine(i, S.Lines[i] with { Unit = v });
-        S.Errors.Remove("lines");
-        await Changed.InvokeAsync();
-    }
-
-    private async Task AddLine()
-    {
-        S.AddLine();
-        await Changed.InvokeAsync();
-    }
-
-    private async Task Remove(int i)
-    {
-        S.RemoveLine(i);
-        await Changed.InvokeAsync();
-    }
-
-    // The number and description inputs handle their own keys; Enter anywhere
-    // else in the panel means "next step".
+    // Enter anywhere in the panel means "next step". The checkbox list handles
+    // Space itself, which is what a checkbox expects.
     private Task RootKey(KeyboardEventArgs e) =>
         e.Key == "Enter" ? Submit.InvokeAsync() : Task.CompletedTask;
 }

@@ -1,6 +1,6 @@
 @implements IDisposable
-@inject QuoteDraft S
-@inject QuoteStore Store
+@inject MailDraft S
+@inject MailStore Store
 @inject AppState App
 
 @* The quote flow's steps, rendered inside the app side menu rather than as a
@@ -45,12 +45,12 @@
                 aria-describedby="@(Left.Length > 0 ? "side-finish-note" : null)"
                 @onclick="Send">
             @Icons.CheckRow
-            <span>Send tilbud</span>
+            <span>Send mail</span>
         </button>
         <p class="side-finish-note" id="side-finish-note">
             @(Left.Length > 0
                 ? $"{Left.Length} trin mangler"
-                : $"{S.Lines.Count} linjer · {S.Total:N0}")
+                : $"{S.Picked.Count} modtagere · {S.Total:N0}")
         </p>
     </div>
 </div>
@@ -64,8 +64,8 @@
     {
         if (!S.ReadyToSend()) return;
 
-        var quote = Store.Send(S);
-        App.SelectOnArrival = quote.Ref;
+        var mail = Store.Send(S);
+        App.SelectOnArrival = mail.Ref;
         App.Page = AppPage.Sent;
         S.NotifyChanged();
     }
