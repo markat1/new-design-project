@@ -671,21 +671,52 @@ body {
 .page-lede { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
 .page-search { flex: none; width: 260px; }
 
-.split { flex: 1; display: flex; min-height: 0; }
+.split { --detail-w: 400px; flex: 1; display: flex; min-height: 0; }
 
 .split-list { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 .split-scroll { flex: 1; min-height: 0; overflow: auto; }
 
 .split-detail {
-  flex: 0 0 400px;
+  flex: 0 0 var(--detail-w);
   min-width: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--sunk);
   border-left: 1px solid var(--line);
 }
+/* Verbatim in spirit from proto/table-split.html: an 11px grab zone whose
+   visible 1px line sits exactly on the pane boundary. */
+.splitter {
+  flex: none;
+  position: relative;
+  z-index: 1;
+  width: 11px;
+  margin: 0 -5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+.splitter::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--line);
+  transition: background-color 150ms ease;
+}
+.splitter:hover::before,
+.splitter[data-dragging]::before { background: var(--accent); }
+.splitter:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 2px; }
+@media (pointer: coarse) { .splitter { width: 20px; margin: 0 -9px; } }
+
 @media (max-width: 1100px) {
   .split { flex-direction: column; }
+  .splitter { display: none; }
   .split-detail { flex: 1 1 auto; border-left: 0; border-top: 1px solid var(--line); }
 }
 
