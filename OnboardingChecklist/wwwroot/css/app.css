@@ -719,8 +719,13 @@ body {
 /* The quote form shares the split shell but scrolls as one column rather than
    holding a fixed header over a scrolling table. */
 .split-form { overflow-y: auto; padding: 26px 24px 48px; }
-.split-form .v3-progress { max-width: 620px; margin-bottom: 14px; }
-.split-form .v3-panel { max-width: 620px; }
+.split-form .v3-progress { max-width: 880px; margin-bottom: 14px; }
+.split-form .v3-panel { max-width: 880px; }
+
+/* The card fills the pane, the fields don't follow it. A company name typed
+   into an 850px box is a worse form than a card with room to spare. */
+.v3-panel .f-group .f-input { max-width: 460px; }
+.v3-panel .f-group .f-textarea { max-width: 620px; }
 .split-scroll { flex: 1; min-height: 0; overflow: auto; }
 
 .split-detail {
