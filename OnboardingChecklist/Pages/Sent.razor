@@ -97,65 +97,7 @@
         <aside class="split-detail" aria-label="Sent mail">
             @if (Picked is { } q)
             {
-                <div class="d" @key="q.Ref">
-                    <div class="d-top">
-                        <span class="t-pill" data-s="@q.Status.ToString().ToLowerInvariant()">@q.Label</span>
-                        <span class="d-ref">@q.Ref</span>
-                    </div>
-
-                    <h2 class="d-subject">@q.Subject</h2>
-
-                    <dl class="d-meta">
-                        <div><dt>Til</dt><dd class="d-to" title="@q.To">@q.To</dd></div>
-                        <div><dt>Kunde</dt><dd title="@q.Client">@q.Client</dd></div>
-                        <div><dt>Sendt</dt><dd class="num">@q.Sent</dd></div>
-                    </dl>
-
-                    @* Header, then the message, then what was attached to it —
-                       the order an email is read in. *@
-                    @if (q.Status != QuoteStatus.Draft)
-                    {
-                        <div class="d-body" data-empty="@(q.Note.Length == 0 ? "" : null)">
-                            @(q.Note.Length > 0 ? q.Note : "Sendt uden besked.")
-                        </div>
-                    }
-
-                    @if (q.Lines.Length == 0)
-                    {
-                        <div class="d-none">
-                            <p>Kladden er ikke sendt endnu.</p>
-                            <p class="d-none-b">Der er hverken vedhæftning eller priser på den.</p>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="d-file">
-                            @Icons.Sheet
-                            <span class="d-file-txt">
-                                <span class="d-file-n" title="@q.Attachment">@q.Attachment</span>
-                                <span class="d-file-s">Regneark · @q.AttachmentSize</span>
-                            </span>
-                        </div>
-
-                        <h3 class="d-h3">Priser i regnearket</h3>
-                        <table class="d-lines">
-                            <tbody>
-                                @foreach (var l in q.Lines)
-                                {
-                                    <tr>
-                                        <td>@l.Description</td>
-                                        <td class="num d-qty">@l.Qty ×</td>
-                                        <td class="num">@l.Unit.ToString("N0")</td>
-                                        <td class="num d-tot">@l.Total.ToString("N0")</td>
-                                    </tr>
-                                }
-                            </tbody>
-                            <tfoot>
-                                <tr><td colspan="3">I alt</td><td class="num">@q.Amount.ToString("N0")</td></tr>
-                            </tfoot>
-                        </table>
-                    }
-                </div>
+                <MailView Q="q" />
             }
             else
             {
@@ -225,7 +167,7 @@
 
         try
         {
-            await JS.InvokeVoidAsync("app.splitter.attach", handle, split);
+            await JS.InvokeVoidAsync("app.splitter.attach", handle, split, "sent.detailWidth");
         }
         catch (JSException)
         {

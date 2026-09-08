@@ -2,15 +2,18 @@
 @inject QuoteDraft S
 @inject QuoteStore Store
 @inject AppState App
+@inject IJSRuntime JS
 
-<div class="v3-wrap">
-    <div class="v3-shell">
+<div class="split-page">
 
-        <span class="v3-eyebrow" title="@Content.Workspace">@Content.Workspace</span>
-        <h1 class="v3-h1">Nyt tilbud</h1>
-        <p class="v3-lede">Fire trin. Det sidste kan springes over — resten skal udfyldes, før tilbuddet kan sendes.</p>
+    <header class="split-head">
+        <h1 class="page-h1">Nyt tilbud</h1>
+        <p class="page-lede">Fire trin. Det sidste kan springes over — resten skal udfyldes, før tilbuddet kan sendes.</p>
+    </header>
 
-        <div class="v3-single">
+    <div class="split" @ref="split">
+
+        <div class="split-list split-form">
 
             @* Sits on the card rather than in the header's empty corner, where it
                lined up with nothing. Outside the panel, so it doesn't re-animate
@@ -58,6 +61,16 @@
 
         </div>
 
+        <div class="splitter" role="separator" aria-orientation="vertical" tabindex="0"
+             aria-label="Juster forhåndsvisningen" aria-valuemin="280" aria-valuenow="400"
+             @ref="handle"></div>
+
+        @* Composing in the same view the sent list shows afterwards, so the thing
+           you are making looks like the thing you will get. *@
+        <aside class="split-detail" aria-label="Sådan bliver mailen">
+            <MailView Q="S.Preview(Store.NextRef())" Preview="true" />
+        </aside>
+
     </div>
 </div>
 
@@ -74,12 +87,27 @@
     private TaskDef? Prev => Index > 0 ? Content.Tasks[Index - 1] : null;
     private TaskDef? Next => Index < Content.Tasks.Length - 1 ? Content.Tasks[Index + 1] : null;
 
+    private ElementReference handle;
+    private ElementReference split;
+
     protected override void OnInitialized() => S.Changed += StateHasChanged;
     public void Dispose() => S.Changed -= StateHasChanged;
 
     protected override async Task OnAfterRenderAsync(bool first)
     {
         S.Nudge = null;
+
+        if (first)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("app.splitter.attach", handle, split, "quote.previewWidth");
+            }
+            catch (JSException)
+            {
+                // A resizable divider is an enhancement; the pane still works fixed.
+            }
+        }
 
         if (S.FocusNext && fields is not null)
         {

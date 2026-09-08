@@ -10,13 +10,13 @@ window.app = {
   // The drag lives in JS, not Blazor: a re-render per pointermove would be a
   // render storm for something that is only ever a layout change.
   splitter: {
-    attach(handle, split) {
+    attach(handle, split, key) {
       if (!handle || !split) return;
 
       const MIN = 280;        // detail pane never narrower than this
       const LIST_MIN = 660;   // matches .t's min-width, so the table never clips
       const STEP = 16;
-      const KEY = 'sent.detailWidth';
+      const KEY = key || 'sent.detailWidth';
 
       const max = () => Math.max(MIN, split.getBoundingClientRect().width - LIST_MIN);
       const clamp = w => Math.min(Math.max(w, MIN), max());

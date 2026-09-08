@@ -141,6 +141,13 @@ public partial class QuoteDraft
         return false;
     }
 
+    /// The draft as it would look sent, for the preview beside the form. Lines
+    /// with nothing in them yet are left out so the preview isn't full of blanks.
+    public Quote Preview(string reference) =>
+        new(reference, Client, To, Subject, Note, QuoteStatus.Draft,
+            DateTime.Now.ToString("yyyy-MM-dd"),
+            [.. Lines.Where(l => l.Description.Trim().Length > 0 || l.Unit > 0)]);
+
     /// Everything the flow collected, as the thing the list stores.
     public Quote ToQuote(string reference, string sentOn) =>
         new(reference, Client.Trim(), To.Trim().ToLowerInvariant(), Subject.Trim(),

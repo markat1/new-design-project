@@ -1,0 +1,102 @@
+@* The sent mail, rendered the same way whether it has been sent or is still
+   being written. Composing in the view you'll see afterwards is the point. *@
+<div class="d" @key="Q.Ref">
+
+    <div class="d-top">
+        @* A preview says what it is. Claiming "Sent" on something still being
+           written would be the one thing this view must never do. *@
+        <span class="t-pill" data-s="@Q.Status.ToString().ToLowerInvariant()">@(Preview ? "Udkast" : Q.Label)</span>
+        <span class="d-ref">@Q.Ref</span>
+    </div>
+
+    <h2 class="d-subject" data-empty="@(Blank(Q.Subject) ? "" : null)">
+        @Show(Q.Subject, "Ingen emnelinje endnu")
+    </h2>
+
+    <dl class="d-meta">
+        <div>
+            <dt>Til</dt>
+            <dd class="d-to" title="@Q.To" data-empty="@(Blank(Q.To) ? "" : null)">@Show(Q.To, "Ingen modtager endnu")</dd>
+        </div>
+        <div>
+            <dt>Kunde</dt>
+            <dd title="@Q.Client" data-empty="@(Blank(Q.Client) ? "" : null)">@Show(Q.Client, "Ingen kunde endnu")</dd>
+        </div>
+        <div>
+            <dt>@(Preview ? "Sendes" : "Sendt")</dt>
+            <dd class="num">@Q.Sent</dd>
+        </div>
+    </dl>
+
+    @* Header, then the message, then what was attached to it — the order an
+       email is read in. *@
+    @if (Preview || Q.Status != QuoteStatus.Draft)
+    {
+        <div class="d-body" data-empty="@(Blank(Q.Note) ? "" : null)">
+            @(Blank(Q.Note) ? (Preview ? "Ingen besked — den kan springes over." : "Sendt uden besked.") : Q.Note)
+        </div>
+    }
+
+    @if (Q.Lines.Length == 0)
+    {
+        @if (Preview)
+        {
+            <div class="d-file" data-empty>
+                @Icons.Sheet
+                <span class="d-file-txt">
+                    <span class="d-file-n">Ingen vedhæftning endnu</span>
+                    <span class="d-file-s">Prislinjerne bliver til regnearket</span>
+                </span>
+            </div>
+        }
+        else
+        {
+            <div class="d-none">
+                <p>Kladden er ikke sendt endnu.</p>
+                <p class="d-none-b">Der er hverken vedhæftning eller priser på den.</p>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="d-file">
+            @Icons.Sheet
+            <span class="d-file-txt">
+                <span class="d-file-n" title="@Q.Attachment">@Q.Attachment</span>
+                <span class="d-file-s">Regneark · @Q.AttachmentSize</span>
+            </span>
+        </div>
+
+        <h3 class="d-h3">Priser i regnearket</h3>
+        <table class="d-lines">
+            <tbody>
+                @foreach (var l in Q.Lines)
+                {
+                    <tr>
+                        <td>@l.Description</td>
+                        <td class="num d-qty">@l.Qty ×</td>
+                        <td class="num">@l.Unit.ToString("N0")</td>
+                        <td class="num d-tot">@l.Total.ToString("N0")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr><td colspan="3">I alt</td><td class="num">@Q.Amount.ToString("N0")</td></tr>
+            </tfoot>
+        </table>
+    }
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Quote Q { get; set; } = default!;
+
+    /// A quote still being written: empty fields say what is still missing
+    /// rather than leaving a gap that reads as a rendering fault.
+    [Parameter] public bool Preview { get; set; }
+
+    private static bool Blank(string s) => s.Trim().Length == 0;
+
+    private static string Show(string value, string fallback) =>
+        value.Trim().Length > 0 ? value : fallback;
+}
