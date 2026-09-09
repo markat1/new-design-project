@@ -1,6 +1,6 @@
 # Pristilbud i Blazor — fra tom mappe til hostet app
 
-Sådan bygger du et Blazor WebAssembly-projekt fra prototypen: først checklisten alene, så et app-skelet med sidemenu, en tabel over sendte pristilbud og trin-flowet der laver et nyt — og til sidst en hurtig Release-version du kan dele.
+Sådan bygger du et Blazor WebAssembly-projekt fra prototypen — fra én skærm til et værktøj der sender prismails til en hel marketinggruppe, hvor hver kunde får sin egen prisliste. Delene følger arbejdet i den rækkefølge det skete; vil du kun have sluttilstanden, så byg del 1 og gå derefter til appendiks B.
 
 Hvert trin i denne guide er udført og verificeret på den kode der ligger i `proto/BlazorProto` (commit `fdbb995`). Følger du dem i rækkefølge, ender du med det samme resultat — og det færdige projekt ligger som reference i `OnboardingChecklist/` i repoet.
 
