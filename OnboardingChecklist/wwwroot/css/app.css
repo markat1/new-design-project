@@ -677,6 +677,81 @@ body {
 }
 .page-h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
 .page-lede { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
+/* ---- toolbar over the list ---- */
+.list-bar {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* The menus anchor to this, not to the button, so both open from one edge. */
+.tb { position: relative; display: flex; gap: 2px; }
+
+.tb-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background-color 130ms ease, color 130ms ease;
+}
+.tb-btn:hover { background: #f0f0f1; color: var(--ink-1); }
+.tb-btn[aria-expanded="true"] { background: #e9e9eb; color: var(--ink-1); }
+.tb-btn[data-on] { color: var(--accent); }
+.tb-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* 32px looks right in a toolbar; the hit area still meets the floor. */
+.tb-btn::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 100%;
+  min-height: 40px;
+  transform: translateY(-50%);
+}
+@media (pointer: coarse) { .tb-btn::after { min-height: 44px; } }
+
+.tb-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.tb-sort-ico { display: inline-flex; transition: transform 180ms var(--ease); }
+/* The icon's arrow points down; ascending turns it over. */
+.tb-sort-ico[data-asc] svg { transform: scaleY(-1); }
+
+/* Hangs from the toolbar's right edge — both menus open from the same place. */
+.tb-menu { top: calc(100% + 6px); left: auto; right: 0; width: 248px; transform-origin: top right; }
+
+.t-menu-head {
+  display: block;
+  padding: 8px 10px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.t-menu-head-gap { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+.t-menu-filter-first { margin-top: 0; border-top: 0; padding-top: 6px; }
+
 .split { --detail-w: 400px; flex: 1; display: flex; min-height: 0; }
 
 .split-list { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
@@ -793,23 +868,16 @@ body {
 }
 
 .t-th {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 5px;
-  width: 100%;
-  min-height: 44px;
-  padding: 11px 14px;
-  border: 0;
-  background: transparent;
+  min-height: 40px;
+  padding: 0 14px;
   color: var(--ink-2);
-  font: inherit;
   font-size: 12px;
   font-weight: 500;
-  cursor: pointer;
 }
 .t th.num .t-th { justify-content: flex-end; }
-.t-th:hover { color: var(--ink-1); }
-.t-th:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* Sort state only, in the same arrow the menu uses — the header used to show
    a chevron that meant "sorted descending" on one column and "has a menu" on
@@ -819,8 +887,6 @@ body {
 
 /* ---- column menus: sort and filter live on the header they act on ---- */
 .t th { position: sticky; }
-.t th[data-open] { z-index: 6; }
-.t th[data-open] .t-th { color: var(--ink-1); background: #f0f0f1; }
 
 /* A dot, not a colour change on the label: the header text stays readable
    whether or not the column is narrowing the list. */
@@ -879,7 +945,7 @@ body {
 }
 .t-menu-item:hover { background: var(--sunk); }
 .t-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.t-menu-item[aria-pressed="true"] { color: var(--accent); }
+.t-menu-item[aria-pressed="true"] { color: var(--ink-1); }
 /* Same 44px floor as the other small controls. */
 .t-menu-item::after {
   content: "";
@@ -896,7 +962,6 @@ body {
 .t-menu-item[aria-pressed="true"] .t-menu-ico { color: var(--accent); }
 /* One arrow, turned round. */
 .t-menu-down svg { transform: rotate(180deg); }
-.t-menu-tick { display: inline-flex; margin-left: auto; }
 
 .t-menu-filter {
   margin-top: 6px;
