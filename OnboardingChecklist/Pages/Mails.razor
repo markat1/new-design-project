@@ -15,124 +15,121 @@
     <div class="split" @ref="split">
 
         <div class="split-list">
-            @* Filters sit over the list rather than on a column: "Gik til" narrows
-               by company, which no column shows. The button says how many are on
-               without opening. Sorting is on the headers. *@
-            <div class="list-bar">
-                <div class="tb">
-                    <button type="button" class="tb-btn" id="tb-filter"
-                            aria-haspopup="dialog" aria-expanded="@(openMenu == "filter" ? "true" : "false")"
-                            data-on="@(AnyFilter ? "" : null)" @onclick="@(() => Toggle("filter"))">
-                        @Icons.Filter
-                        <span>Filtrer</span>
-                        @if (FilterCount > 0)
-                        {
-                            <span class="tb-count">@FilterCount</span>
-                        }
-                    </button>
-
-                    @if (openMenu == "filter")
-                    {
-                        <div class="t-menu tb-menu" role="dialog" aria-label="Filtre" @ref="menu" @onkeydown="MenuKey">
-                            <div class="t-menu-filter t-menu-filter-first">
-                                <label class="t-menu-lbl" for="flt-ref">Reference indeholder</label>
-                                <input class="f-input t-menu-input" id="flt-ref" type="text" autocomplete="off" spellcheck="false"
-                                       value="@refFilter" @oninput='e => SetText("ref", e.Value?.ToString() ?? string.Empty)' />
-                            </div>
-                            <div class="t-menu-filter">
-                                <label class="t-menu-lbl" for="flt-subject">Emne indeholder</label>
-                                <input class="f-input t-menu-input" id="flt-subject" type="text" autocomplete="off" spellcheck="false"
-                                       value="@subjectFilter" @oninput='e => SetText("subject", e.Value?.ToString() ?? string.Empty)' />
-                            </div>
-                            <div class="t-menu-filter">
-                                <span class="t-menu-lbl">Gik til</span>
-                                <ul class="t-menu-list">
-                                    @foreach (var co in Companies)
-                                    {
-                                        var company = co;
-                                        <li>
-                                            <label class="t-menu-check">
-                                                <input type="checkbox" checked="@companies.Contains(company)"
-                                                       @onchange="() => ToggleCompany(company)" />
-                                                <span title="@company">@company</span>
-                                            </label>
-                                        </li>
-                                    }
-                                </ul>
-                            </div>
-                            @if (AnyFilter)
-                            {
-                                <button type="button" class="t-menu-clear" @onclick="ClearAllInMenu">Ryd filtre</button>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
-
-            @if (openMenu is not null)
+            @if (openCol is not null)
             {
                 <div class="t-backdrop" @onclick="Close"></div>
             }
 
-            @if (Rows.Length == 0)
-            {
-                <div class="t-empty">
-                    <p class="t-empty-h">Ingen udsendelser matcher filtrene</p>
-                    <p class="t-empty-b">Ryd dem for at se alle @Store.All.Count igen.</p>
-                    <button type="button" class="btn btn-outline" @onclick="ClearFilters">Ryd filtre</button>
-                </div>
-            }
-            else
-            {
-                <div class="split-scroll">
-                    <table class="t" role="grid">
-                        <thead>
-                            <tr>
-                                @foreach (var c in Columns)
-                                {
-                                    var col = c;
-                                    var sorted = sort == col.Key;
-                                    @* The header is the sort control, as in every table. The
-                                       arrow is always there: on the sorted column it says which
-                                       way; on the others it shows on hover which way a click
-                                       would start. *@
-                                    <th scope="col" class="@(col.Num ? "num" : null)"
-                                        aria-sort="@(sorted ? (asc ? "ascending" : "descending") : "none")">
-                                        <button type="button" class="t-th" @onclick="() => SortBy(col.Key)">
+            @* The table stays when a filter empties it. The filter being typed
+               into lives in a header; unmounting the headers took the field away
+               mid-word. *@
+            <div class="split-scroll">
+                <table class="t" role="grid">
+                    <thead>
+                        <tr>
+                            @foreach (var c in Columns)
+                            {
+                                var col = c;
+                                var sorted = sort == col.Key;
+                                var filtered = IsFiltered(col.Key);
+                                var isOpen = openCol == col.Key;
+                                var fltLabel = filtered ? $"Filtrér {col.Label} (aktivt)" : $"Filtrér {col.Label}";
+                                @* Two controls, as in a spreadsheet: the cell sorts, the
+                                   funnel beside the label opens that column's filter. The
+                                   arrow is always there: on the sorted column it says which
+                                   way; on the others it shows on hover which way a click
+                                   would start. *@
+                                <th scope="col" class="@(col.Num ? "num" : null)" data-open="@(isOpen ? "" : null)"
+                                    aria-sort="@(sorted ? (asc ? "ascending" : "descending") : "none")">
+                                    <div class="t-th">
+                                        <button type="button" class="t-th-sort" @onclick="() => SortBy(col.Key)">
                                             @col.Label
-                                            @if (IsFiltered(col.Key))
-                                            {
-                                                <span class="t-filtered" aria-label="filtreret"></span>
-                                            }
                                             <span class="t-sort" data-on="@(sorted ? "" : null)"
                                                   data-asc="@((sorted ? asc : NaturalAsc(col.Key)) ? "" : null)">@Icons.ArrowUp</span>
                                         </button>
-                                    </th>
-                                }
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var r in Rows)
-                            {
-                                var row = r;
-                                <tr @key="row.Ref" tabindex="0"
-                                    data-picked="@(picked == row.Ref ? "" : null)"
-                                    aria-selected="@(picked == row.Ref ? "true" : "false")"
-                                    @onclick="() => picked = row.Ref"
-                                    @onkeydown="e => RowKey(e, row.Ref)">
-                                    <td class="t-ref">@row.Ref</td>
-                                    <td>
-                                        <span class="t-client" title="@row.Subject">@row.Subject</span>
-                                        <span class="t-sub">@row.Responses</span>
-                                    </td>
-                                    <td class="num">@(row.Recipients.Length == 0 ? "—" : $"{row.Recipients.Length} · {row.Companies} {(row.Companies == 1 ? "kunde" : "kunder")}")</td>
-                                    <td class="num">@(row.Recipients.Length == 0 ? "—" : row.Total.ToString("N0"))</td>
-                                    <td class="num t-muted">@row.Sent</td>
-                                </tr>
+                                        @if (col.Filter != FilterKind.None)
+                                        {
+                                            <button type="button" class="t-th-flt" id="flt-btn-@col.Key"
+                                                    aria-label="@fltLabel"
+                                                    aria-haspopup="dialog" aria-expanded="@(isOpen ? "true" : "false")"
+                                                    data-on="@(filtered ? "" : null)"
+                                                    @onclick="() => Toggle(col.Key)">@Icons.Filter</button>
+                                        }
+                                    </div>
+
+                                    @if (isOpen)
+                                    {
+                                        <div class="t-menu" role="dialog" aria-label="Filtrér @col.Label" @ref="menu" @onkeydown="MenuKey">
+                                            <div class="t-menu-filter">
+                                                @if (col.Filter == FilterKind.Text)
+                                                {
+                                                    <label class="t-menu-lbl" for="flt-@col.Key">Indeholder</label>
+                                                    <input class="f-input t-menu-input" id="flt-@col.Key" type="text" autocomplete="off" spellcheck="false"
+                                                           value="@TextFilter(col.Key)"
+                                                           @oninput="e => SetText(col.Key, e.Value?.ToString() ?? string.Empty)" />
+                                                }
+                                                else
+                                                {
+                                                    <span class="t-menu-lbl">Gik til</span>
+                                                    <ul class="t-menu-list">
+                                                        @foreach (var co in Companies)
+                                                        {
+                                                            var company = co;
+                                                            <li>
+                                                                <label class="t-menu-check">
+                                                                    <input type="checkbox" checked="@companies.Contains(company)"
+                                                                           @onchange="() => ToggleCompany(company)" />
+                                                                    <span title="@company">@company</span>
+                                                                </label>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                }
+                                            </div>
+                                            @if (filtered)
+                                            {
+                                                <button type="button" class="t-menu-clear" @onclick="() => ClearColumn(col.Key)">Ryd filter</button>
+                                            }
+                                        </div>
+                                    }
+                                </th>
                             }
-                        </tbody>
-                    </table>
-                </div>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Rows)
+                        {
+                            var row = r;
+                            <tr @key="row.Ref" tabindex="0"
+                                data-picked="@(picked == row.Ref ? "" : null)"
+                                aria-selected="@(picked == row.Ref ? "true" : "false")"
+                                @onclick="() => picked = row.Ref"
+                                @onkeydown="e => RowKey(e, row.Ref)">
+                                <td class="t-ref">@row.Ref</td>
+                                <td>
+                                    <span class="t-client" title="@row.Subject">@row.Subject</span>
+                                    <span class="t-sub">@row.Responses</span>
+                                </td>
+                                <td class="num">@(row.Recipients.Length == 0 ? "—" : $"{row.Recipients.Length} · {row.Companies} {(row.Companies == 1 ? "kunde" : "kunder")}")</td>
+                                <td class="num">@(row.Recipients.Length == 0 ? "—" : row.Total.ToString("N0"))</td>
+                                <td class="num t-muted">@row.Sent</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (Rows.Length == 0)
+                {
+                    <div class="t-empty">
+                        <p class="t-empty-h">Ingen udsendelser matcher filtrene</p>
+                        <p class="t-empty-b">Ryd dem for at se alle @Store.All.Count igen.</p>
+                        <button type="button" class="btn btn-outline" @onclick="ClearFilters">Ryd filtre</button>
+                    </div>
+                }
+            </div>
+
+            @if (Rows.Length > 0)
+            {
                 <p class="t-foot">
                     @Rows.Length af @Store.All.Count udsendelser
                     @if (AnyFilter)
@@ -167,18 +164,20 @@
 </div>
 
 @code {
-    private record Col(string Key, string Label, bool Num = false);
+    private enum FilterKind { None, Text, Company }
 
+    private record Col(string Key, string Label, bool Num = false, FilterKind Filter = FilterKind.None);
+
+    /// Modtagere filters by company: a send reaches many customers, and "Gik
+    /// til" is the question people ask of that column.
     private static readonly Col[] Columns =
     [
-        new("ref", "Reference"),
-        new("subject", "Emne"),
-        new("recipients", "Modtagere", true),
+        new("ref", "Reference", Filter: FilterKind.Text),
+        new("subject", "Emne", Filter: FilterKind.Text),
+        new("recipients", "Modtagere", true, FilterKind.Company),
         new("total", "I alt", true),
         new("sent", "Sendt", true),
     ];
-
-    private int FilterCount => Columns.Count(c => IsFiltered(c.Key));
 
     /// Clicking the sorted column turns it round; any other column starts in
     /// its natural direction.
@@ -198,15 +197,17 @@
     /// a count.
     private static bool NaturalAsc(string key) => key is "ref" or "subject";
 
-    private void ClearAllInMenu()
+    /// "Ryd filter" unmounts itself once the column is clear, so focus goes
+    /// back into the panel rather than falling to the body.
+    private void ClearColumn(string key)
     {
-        refFilter = "";
-        subjectFilter = "";
-        companies.Clear();
+        if (key == "recipients") companies.Clear(); else SetText(key, "");
         focusMenu = true;
     }
 
-    private string? openMenu;
+    private string TextFilter(string key) => key == "ref" ? refFilter : subjectFilter;
+
+    private string? openCol;
     private string refFilter = "";
     private string subjectFilter = "";
     private readonly HashSet<string> companies = [];
@@ -227,7 +228,7 @@
 
     private bool AnyFilter => Columns.Any(c => IsFiltered(c.Key));
 
-        private void SetText(string key, string value)
+    private void SetText(string key, string value)
     {
         if (key == "ref") refFilter = value; else subjectFilter = value;
         KeepSelectionVisible();
@@ -244,16 +245,16 @@
         refFilter = "";
         subjectFilter = "";
         companies.Clear();
-        openMenu = null;
+        openCol = null;
     }
 
-    private void Toggle(string which)
+    private void Toggle(string key)
     {
-        openMenu = openMenu == which ? null : which;
-        focusMenu = openMenu is not null;
+        openCol = openCol == key ? null : key;
+        focusMenu = openCol is not null;
     }
 
-    /// Escape closes and hands focus back to the button that opened the panel,
+    /// Escape closes and hands focus back to the funnel that opened the panel,
     /// or it would land on the body when the panel unmounts.
     private void MenuKey(KeyboardEventArgs e)
     {
@@ -262,8 +263,8 @@
 
     private void Close()
     {
-        returnFocusTo = openMenu;
-        openMenu = null;
+        returnFocusTo = openCol;
+        openCol = null;
     }
     private string sort = "sent";
     private bool asc;
@@ -298,7 +299,7 @@
         else if (returnFocusTo is { } key)
         {
             returnFocusTo = null;
-            await JS.InvokeVoidAsync("app.focusId", $"tb-{key}");
+            await JS.InvokeVoidAsync("app.focusId", $"flt-btn-{key}");
         }
 
         if (!first) return;

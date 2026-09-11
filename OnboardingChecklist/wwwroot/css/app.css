@@ -686,66 +686,6 @@ body {
 }
 .page-h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
 .page-lede { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
-/* ---- toolbar over the list ---- */
-.list-bar {
-  flex: none;
-  display: flex;
-  justify-content: flex-end;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
-}
-
-/* The menus anchor to this, not to the button, so both open from one edge. */
-.tb { position: relative; display: flex; gap: 2px; }
-
-.tb-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 32px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  font: inherit;
-  font-size: 13px;
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: background-color 130ms ease, color 130ms ease;
-}
-.tb-btn:hover { background: #f0f0f1; color: var(--ink-1); }
-.tb-btn[aria-expanded="true"] { background: #e9e9eb; color: var(--ink-1); }
-.tb-btn[data-on] { color: var(--accent); }
-.tb-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-/* 32px looks right in a toolbar; the hit area still meets the floor. */
-.tb-btn::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 100%;
-  min-height: 40px;
-  transform: translateY(-50%);
-}
-@media (pointer: coarse) { .tb-btn::after { min-height: 44px; } }
-
-.tb-count {
-  min-width: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-/* Hangs from the toolbar's right edge, over the list it narrows. */
-.tb-menu { top: calc(100% + 6px); left: auto; right: 0; width: 248px; transform-origin: top right; }
-
-.t-menu-filter-first { margin-top: 0; border-top: 0; padding-top: 6px; }
-
 .split { --detail-w: 400px; flex: 1; display: flex; min-height: 0; }
 
 .split-list { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
@@ -847,8 +787,9 @@ body {
 
 /* ---- list ---- */
 .t { width: 100%; min-width: 660px; table-layout: fixed; border-collapse: collapse; font-size: 14px; }
-.t th:nth-child(1) { width: 118px; }
-.t th:nth-child(3) { width: 116px; }
+/* Reference and Modtagere carry a filter button beside the label. */
+.t th:nth-child(1) { width: 128px; }
+.t th:nth-child(3) { width: 132px; }
 .t th:nth-child(4) { width: 116px; }
 .t th:nth-child(5) { width: 128px; }
 
@@ -861,7 +802,8 @@ body {
   background: var(--sunk);
 }
 
-/* The whole header cell is the sort button. Baseline, not center: the sort
+/* Two controls per header, as in a spreadsheet: the cell sorts, the funnel
+   beside the label opens that column's filter. Baseline, not center: the sort
    arrow sits on the label's baseline and reaches its cap line, the way a
    letter would. Centering put its box on the middle of the line box, which is
    not the middle of the capitals, and it floated a pixel high. Height comes
@@ -870,29 +812,40 @@ body {
 .t-th {
   display: flex;
   align-items: baseline;
-  gap: 5px;
-  width: 100%;
+  gap: 8px;
   padding: 12px 14px;
-  border: 0;
-  background: none;
-  font: inherit;
   font-size: 12px;
   line-height: 16px;
   font-weight: 500;
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: color 130ms ease;
 }
-.t-th:hover { color: var(--ink-1); }
-/* Inset, or the scroller clips the top of the ring on a sticky header. */
-.t-th:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; color: var(--ink-1); }
 /* 40px suits a mouse; a finger gets the 44px floor. */
 @media (pointer: coarse) { .t-th { padding-block: 14px; } }
 
 /* Marks lead in number columns, so the label stays flush with the figures
    under it whether or not the column is sorted or filtered. Trailing, they
    pushed the label sideways every time the sort moved onto its column. */
-.t th.num .t-th { flex-direction: row-reverse; justify-content: flex-start; }
+.t th.num .t-th,
+.t th.num .t-th-sort { flex-direction: row-reverse; }
+
+.t-th-sort {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: color 130ms ease;
+}
+/* The whole cell sorts, not only the word: the button's hit area is
+   stretched over the th, and the funnel sits above it. */
+.t-th-sort::before { content: ""; position: absolute; inset: 0; }
+.t-th-sort:hover { color: var(--ink-1); }
+.t-th-sort:focus-visible { outline: none; color: var(--ink-1); }
+/* The ring goes round the cell it sorts, inset or the scroller clips its top. */
+.t-th-sort:focus-visible::before { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* The arrow is in every header. On the sorted column it says which way; on
    the others it waits, and shows on hover or focus which way a click will
@@ -902,18 +855,43 @@ body {
 .t-sort svg { display: block; }
 .t-sort:not([data-asc]) svg { transform: rotate(180deg); }
 .t-sort:not([data-on]) { color: var(--ink-3); opacity: 0; transition: opacity 130ms ease; }
-.t-th:hover .t-sort:not([data-on]),
-.t-th:focus-visible .t-sort:not([data-on]) { opacity: 1; }
+.t-th-sort:hover .t-sort:not([data-on]),
+.t-th-sort:focus-visible .t-sort:not([data-on]) { opacity: 1; }
 
-/* A dot, not a colour change on the label: the header text stays readable
-   whether or not the column is narrowing the list. */
-.t-filtered {
+/* The funnel. Grey until its column narrows the list; then it keeps a tinted
+   square, so "filtered" is a shape and not only a colour. Negative margins
+   keep its 22px out of the 16px line, or the header would grow. */
+.t-th-flt {
+  position: relative;
+  z-index: 1;
   align-self: center;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
+  width: 22px;
+  height: 22px;
+  margin-block: -3px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-menu);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background-color 130ms ease, color 130ms ease;
 }
+.t-th-flt svg { display: block; }
+.t-th-flt:hover { background: #f0f0f1; color: var(--ink-1); }
+.t-th-flt[aria-expanded="true"] { background: #e9e9eb; color: var(--ink-1); }
+.t-th-flt[data-on] { background: var(--accent-soft); color: var(--accent); }
+.t-th-flt:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* 40px of target (44 on touch) that grows away from the arrow into the empty
+   part of the cell, so a click on the label or arrow still sorts. */
+.t-th-flt::after { content: ""; position: absolute; top: -9px; bottom: -9px; left: -4px; right: -14px; }
+.t th.num .t-th-flt::after { left: -14px; right: -4px; }
+@media (pointer: coarse) {
+  .t-th-flt::after { top: -11px; bottom: -11px; right: -18px; }
+  .t th.num .t-th-flt::after { left: -18px; right: -4px; }
+}
+
+/* The open column rises over the backdrop, so its panel takes the clicks. */
+.t th[data-open] { z-index: 6; }
 
 .t-backdrop { position: fixed; inset: 0; z-index: 5; }
 
@@ -935,13 +913,11 @@ body {
   animation: t-menu-in 140ms var(--ease) both;
   transform-origin: top left;
 }
+/* Number columns open leftwards so the panel stays inside the pane. */
+.t th.num .t-menu { left: auto; right: 0; transform-origin: top right; }
 @keyframes t-menu-in { from { opacity: 0; transform: scale(0.97) translateY(-2px); } }
 
-.t-menu-filter {
-  margin-top: 6px;
-  padding: 10px 6px 4px;
-  border-top: 1px solid var(--line);
-}
+.t-menu-filter { padding: 6px 6px 4px; }
 .t-menu-lbl {
   display: block;
   margin-bottom: 6px;
