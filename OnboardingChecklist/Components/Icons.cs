@@ -26,10 +26,6 @@ public static class Icons
     public static readonly MarkupString Filter = new(
         """<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4h11M4.5 8h7M6.5 12h3"/></svg>""");
 
-    // Lines in order with an arrow beside them; the arrow turns with direction.
-    public static readonly MarkupString SortLines = new(
-        """<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6M2 8h4.5M2 12h3"/><path d="M12 3v10M9.5 10.5 12 13l2.5-2.5"/></svg>""");
-
     // Drawn on the pixel grid at the 12px header's cap height, with a 1px stroke
     // like the letters beside it: the flat tail sits on the baseline, the tip
     // on the cap line. A letter-sized mark, not a 13px icon next to 12px text.

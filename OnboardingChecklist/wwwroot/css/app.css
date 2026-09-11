@@ -741,23 +741,8 @@ body {
   text-align: center;
 }
 
-.tb-sort-ico { display: inline-flex; transition: transform 180ms var(--ease); }
-/* The icon's arrow points down; ascending turns it over. */
-.tb-sort-ico[data-asc] svg { transform: scaleY(-1); }
-
-/* Hangs from the toolbar's right edge — both menus open from the same place. */
+/* Hangs from the toolbar's right edge, over the list it narrows. */
 .tb-menu { top: calc(100% + 6px); left: auto; right: 0; width: 248px; transform-origin: top right; }
-
-.t-menu-head {
-  display: block;
-  padding: 8px 10px 4px;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.t-menu-head-gap { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--line); }
 
 .t-menu-filter-first { margin-top: 0; border-top: 0; padding-top: 6px; }
 
@@ -876,34 +861,49 @@ body {
   background: var(--sunk);
 }
 
-/* Baseline, not center: the sort arrow sits on the label's baseline and
-   reaches its cap line, the way a letter would. Centering put its box on the
-   middle of the line box, which is not the middle of the capitals, and it
-   floated a pixel high. Height comes from line-height + padding (16 + 24 =
-   40) because a baseline row sticks to the top of a min-height box. */
+/* The whole header cell is the sort button. Baseline, not center: the sort
+   arrow sits on the label's baseline and reaches its cap line, the way a
+   letter would. Centering put its box on the middle of the line box, which is
+   not the middle of the capitals, and it floated a pixel high. Height comes
+   from line-height + padding (16 + 24 = 40) because a baseline row sticks to
+   the top of a min-height box. */
 .t-th {
   display: flex;
   align-items: baseline;
   gap: 5px;
+  width: 100%;
   padding: 12px 14px;
-  color: var(--ink-2);
+  border: 0;
+  background: none;
+  font: inherit;
   font-size: 12px;
   line-height: 16px;
   font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: color 130ms ease;
 }
+.t-th:hover { color: var(--ink-1); }
+/* Inset, or the scroller clips the top of the ring on a sticky header. */
+.t-th:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; color: var(--ink-1); }
+/* 40px suits a mouse; a finger gets the 44px floor. */
+@media (pointer: coarse) { .t-th { padding-block: 14px; } }
 
 /* Marks lead in number columns, so the label stays flush with the figures
    under it whether or not the column is sorted or filtered. Trailing, they
    pushed the label sideways every time the sort moved onto its column. */
 .t th.num .t-th { flex-direction: row-reverse; justify-content: flex-start; }
 
-/* Sort state only; the header shows nothing else. */
+/* The arrow is in every header. On the sorted column it says which way; on
+   the others it waits, and shows on hover or focus which way a click will
+   start. Its slot is on the side away from the label's anchor, so appearing
+   moves nothing. */
 .t-sort { display: block; color: var(--accent); }
 .t-sort svg { display: block; }
 .t-sort:not([data-asc]) svg { transform: rotate(180deg); }
-
-/* ---- column menus: sort and filter live on the header they act on ---- */
-.t th { position: sticky; }
+.t-sort:not([data-on]) { color: var(--ink-3); opacity: 0; transition: opacity 130ms ease; }
+.t-th:hover .t-sort:not([data-on]),
+.t-th:focus-visible .t-sort:not([data-on]) { opacity: 1; }
 
 /* A dot, not a colour change on the label: the header text stays readable
    whether or not the column is narrowing the list. */
@@ -935,48 +935,7 @@ body {
   animation: t-menu-in 140ms var(--ease) both;
   transform-origin: top left;
 }
-/* Right-hand columns open leftwards so the panel stays inside the pane. */
-.t th.num .t-menu { left: auto; right: 0; transform-origin: top right; }
 @keyframes t-menu-in { from { opacity: 0; transform: scale(0.97) translateY(-2px); } }
-
-.t-menu-sort { display: grid; gap: 1px; }
-
-.t-menu-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  width: 100%;
-  min-height: 36px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  font: inherit;
-  color: var(--ink-1);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 120ms ease;
-}
-.t-menu-item:hover { background: var(--sunk); }
-.t-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.t-menu-item[aria-pressed="true"] { color: var(--ink-1); }
-/* Same 44px floor as the other small controls. */
-.t-menu-item::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 100%;
-  min-height: 44px;
-  transform: translateY(-50%);
-}
-
-.t-menu-ico { display: inline-flex; justify-content: center; width: 16px; color: var(--ink-3); }
-.t-menu-item[aria-pressed="true"] .t-menu-ico { color: var(--accent); }
-/* One arrow, turned round. */
-.t-menu-down svg { transform: rotate(180deg); }
 
 .t-menu-filter {
   margin-top: 6px;
@@ -1006,11 +965,9 @@ body {
   cursor: pointer;
 }
 /* 44px is a touch floor. With a mouse it only made the list twice as tall as
-   the sort rows above it; with a finger it is required. Same split the
-   divider uses. */
+   it needs to be; with a finger it is required. Same split the divider uses. */
 @media (pointer: coarse) {
-  .t-menu-check,
-  .t-menu-item { min-height: 44px; }
+  .t-menu-check { min-height: 44px; }
 }
 .t-menu-check:hover { background: var(--sunk); }
 .t-menu-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
