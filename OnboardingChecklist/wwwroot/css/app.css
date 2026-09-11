@@ -35,10 +35,11 @@
   /* Both pages cap their content here, so switching pages doesn't shift it. */
   --page-w: 940px;
 
-  /* Menus and popovers. 4px is the Windows flyout radius in the reference —
-     reads square without the floating panel looking unfinished. Everything
-     inside derives from it: radius minus padding. */
-  --radius-menu: 4px;
+  /* Menus and popovers: square, as Mark wants them. Outlook's flyout
+     measures about 4px in his screenshot, and at 4 ours still read as
+     rounded to him. Everything inside derives from it (radius minus
+     padding), so it is all square. */
+  --radius-menu: 0;
   --shadow-menu:
     0 0 0 1px rgb(0 0 0 / 0.08),
     0 2px 4px rgb(0 0 0 / 0.06),
