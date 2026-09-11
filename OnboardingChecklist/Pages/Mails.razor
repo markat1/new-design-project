@@ -47,7 +47,10 @@
                                             {
                                                 <span class="t-filtered" aria-label="filtreret"></span>
                                             }
-                                            <span class="t-sort" data-on="@(sort == col.Key ? "" : null)" data-asc="@(sort == col.Key && asc ? "" : null)">@Icons.Chevron</span>
+                                            @if (sort == col.Key)
+                                            {
+                                                <span class="t-sort" data-asc="@(asc ? "" : null)">@Icons.ArrowUp</span>
+                                            }
                                         </button>
 
                                         @if (isOpen)

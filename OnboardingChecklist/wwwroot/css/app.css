@@ -811,11 +811,11 @@ body {
 .t-th:hover { color: var(--ink-1); }
 .t-th:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-/* The arrow holds its space at all times so sorting never shifts the header. */
-.t-sort { display: inline-flex; opacity: 0; transition: opacity 130ms ease, transform 180ms var(--ease); }
-.t-th:hover .t-sort { opacity: 0.4; }
-.t-sort[data-on] { opacity: 1; }
-.t-sort[data-asc] { transform: rotate(180deg); }
+/* Sort state only, in the same arrow the menu uses — the header used to show
+   a chevron that meant "sorted descending" on one column and "has a menu" on
+   the next. The hover tint already says the header is clickable. */
+.t-sort { display: inline-flex; color: var(--accent); }
+.t-sort:not([data-asc]) svg { transform: rotate(180deg); }
 
 /* ---- column menus: sort and filter live on the header they act on ---- */
 .t th { position: sticky; }
@@ -836,7 +836,7 @@ body {
 .t-menu {
   position: absolute;
   top: calc(100% + 4px);
-  left: 6px;
+  left: 0;
   z-index: 7;
   width: 240px;
   padding: 6px;
@@ -855,7 +855,7 @@ body {
   transform-origin: top left;
 }
 /* Right-hand columns open leftwards so the panel stays inside the pane. */
-.t th.num .t-menu { left: auto; right: 6px; transform-origin: top right; }
+.t th.num .t-menu { left: auto; right: 0; transform-origin: top right; }
 @keyframes t-menu-in { from { opacity: 0; transform: scale(0.97) translateY(-2px); } }
 
 .t-menu-sort { display: grid; gap: 1px; }
@@ -864,7 +864,7 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   width: 100%;
   min-height: 36px;
   padding: 0 10px;
@@ -892,7 +892,7 @@ body {
   transform: translateY(-50%);
 }
 
-.t-menu-ico { display: inline-flex; color: var(--ink-3); }
+.t-menu-ico { display: inline-flex; justify-content: center; width: 16px; color: var(--ink-3); }
 .t-menu-item[aria-pressed="true"] .t-menu-ico { color: var(--accent); }
 /* One arrow, turned round. */
 .t-menu-down svg { transform: rotate(180deg); }
@@ -920,10 +920,17 @@ body {
   grid-template-columns: 16px minmax(0, 1fr);
   align-items: center;
   gap: 9px;
-  min-height: 44px;
+  min-height: 36px;
   padding: 0 4px;
   border-radius: 6px;
   cursor: pointer;
+}
+/* 44px is a touch floor. With a mouse it only made the list twice as tall as
+   the sort rows above it; with a finger it is required. Same split the
+   divider uses. */
+@media (pointer: coarse) {
+  .t-menu-check,
+  .t-menu-item { min-height: 44px; }
 }
 .t-menu-check:hover { background: var(--sunk); }
 .t-menu-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
