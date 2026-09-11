@@ -30,8 +30,11 @@ public static class Icons
     public static readonly MarkupString SortLines = new(
         """<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6M2 8h4.5M2 12h3"/><path d="M12 3v10M9.5 10.5 12 13l2.5-2.5"/></svg>""");
 
+    // Drawn on the pixel grid at the 12px header's cap height, with a 1px stroke
+    // like the letters beside it: the flat tail sits on the baseline, the tip
+    // on the cap line. A letter-sized mark, not a 13px icon next to 12px text.
     public static readonly MarkupString ArrowUp = new(
-        """<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>""");
+        """<svg width="7" height="9" viewBox="0 0 7 9" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M3.5 9V1"/><path d="M.5 3.5l3-3 3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>""");
 
     public static readonly MarkupString Search = new(
         """<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>""");
