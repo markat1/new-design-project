@@ -677,70 +677,6 @@ body {
 }
 .page-h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
 .page-lede { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
-/* Left-aligned with the table's first column, capped so it doesn't stretch
-   to whatever width the divider happens to leave. */
-.list-bar { flex: none; padding: 12px 14px; border-bottom: 1px solid var(--line); }
-
-.search { position: relative; max-width: 320px; }
-
-/* Same 44px box as the field it replaces, so opening search shifts nothing. */
-.search-open {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 1px solid var(--line-2);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: background-color 130ms ease, color 130ms ease, border-color 130ms ease;
-}
-.search-open:hover { border-color: var(--ink-3); color: var(--ink-1); }
-.search-open:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-/* The magnifier is what says "search" once the placeholder is gone. */
-.search > svg {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--ink-3);
-  pointer-events: none;
-}
-.search .f-input { padding-left: 35px; padding-right: 38px; }
-/* Chrome's own ✕ is unstyled and absent in other browsers — ours replaces it. */
-.search .f-input::-webkit-search-cancel-button { display: none; }
-
-.search-clear {
-  position: absolute;
-  right: 5px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--ink-3);
-  cursor: pointer;
-  transition: background-color 130ms ease, color 130ms ease;
-}
-.search-clear:hover { background: #f0f0f1; color: var(--ink-1); }
-.search-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-/* Same 44px floor as .btn, without inflating a 30px control inside a 44px field. */
-.search-clear::after {
-  content: "";
-  position: absolute;
-  inset: 50% auto auto 50%;
-  width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
-}
-
 .split { --detail-w: 400px; flex: 1; display: flex; min-height: 0; }
 
 .split-list { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
@@ -880,6 +816,149 @@ body {
 .t-th:hover .t-sort { opacity: 0.4; }
 .t-sort[data-on] { opacity: 1; }
 .t-sort[data-asc] { transform: rotate(180deg); }
+
+/* ---- column menus: sort and filter live on the header they act on ---- */
+.t th { position: sticky; }
+.t th[data-open] { z-index: 6; }
+.t th[data-open] .t-th { color: var(--ink-1); background: #f0f0f1; }
+
+/* A dot, not a colour change on the label: the header text stays readable
+   whether or not the column is narrowing the list. */
+.t-filtered {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.t-backdrop { position: fixed; inset: 0; z-index: 5; }
+
+.t-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 6px;
+  z-index: 7;
+  width: 240px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.10);
+  text-align: left;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-1);
+  cursor: default;
+  animation: t-menu-in 140ms var(--ease) both;
+  transform-origin: top left;
+}
+/* Right-hand columns open leftwards so the panel stays inside the pane. */
+.t th.num .t-menu { left: auto; right: 6px; transform-origin: top right; }
+@keyframes t-menu-in { from { opacity: 0; transform: scale(0.97) translateY(-2px); } }
+
+.t-menu-sort { display: grid; gap: 1px; }
+
+.t-menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  color: var(--ink-1);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.t-menu-item:hover { background: var(--sunk); }
+.t-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.t-menu-item[aria-pressed="true"] { color: var(--accent); }
+/* Same 44px floor as the other small controls. */
+.t-menu-item::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 100%;
+  min-height: 44px;
+  transform: translateY(-50%);
+}
+
+.t-menu-ico { display: inline-flex; color: var(--ink-3); }
+.t-menu-item[aria-pressed="true"] .t-menu-ico { color: var(--accent); }
+/* One arrow, turned round. */
+.t-menu-down svg { transform: rotate(180deg); }
+.t-menu-tick { display: inline-flex; margin-left: auto; }
+
+.t-menu-filter {
+  margin-top: 6px;
+  padding: 10px 6px 4px;
+  border-top: 1px solid var(--line);
+}
+.t-menu-lbl {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.t-menu-input { min-height: 38px; padding: 7px 10px; }
+
+.t-menu-list { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; }
+.t-menu-check {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.t-menu-check:hover { background: var(--sunk); }
+.t-menu-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.t-menu-check span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.t-menu-clear {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 9px 10px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-2);
+  text-align: left;
+  cursor: pointer;
+}
+.t-menu-clear:hover { color: var(--danger); }
+.t-menu-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+
+.t-foot-sep { margin: 0 6px; color: var(--line-2); }
+.t-foot-clear {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+}
+.t-foot-clear:hover { text-decoration: underline; }
+.t-foot-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+@media (prefers-reduced-motion: reduce) { .t-menu { animation: none; } }
 
 .t tbody tr { cursor: pointer; }
 .t tbody tr:hover { background: var(--sunk); }

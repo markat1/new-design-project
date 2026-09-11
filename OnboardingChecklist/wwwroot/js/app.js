@@ -7,7 +7,19 @@ window.app = {
     (el || container).focus({ preventScroll: true });
   },
 
-  // The drag lives in JS, not Blazor: a re-render per pointermove would be a
+  // First control in a panel that just opened — buttons included, unlike
+  // focusFirst, which is for forms.
+  focusIn(container) {
+    if (!container) return;
+    const el = container.querySelector('button, input, textarea, [tabindex="0"]');
+    (el || container).focus({ preventScroll: true });
+  },
+
+  focusId(id) {
+    document.getElementById(id)?.focus({ preventScroll: true });
+  },
+
+    // The drag lives in JS, not Blazor: a re-render per pointermove would be a
   // render storm for something that is only ever a layout change.
   splitter: {
     attach(handle, split, key) {
