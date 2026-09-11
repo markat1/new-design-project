@@ -791,8 +791,7 @@ body {
 /* ---- list ---- */
 .t { width: 100%; min-width: 660px; table-layout: fixed; border-collapse: collapse; font-size: 14px; }
 .t th:nth-child(1) { width: 118px; }
-/* Modtagere can carry both marks beside a long label. */
-.t th:nth-child(3) { width: 124px; }
+.t th:nth-child(3) { width: 116px; }
 .t th:nth-child(4) { width: 116px; }
 .t th:nth-child(5) { width: 128px; }
 
@@ -838,16 +837,13 @@ body {
    pushed the label sideways every time the sort moved onto its column. */
 .t th.num .t-th { flex-direction: row-reverse; }
 
-/* On the sorted column only, and it says which way. */
-.t-sort { display: block; color: var(--accent); }
-.t-sort svg { display: block; }
+/* One mark per header, in Outlook's glyphs: the arrow when the column is
+   sorted, the filter lines when it is filtered, the two drawn as one when it
+   is both. Each is cap height and sits on the baseline. The arrow says which
+   way by turning; the combined mark comes in both directions. */
+.t-mark { display: block; color: var(--accent); }
+.t-mark svg { display: block; }
 .t-sort:not([data-asc]) svg { transform: rotate(180deg); }
-
-/* Outlook's filter glyph where a dot used to be; a dot said "something"
-   without saying what. It sits on the baseline beside the arrow, on the same
-   side, with the arrow nearer the label. */
-.t-filtered { display: block; color: var(--accent); }
-.t-filtered svg { display: block; }
 
 /* The open column rises over the backdrop, so its panel takes the clicks,
    and its header stays tinted so the panel is plainly that column's. */

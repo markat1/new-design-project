@@ -34,6 +34,15 @@ public static class Icons
     public static readonly MarkupString Filter = new(
         """<svg width="11" height="9" viewBox="0 0 11 9" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 .5h11M2 4.5h7M4 8.5h3"/></svg>""");
 
+    // Sorted and filtered at once: one mark, as Outlook draws its sort button,
+    // with the lines beside the arrow. Same cap height, grid and stroke as the
+    // two marks it stands in for, and the arrow half is the sort arrow as is.
+    public static readonly MarkupString SortFilterDown = new(
+        """<svg width="15" height="9" viewBox="0 0 15 9" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 .5h7M0 4.5h5M0 8.5h3"/><path d="M11.5 0v8"/><path d="M8.5 5.5l3 3 3-3" stroke-linecap="round" stroke-linejoin="round"/></svg>""");
+
+    public static readonly MarkupString SortFilterUp = new(
+        """<svg width="15" height="9" viewBox="0 0 15 9" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 .5h7M0 4.5h5M0 8.5h3"/><path d="M11.5 9V1"/><path d="M8.5 3.5l3-3 3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>""");
+
     public static readonly MarkupString Search = new(
         """<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>""");
 

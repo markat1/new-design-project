@@ -43,13 +43,18 @@
                                             aria-haspopup="dialog" aria-expanded="@(isOpen ? "true" : "false")"
                                             @onclick="() => Toggle(col.Key)">
                                         @col.Label
-                                        @if (sorted)
+                                        @if (sorted && filtered)
                                         {
-                                            <span class="t-sort" data-asc="@(asc ? "" : null)">@Icons.ArrowUp</span>
+                                            @* Both at once: one mark, the way Outlook draws it. *@
+                                            <span class="t-mark" role="img" aria-label="filtreret">@(asc ? Icons.SortFilterUp : Icons.SortFilterDown)</span>
                                         }
-                                        @if (filtered)
+                                        else if (sorted)
                                         {
-                                            <span class="t-filtered" role="img" aria-label="filtreret">@Icons.Filter</span>
+                                            <span class="t-mark t-sort" data-asc="@(asc ? "" : null)">@Icons.ArrowUp</span>
+                                        }
+                                        else if (filtered)
+                                        {
+                                            <span class="t-mark" role="img" aria-label="filtreret">@Icons.Filter</span>
                                         }
                                     </button>
 
