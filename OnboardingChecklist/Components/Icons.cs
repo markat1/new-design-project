@@ -22,12 +22,6 @@ public static class Icons
     public static readonly MarkupString Chevron = new(
         """<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>""");
 
-    // Three lines narrowing to a point — the list getting shorter. Drawn at
-    // the size of the 22px header button it fills, on whole pixels with a 1px
-    // stroke, to match the sort arrow and the letters beside it.
-    public static readonly MarkupString Filter = new(
-        """<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M5 7.5h12M7 10.5h8M9 13.5h4"/></svg>""");
-
     // Drawn on the pixel grid at the 12px header's cap height, with a 1px stroke
     // like the letters beside it: the flat tail sits on the baseline, the tip
     // on the cap line. A letter-sized mark, not a 13px icon next to 12px text.

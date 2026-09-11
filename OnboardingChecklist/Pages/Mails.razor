@@ -33,44 +33,57 @@
                                 var sorted = sort == col.Key;
                                 var filtered = IsFiltered(col.Key);
                                 var isOpen = openCol == col.Key;
-                                var fltLabel = filtered ? $"Filtrér {col.Label} (aktivt)" : $"Filtrér {col.Label}";
-                                @* Two controls, as in a spreadsheet: the cell sorts, the
-                                   funnel beside the label opens that column's filter. The
-                                   arrow is always there: on the sorted column it says which
-                                   way; on the others it shows on hover which way a click
-                                   would start. *@
+                                @* The header opens the column's dropdown, laid out like
+                                   Outlook's sort menu: the order in the field's own words
+                                   with a tick, then the column's filter. The arrow on the
+                                   header shows only on the sorted column. *@
                                 <th scope="col" class="@(col.Num ? "num" : null)" data-open="@(isOpen ? "" : null)"
                                     aria-sort="@(sorted ? (asc ? "ascending" : "descending") : "none")">
-                                    <div class="t-th">
-                                        <button type="button" class="t-th-sort" @onclick="() => SortBy(col.Key)">
-                                            @col.Label
-                                            <span class="t-sort" data-on="@(sorted ? "" : null)"
-                                                  data-asc="@((sorted ? asc : NaturalAsc(col.Key)) ? "" : null)">@Icons.ArrowUp</span>
-                                        </button>
-                                        @if (col.Filter != FilterKind.None)
+                                    <button type="button" class="t-th" id="th-@col.Key"
+                                            aria-haspopup="dialog" aria-expanded="@(isOpen ? "true" : "false")"
+                                            @onclick="() => Toggle(col.Key)">
+                                        @col.Label
+                                        @if (filtered)
                                         {
-                                            <button type="button" class="t-th-flt" id="flt-btn-@col.Key"
-                                                    aria-label="@fltLabel"
-                                                    aria-haspopup="dialog" aria-expanded="@(isOpen ? "true" : "false")"
-                                                    data-on="@(filtered ? "" : null)"
-                                                    @onclick="() => Toggle(col.Key)">@Icons.Filter</button>
+                                            <span class="t-filtered" aria-label="filtreret"></span>
                                         }
-                                    </div>
+                                        @if (sorted)
+                                        {
+                                            <span class="t-sort" data-asc="@(asc ? "" : null)">@Icons.ArrowUp</span>
+                                        }
+                                    </button>
 
                                     @if (isOpen)
                                     {
-                                        <div class="t-menu" role="dialog" aria-label="Filtrér @col.Label" @ref="menu" @onkeydown="MenuKey">
-                                            <div class="t-menu-filter">
-                                                @if (col.Filter == FilterKind.Text)
-                                                {
-                                                    <label class="t-menu-lbl" for="flt-@col.Key">Indeholder</label>
+                                        var order = OrderLabels(col.Key);
+                                        <div class="t-menu" role="dialog" aria-label="Sortér og filtrér @col.Label" @ref="menu" @onkeydown="MenuKey">
+                                            <span class="t-menu-head">Sorteringsrækkefølge</span>
+                                            @* Low end first, as Outlook lists it: Ældste before
+                                               Nyeste, A before Å. *@
+                                            <button type="button" class="t-menu-item" aria-pressed="@(sorted && asc ? "true" : "false")"
+                                                    @onclick="() => SetSort(col.Key, true)">
+                                                <span class="t-menu-ico">@if (sorted && asc) { @Icons.TickSm }</span>
+                                                @order.Asc
+                                            </button>
+                                            <button type="button" class="t-menu-item" aria-pressed="@(sorted && !asc ? "true" : "false")"
+                                                    @onclick="() => SetSort(col.Key, false)">
+                                                <span class="t-menu-ico">@if (sorted && !asc) { @Icons.TickSm }</span>
+                                                @order.Desc
+                                            </button>
+
+                                            @if (col.Filter == FilterKind.Text)
+                                            {
+                                                <div class="t-menu-filter">
+                                                    <label class="t-menu-head" for="flt-@col.Key">Indeholder</label>
                                                     <input class="f-input t-menu-input" id="flt-@col.Key" type="text" autocomplete="off" spellcheck="false"
                                                            value="@TextFilter(col.Key)"
                                                            @oninput="e => SetText(col.Key, e.Value?.ToString() ?? string.Empty)" />
-                                                }
-                                                else
-                                                {
-                                                    <span class="t-menu-lbl">Gik til</span>
+                                                </div>
+                                            }
+                                            else if (col.Filter == FilterKind.Company)
+                                            {
+                                                <div class="t-menu-filter">
+                                                    <span class="t-menu-head">Gik til</span>
                                                     <ul class="t-menu-list">
                                                         @foreach (var co in Companies)
                                                         {
@@ -84,8 +97,9 @@
                                                             </li>
                                                         }
                                                     </ul>
-                                                }
-                                            </div>
+                                                </div>
+                                            }
+
                                             @if (filtered)
                                             {
                                                 <button type="button" class="t-menu-clear" @onclick="() => ClearColumn(col.Key)">Ryd filter</button>
@@ -179,23 +193,25 @@
         new("sent", "Sendt", true),
     ];
 
-    /// Clicking the sorted column turns it round; any other column starts in
-    /// its natural direction.
-    private void SortBy(string key)
+    /// Direction in the field's own words, as Outlook says it. "Nyeste øverst"
+    /// says what you will see; "Faldende" has to be translated, and means
+    /// something different for a date, a sum and a name.
+    private static (string Asc, string Desc) OrderLabels(string key) => key switch
     {
-        if (sort == key)
-        {
-            asc = !asc;
-            return;
-        }
+        "sent" => ("Ældste øverst", "Nyeste øverst"),
+        "total" => ("Mindst øverst", "Størst øverst"),
+        "recipients" => ("Færrest øverst", "Flest øverst"),
+        _ => ("A til Å", "Å til A"),
+    };
 
+    /// Picking an order sorts by the column and closes, as Outlook's menu
+    /// does; the arrow on the header then says which way.
+    private void SetSort(string key, bool ascending)
+    {
         sort = key;
-        asc = NaturalAsc(key);
+        asc = ascending;
+        Close();
     }
-
-    /// A first for text; newest, largest and most first for a date, a sum and
-    /// a count.
-    private static bool NaturalAsc(string key) => key is "ref" or "subject";
 
     /// "Ryd filter" unmounts itself once the column is clear, so focus goes
     /// back into the panel rather than falling to the body.
@@ -254,7 +270,7 @@
         focusMenu = openCol is not null;
     }
 
-    /// Escape closes and hands focus back to the funnel that opened the panel,
+    /// Escape closes and hands focus back to the header that opened the panel,
     /// or it would land on the body when the panel unmounts.
     private void MenuKey(KeyboardEventArgs e)
     {
@@ -299,7 +315,7 @@
         else if (returnFocusTo is { } key)
         {
             returnFocusTo = null;
-            await JS.InvokeVoidAsync("app.focusId", $"flt-btn-{key}");
+            await JS.InvokeVoidAsync("app.focusId", $"th-{key}");
         }
 
         if (!first) return;

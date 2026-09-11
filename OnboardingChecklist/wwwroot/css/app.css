@@ -17,6 +17,9 @@
   --surface: #ffffff;
   --canvas: #fafafa;
   --sunk: #fbfbfc;
+  /* Hover on a header or a menu row. --sunk was the old menu hover and did
+     not show on white. */
+  --hover: #f4f4f5;
 
   --accent: #4f46e5;
   --accent-2: #4338ca;
@@ -787,9 +790,8 @@ body {
 
 /* ---- list ---- */
 .t { width: 100%; min-width: 660px; table-layout: fixed; border-collapse: collapse; font-size: 14px; }
-/* Reference and Modtagere carry a filter button beside the label. */
-.t th:nth-child(1) { width: 128px; }
-.t th:nth-child(3) { width: 132px; }
+.t th:nth-child(1) { width: 118px; }
+.t th:nth-child(3) { width: 116px; }
 .t th:nth-child(4) { width: 116px; }
 .t th:nth-child(5) { width: 128px; }
 
@@ -802,96 +804,58 @@ body {
   background: var(--sunk);
 }
 
-/* Two controls per header, as in a spreadsheet: the cell sorts, the funnel
-   beside the label opens that column's filter. Baseline, not center: the sort
-   arrow sits on the label's baseline and reaches its cap line, the way a
-   letter would. Centering put its box on the middle of the line box, which is
-   not the middle of the capitals, and it floated a pixel high. Height comes
-   from line-height + padding (16 + 24 = 40) because a baseline row sticks to
-   the top of a min-height box. */
+/* The header is a button that opens the column's dropdown. Baseline, not
+   center: the sort arrow sits on the label's baseline and reaches its cap
+   line, the way a letter would. Centering put its box on the middle of the
+   line box, which is not the middle of the capitals, and it floated a pixel
+   high. Height comes from line-height + padding (16 + 24 = 40) because a
+   baseline row sticks to the top of a min-height box. */
 .t-th {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 5px;
+  width: 100%;
   padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  font: inherit;
   font-size: 12px;
   line-height: 16px;
   font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: color 130ms ease, background-color 130ms ease;
 }
+.t-th:hover { color: var(--ink-1); background: var(--hover); }
+/* Inset, or the scroller clips the top of the ring on a sticky header. */
+.t-th:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 /* 40px suits a mouse; a finger gets the 44px floor. */
 @media (pointer: coarse) { .t-th { padding-block: 14px; } }
 
 /* Marks lead in number columns, so the label stays flush with the figures
    under it whether or not the column is sorted or filtered. Trailing, they
    pushed the label sideways every time the sort moved onto its column. */
-.t th.num .t-th,
-.t th.num .t-th-sort { flex-direction: row-reverse; }
+.t th.num .t-th { flex-direction: row-reverse; }
 
-.t-th-sort {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: color 130ms ease;
-}
-/* The whole cell sorts, not only the word: the button's hit area is
-   stretched over the th, and the funnel sits above it. */
-.t-th-sort::before { content: ""; position: absolute; inset: 0; }
-.t-th-sort:hover { color: var(--ink-1); }
-.t-th-sort:focus-visible { outline: none; color: var(--ink-1); }
-/* The ring goes round the cell it sorts, inset or the scroller clips its top. */
-.t-th-sort:focus-visible::before { outline: 2px solid var(--accent); outline-offset: -2px; }
-
-/* The arrow is in every header. On the sorted column it says which way; on
-   the others it waits, and shows on hover or focus which way a click will
-   start. Its slot is on the side away from the label's anchor, so appearing
-   moves nothing. */
+/* On the sorted column only, and it says which way. */
 .t-sort { display: block; color: var(--accent); }
 .t-sort svg { display: block; }
 .t-sort:not([data-asc]) svg { transform: rotate(180deg); }
-.t-sort:not([data-on]) { color: var(--ink-3); opacity: 0; transition: opacity 130ms ease; }
-.t-th-sort:hover .t-sort:not([data-on]),
-.t-th-sort:focus-visible .t-sort:not([data-on]) { opacity: 1; }
 
-/* The funnel. Grey until its column narrows the list; then it keeps a tinted
-   square, so "filtered" is a shape and not only a colour. Negative margins
-   keep its 22px out of the 16px line, or the header would grow. */
-.t-th-flt {
-  position: relative;
-  z-index: 1;
+/* A dot, not a colour change on the label: the header text stays readable
+   whether or not the column is narrowing the list. */
+.t-filtered {
   align-self: center;
-  width: 22px;
-  height: 22px;
-  margin-block: -3px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-menu);
-  background: transparent;
-  color: var(--ink-3);
-  cursor: pointer;
-  transition: background-color 130ms ease, color 130ms ease;
-}
-.t-th-flt svg { display: block; }
-.t-th-flt:hover { background: #f0f0f1; color: var(--ink-1); }
-.t-th-flt[aria-expanded="true"] { background: #e9e9eb; color: var(--ink-1); }
-.t-th-flt[data-on] { background: var(--accent-soft); color: var(--accent); }
-.t-th-flt:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-/* 40px of target (44 on touch) that grows away from the arrow into the empty
-   part of the cell, so a click on the label or arrow still sorts. */
-.t-th-flt::after { content: ""; position: absolute; top: -9px; bottom: -9px; left: -4px; right: -14px; }
-.t th.num .t-th-flt::after { left: -14px; right: -4px; }
-@media (pointer: coarse) {
-  .t-th-flt::after { top: -11px; bottom: -11px; right: -18px; }
-  .t th.num .t-th-flt::after { left: -18px; right: -4px; }
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
-/* The open column rises over the backdrop, so its panel takes the clicks. */
+/* The open column rises over the backdrop, so its panel takes the clicks,
+   and its header stays tinted so the panel is plainly that column's. */
 .t th[data-open] { z-index: 6; }
+.t th[data-open] .t-th { color: var(--ink-1); background: #f0f0f1; }
 
 .t-backdrop { position: fixed; inset: 0; z-index: 5; }
 
@@ -917,17 +881,41 @@ body {
 .t th.num .t-menu { left: auto; right: 0; transform-origin: top right; }
 @keyframes t-menu-in { from { opacity: 0; transform: scale(0.97) translateY(-2px); } }
 
-.t-menu-filter { padding: 6px 6px 4px; }
-.t-menu-lbl {
+/* Laid out like Outlook's sort menu: a quiet sentence-case heading, then rows
+   with a tick slot on the left, so the labels line up whether or not they
+   are chosen. Headings, ticks, checkboxes and the field all start on the
+   same 16px edge. */
+.t-menu-head {
   display: block;
-  margin-bottom: 6px;
-  font-size: 11px;
+  padding: 8px 10px 4px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--ink-3);
 }
-.t-menu-input { min-height: 38px; padding: 7px 10px; border-radius: 0; }
+
+.t-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--ink-1);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.t-menu-item:hover { background: var(--hover); }
+.t-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.t-menu-ico { display: inline-flex; justify-content: center; width: 16px; color: var(--accent); }
+
+/* The column's filter, under a rule like the one between Outlook's sections. */
+.t-menu-filter { margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--line); }
+.t-menu-input { width: calc(100% - 20px); min-height: 38px; margin: 2px 10px 6px; padding: 7px 10px; border-radius: 0; }
 
 .t-menu-list { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; }
 .t-menu-check {
@@ -936,16 +924,17 @@ body {
   align-items: center;
   gap: 9px;
   min-height: 36px;
-  padding: 0 4px;
+  padding: 0 10px;
   border-radius: 0;
   cursor: pointer;
 }
-/* 44px is a touch floor. With a mouse it only made the list twice as tall as
-   it needs to be; with a finger it is required. Same split the divider uses. */
+/* 44px is a touch floor. With a mouse it only made the rows twice as tall as
+   they need to be; with a finger it is required. Same split the divider uses. */
 @media (pointer: coarse) {
+  .t-menu-item,
   .t-menu-check { min-height: 44px; }
 }
-.t-menu-check:hover { background: var(--sunk); }
+.t-menu-check:hover { background: var(--hover); }
 .t-menu-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .t-menu-check span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
