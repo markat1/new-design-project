@@ -43,13 +43,13 @@
                                             aria-haspopup="dialog" aria-expanded="@(isOpen ? "true" : "false")"
                                             @onclick="() => Toggle(col.Key)">
                                         @col.Label
-                                        @if (filtered)
-                                        {
-                                            <span class="t-filtered" aria-label="filtreret"></span>
-                                        }
                                         @if (sorted)
                                         {
                                             <span class="t-sort" data-asc="@(asc ? "" : null)">@Icons.ArrowUp</span>
+                                        }
+                                        @if (filtered)
+                                        {
+                                            <span class="t-filtered" role="img" aria-label="filtreret">@Icons.Filter</span>
                                         }
                                     </button>
 

@@ -791,7 +791,8 @@ body {
 /* ---- list ---- */
 .t { width: 100%; min-width: 660px; table-layout: fixed; border-collapse: collapse; font-size: 14px; }
 .t th:nth-child(1) { width: 118px; }
-.t th:nth-child(3) { width: 116px; }
+/* Modtagere can carry both marks beside a long label. */
+.t th:nth-child(3) { width: 124px; }
 .t th:nth-child(4) { width: 116px; }
 .t th:nth-child(5) { width: 128px; }
 
@@ -842,15 +843,11 @@ body {
 .t-sort svg { display: block; }
 .t-sort:not([data-asc]) svg { transform: rotate(180deg); }
 
-/* A dot, not a colour change on the label: the header text stays readable
-   whether or not the column is narrowing the list. */
-.t-filtered {
-  align-self: center;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-}
+/* Outlook's filter glyph where a dot used to be; a dot said "something"
+   without saying what. It sits on the baseline beside the arrow, on the same
+   side, with the arrow nearer the label. */
+.t-filtered { display: block; color: var(--accent); }
+.t-filtered svg { display: block; }
 
 /* The open column rises over the backdrop, so its panel takes the clicks,
    and its header stays tinted so the panel is plainly that column's. */
