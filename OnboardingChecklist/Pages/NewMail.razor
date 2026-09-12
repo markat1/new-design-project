@@ -59,8 +59,20 @@
                     {
                         <button type="button" class="btn btn-ghost" data-act="skip" @onclick="() => Commit(true)">Spring over</button>
                     }
+                    @* The last step's button is the send. It used to be shadowed by
+                       a second Send row in the side rail — one action, two primaries,
+                       and the rail's copy could fire from a step where you had not
+                       yet seen where the mail was going. *@
                     <button type="button" class="btn btn-primary" data-act="save" @onclick="() => Commit(false)">
-                        @(Next is not null ? "Gem og fortsæt" : "Send mail")
+                        @if (Next is null)
+                        {
+                            @Icons.Send
+                            <text>Send mail</text>
+                        }
+                        else
+                        {
+                            <text>Gem og fortsæt</text>
+                        }
                     </button>
                 </div>
             </div>

@@ -263,10 +263,12 @@
 
     else if (TaskKey == "send")
     {
+        @* The totals the side rail used to carry, where the decision is made. *@
         <p class="send-sum">
             <b>@S.Picked.Count @(S.Picked.Count == 1 ? "mail" : "mails")</b> med
-            @S.Companies @(S.Companies == 1 ? "prisliste" : "prislister"),
-            skrevet på @S.Langs.Length @(S.Langs.Length == 1 ? "sprog" : "sprog").
+            @S.Companies @(S.Companies == 1 ? "prisliste" : "prislister") på
+            @S.Langs.Length @(S.Langs.Length == 1 ? "sprog" : "sprog") ·
+            <b>@S.Total.ToString("N0")</b> i alt.
         </p>
 
         <fieldset class="f-fieldset send-w">

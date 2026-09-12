@@ -1,7 +1,5 @@
 @implements IDisposable
 @inject MailDraft S
-@inject MailStore Store
-@inject AppState App
 
 @* The quote flow's steps, rendered inside the app side menu rather than as a
    second navigation column beside it. Lives next to the app nav it belongs to. *@
@@ -38,38 +36,9 @@
         </button>
     }
 
-    <div class="side-finish">
-        @* Shaped like every other row in this column; the panel owns the one filled
-           primary on screen. Still genuinely enabled — it walks you to what's missing. *@
-        <button type="button" class="side-nav-item side-finish-btn" id="v3-finish"
-                aria-describedby="@(Left.Length > 0 ? "side-finish-note" : null)"
-                @onclick="Send">
-            @Icons.Send
-            <span>Send mail</span>
-        </button>
-        <p class="side-finish-note" id="side-finish-note">
-            @(Left.Length > 0
-                ? $"{Left.Length} trin mangler"
-                : $"{S.Picked.Count} modtagere · {S.Total:N0}")
-        </p>
-    </div>
 </div>
 
 @code {
-    private TaskDef[] Left => S.RequiredLeft;
-
-    /// The one place the two pages meet: the draft becomes a row in the list,
-    /// and the list opens on it.
-    private void Send()
-    {
-        if (!S.ReadyToSend()) return;
-
-        var mail = Store.Send(S);
-        App.SelectOnArrival = mail.Ref;
-        App.Page = AppPage.Sent;
-        S.NotifyChanged();
-    }
-
     protected override void OnInitialized() => S.Changed += StateHasChanged;
     public void Dispose() => S.Changed -= StateHasChanged;
 }
