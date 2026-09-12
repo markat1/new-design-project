@@ -1,9 +1,9 @@
-using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using XlCell = DocumentFormat.OpenXml.Spreadsheet.Cell;
 using XlSheet = DocumentFormat.OpenXml.Spreadsheet.Sheet;
 
 namespace OnboardingChecklist.Model;
@@ -14,31 +14,32 @@ namespace OnboardingChecklist.Model;
 /// ones shipped in wwwroot/sheets, and nothing else here changes.
 public static partial class Accounting
 {
-    /// A workbook as this app needs it: the worksheet's name, the lines the
-    /// mail quotes, and the size of the file on disk. Edited says the two have
-    /// parted ways — the app holds newer lines than the file does.
-    public record Sheet(string Name, QuoteLine[] Lines, int Bytes, bool Edited = false, string? Url = null);
+    /// A workbook: every worksheet in it, the size of the file, and where
+    /// Office for the web can reach it if it lives somewhere Microsoft may
+    /// read. Edited says the app holds newer cells than the file does.
+    public record Book(Tab[] Tabs, int Bytes, bool Edited = false, string? Url = null);
 
-    /// A line in the system's own list of what it has made: the workbook, and
-    /// where Office for the web can reach it, when it is somewhere Microsoft
-    /// is allowed to read — a SharePoint embed link, or a public address.
+    /// A line in the system's own list of what it has made.
     private record Listed(string File, string? Url = null);
 
-    private static readonly Dictionary<string, Sheet> Books = [];
+    private static readonly Dictionary<string, Book> Books = [];
 
+    /// The mail's figures come off the first worksheet: a line is a row with a
+    /// quantity and a price in it, which leaves out the header and the sum.
     public static QuoteLine[] SheetFor(string company) =>
-        Books.TryGetValue(company, out var book) ? book.Lines : [];
+        Books.TryGetValue(company, out var book) && book.Tabs.Length > 0 ? Lines(book.Tabs[0]) : [];
 
     public static bool HasSheet(string company) => SheetFor(company).Length > 0;
 
-    /// The worksheet's own name, off the tab inside the workbook.
-    public static string SheetName(string company) =>
-        Books.TryGetValue(company, out var book) ? book.Name : "Ark1";
+    public static Tab[] TabsFor(string company) =>
+        Books.TryGetValue(company, out var book) ? book.Tabs : [];
 
     public static string FileFor(string company) => $"priser-{Slug(company)}.xlsx";
 
     public static string SizeFor(string company) =>
         Books.TryGetValue(company, out var book) ? $"{(book.Bytes + 512) / 1024} KB" : "—";
+
+    public static bool IsEdited(string company) => Books.TryGetValue(company, out var book) && book.Edited;
 
     /// Office for the web, ready to be framed. A link that is already an embed
     /// — the one SharePoint hands out — goes in as it is; anything else is a
@@ -54,16 +55,28 @@ public static partial class Accounting
             : $"https://view.officeapps.live.com/op/embed.aspx?src={Uri.EscapeDataString(url)}";
     }
 
-    public static bool IsEdited(string company) => Books.TryGetValue(company, out var book) && book.Edited;
-
-    /// A cell was changed in the app. The workbook on disk is untouched until
-    /// somebody saves it, which is what Edited is there to say.
-    public static void Replace(string company, QuoteLine[] lines)
+    /// A cell was typed into. Anything starting with "=" is kept as a formula,
+    /// as it would be in Excel; everything else stands as it is written. The
+    /// file on disk is untouched until somebody saves it.
+    public static void SetCell(string company, int tab, int row, int column, string typed)
     {
-        if (Books.TryGetValue(company, out var book))
-        {
-            Books[company] = book with { Lines = lines, Edited = true };
-        }
+        if (!Books.TryGetValue(company, out var book) || tab < 0 || tab >= book.Tabs.Length) return;
+
+        var was = book.Tabs[tab].At(row, column);
+        var text = typed.Trim();
+
+        book.Tabs[tab].Put(row, column, text.StartsWith('=')
+            ? new Cell("", text[1..], was.Bold)
+            : new Cell(text, null, was.Bold));
+
+        Books[company] = book with { Edited = true };
+    }
+
+    /// The workbook changed shape rather than content — rows moved — so the
+    /// file is behind again.
+    public static void Touch(string company)
+    {
+        if (Books.TryGetValue(company, out var book)) Books[company] = book with { Edited = true };
     }
 
     /// Read once, before the first screen, so every page below can stay
@@ -91,35 +104,63 @@ public static partial class Accounting
         }
     }
 
-    /// The first worksheet, top to bottom. A line is a row with a quantity and
-    /// a price in it, which leaves out the header and the sum underneath.
-    private static Sheet Read(Stream file, int bytes)
+    /// Every worksheet in the workbook, in the order the tabs sit in.
+    private static Book Read(Stream file, int bytes)
     {
         using var doc = SpreadsheetDocument.Open(file, false);
         var workbook = doc.WorkbookPart ?? throw new InvalidDataException("No workbook part.");
-        var first = workbook.Workbook?.Sheets?.Elements<XlSheet>().FirstOrDefault()
-                    ?? throw new InvalidDataException("No worksheet.");
-        var sheet = (WorksheetPart)workbook.GetPartById(first.Id!);
         var strings = workbook.SharedStringTablePart?.SharedStringTable;
+        var bold = BoldStyles(workbook);
 
-        var lines = new List<QuoteLine>();
-        foreach (var row in sheet.Worksheet?.Descendants<Row>() ?? [])
-        {
-            var cells = row.Elements<Cell>().ToDictionary(Column, c => CellText(c, strings));
+        var tabs = (workbook.Workbook?.Sheets?.Elements<XlSheet>() ?? [])
+            .Select(entry => ReadTab(workbook, entry, strings, bold))
+            .ToArray();
 
-            if (!cells.TryGetValue("B", out var qty) || !int.TryParse(qty, NumberStyles.Any, CultureInfo.InvariantCulture, out var count)) continue;
-            if (!cells.TryGetValue("C", out var price) || !decimal.TryParse(price, NumberStyles.Any, CultureInfo.InvariantCulture, out var unit)) continue;
-
-            lines.Add(new QuoteLine(cells.GetValueOrDefault("A", "").Trim(), count, unit));
-        }
-
-        return new Sheet(first.Name?.Value ?? "Ark1", [.. lines], bytes);
+        return new Book(tabs, bytes);
     }
 
-    /// The sheet written back out as a workbook: the same SDK, the other way
-    /// round. The line totals and the sum go in as the formulas Excel expects
-    /// (=B2*C2, =SUM), not as numbers, so the file recalculates when it is
-    /// opened and keeps working when somebody edits it there.
+    private static Tab ReadTab(WorkbookPart workbook, XlSheet entry, SharedStringTable? strings, HashSet<uint> bold)
+    {
+        var part = (WorksheetPart)workbook.GetPartById(entry.Id!);
+        var tab = new Tab(entry.Name?.Value ?? "Ark", []);
+
+        foreach (var row in part.Worksheet?.Descendants<Row>() ?? [])
+        {
+            var at = (int)(row.RowIndex?.Value ?? (uint)(tab.Rows.Count + 1)) - 1;
+
+            foreach (var cell in row.Elements<XlCell>())
+            {
+                tab.Put(at, Column(cell), new Cell(
+                    CellText(cell, strings),
+                    cell.CellFormula?.Text,
+                    bold.Contains(cell.StyleIndex?.Value ?? 0)));
+            }
+        }
+
+        return tab;
+    }
+
+    /// Which style slots carry a bold font. Read so a heading stays a heading
+    /// when the sheet is written back out.
+    private static HashSet<uint> BoldStyles(WorkbookPart workbook)
+    {
+        var styles = workbook.WorkbookStylesPart?.Stylesheet;
+        var fonts = styles?.Fonts?.Elements<Font>().ToArray() ?? [];
+        var formats = styles?.CellFormats?.Elements<CellFormat>().ToArray() ?? [];
+
+        return [.. Enumerable.Range(0, formats.Length)
+            .Where(i => formats[i].FontId?.Value is { } font && font < fonts.Length && fonts[font].Bold is not null)
+            .Select(i => (uint)i)];
+    }
+
+    private static QuoteLine[] Lines(Tab tab) =>
+        [.. Enumerable.Range(0, tab.Rows.Count)
+            .Select(row => (row, qty: Formulas.Value(tab, row, 1), unit: Formulas.Value(tab, row, 2)))
+            .Where(line => line.qty is not null && line.unit is not null)
+            .Select(line => new QuoteLine(tab.At(line.row, 0).Value.Trim(), (int)line.qty!.Value, line.unit!.Value))];
+
+    /// The workbook written back out, every sheet of it, by the same SDK that
+    /// read it. Formulas go in as formulas so Excel recalculates on open.
     public static byte[] Write(string company)
     {
         var book = Books[company];
@@ -130,36 +171,33 @@ public static partial class Accounting
             var workbook = doc.AddWorkbookPart();
             workbook.Workbook = new Workbook();
             workbook.AddNewPart<WorkbookStylesPart>().Stylesheet = Styles();
+            var sheets = workbook.Workbook.AppendChild(new Sheets());
 
-            var sheetPart = workbook.AddNewPart<WorksheetPart>();
-            var rows = new SheetData();
-            sheetPart.Worksheet = new Worksheet(Widths(), rows);
-
-            rows.Append(new Row(
-                Str("A1", "Beskrivelse", Head), Str("B1", "Antal", Head),
-                Str("C1", "Stykpris", Head), Str("D1", "I alt", Head)) { RowIndex = 1 });
-
-            uint index = 2;
-            foreach (var line in book.Lines)
+            uint id = 1;
+            foreach (var tab in book.Tabs)
             {
-                rows.Append(new Row(
-                    Str($"A{index}", line.Description), Num($"B{index}", line.Qty),
-                    Num($"C{index}", line.Unit, Money), Formula($"D{index}", $"B{index}*C{index}", Money))
-                { RowIndex = index });
-                index++;
+                var part = workbook.AddNewPart<WorksheetPart>();
+                var rows = new SheetData();
+                part.Worksheet = new Worksheet(Widths(), rows);
+
+                for (var r = 0; r < tab.Rows.Count; r++)
+                {
+                    var row = new Row { RowIndex = (uint)(r + 1) };
+
+                    for (var c = 0; c < tab.Rows[r].Count; c++)
+                    {
+                        var cell = tab.At(r, c);
+                        if (cell.Blank) continue;
+
+                        row.Append(Written($"{ColumnName(c)}{r + 1}", cell));
+                    }
+
+                    rows.Append(row);
+                }
+
+                sheets.AppendChild(new XlSheet { Id = workbook.GetIdOfPart(part), SheetId = id, Name = tab.Name });
+                id++;
             }
-
-            var last = index - 1;
-            rows.Append(new Row(
-                Str($"A{index}", "I alt", Head), new Cell { CellReference = $"B{index}" }, new Cell { CellReference = $"C{index}" },
-                Formula($"D{index}", $"SUM(D2:D{last})", HeadMoney)) { RowIndex = index });
-
-            workbook.Workbook.AppendChild(new Sheets()).AppendChild(new XlSheet
-            {
-                Id = workbook.GetIdOfPart(sheetPart),
-                SheetId = 1,
-                Name = book.Name,
-            });
 
             workbook.Workbook.Save();
         }
@@ -167,6 +205,37 @@ public static partial class Accounting
         var file = memory.ToArray();
         Books[company] = book with { Bytes = file.Length, Edited = false };
         return file;
+    }
+
+    private static XlCell Written(string reference, Cell cell)
+    {
+        var money = Formulas.Number(cell.Value) is not null || cell.Formula is not null;
+        var style = (cell.Bold, money) switch
+        {
+            (true, true) => HeadMoney,
+            (true, false) => Head,
+            (false, true) => Money,
+            _ => Plain,
+        };
+
+        if (cell.Formula is not null) return Formula(reference, cell.Formula, style);
+
+        return Formulas.Number(cell.Value) is { } number
+            ? Num(reference, number, style)
+            : Str(reference, cell.Value, style);
+    }
+
+    /// 0 is A, 26 is AA. These sheets are four columns wide, but the rule is
+    /// cheap and the grid is not ours to limit.
+    public static string ColumnName(int column)
+    {
+        var name = "";
+        for (var rest = column; rest >= 0; rest = rest / 26 - 1)
+        {
+            name = (char)('A' + rest % 26) + name;
+        }
+
+        return name;
     }
 
     // Style slots, in the order Styles() lists them.
@@ -195,7 +264,7 @@ public static partial class Accounting
             new CellFormat { FontId = 1, ApplyFont = true, NumberFormatId = 164, ApplyNumberFormat = true }),
         new CellStyles(new CellStyle { Name = "Normal", FormatId = 0, BuiltinId = 0 }));
 
-    private static Cell Str(string reference, string value, uint style = Plain) => new()
+    private static XlCell Str(string reference, string value, uint style = Plain) => new()
     {
         CellReference = reference,
         StyleIndex = style,
@@ -203,7 +272,7 @@ public static partial class Accounting
         InlineString = new InlineString(new Text(value)),
     };
 
-    private static Cell Num(string reference, decimal value, uint style = Plain) => new()
+    private static XlCell Num(string reference, decimal value, uint style = Plain) => new()
     {
         CellReference = reference,
         StyleIndex = style,
@@ -211,25 +280,28 @@ public static partial class Accounting
         CellValue = new CellValue(value),
     };
 
-    private static Cell Formula(string reference, string formula, uint style = Plain) => new()
+    private static XlCell Formula(string reference, string formula, uint style = Plain) => new()
     {
         CellReference = reference,
         StyleIndex = style,
         CellFormula = new CellFormula(formula),
     };
 
-    /// "B7" names column B. The letters lead, so the digits end them.
-    private static string Column(Cell cell)
+    /// "B7" names column B, counting from zero. The letters lead, so the
+    /// digits end them.
+    private static int Column(XlCell cell)
     {
         var reference = cell.CellReference?.Value ?? "";
-        var end = reference.TakeWhile(char.IsLetter).Count();
-        return reference[..end];
+        var letters = reference.TakeWhile(char.IsLetter).Count();
+
+        return reference[..letters].ToUpperInvariant()
+            .Aggregate(0, (value, letter) => value * 26 + (letter - 'A' + 1)) - 1;
     }
 
     /// Text lives in a shared table, numbers in the cell. A formula cell holds
     /// the last value Excel worked out — the SDK reads files, it does not
-    /// recalculate them, so the totals here are summed in C# instead.
-    private static string CellText(Cell cell, SharedStringTable? strings)
+    /// recalculate them, so Formulas works the value out instead.
+    private static string CellText(XlCell cell, SharedStringTable? strings)
     {
         var value = cell.CellValue?.InnerText ?? cell.InlineString?.Text?.Text ?? "";
 

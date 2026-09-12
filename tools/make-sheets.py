@@ -87,6 +87,18 @@ def write(company, lines):
     for column, width in (("A", 34), ("B", 8), ("C", 12), ("D", 12)):
         sheet.column_dimensions[column].width = width
 
+    # A workbook is not one sheet. The terms live on their own tab, the way an
+    # accountant keeps them, so the app has more than one to show.
+    terms = book.create_sheet("Vilkår")
+    terms.append(["Vilkår", "Værdi"])
+    for cell in terms[1]:
+        cell.font = Font(bold=True)
+    terms.append(["Betaling", "30 dage netto"])
+    terms.append(["Priserne gælder til", "31-12-2027"])
+    terms.append(["Valuta", "DKK"])
+    terms.column_dimensions["A"].width = 24
+    terms.column_dimensions["B"].width = 20
+
     path = f"{OUT}/priser-{slug(company)}.xlsx"
     book.save(path)
     return path

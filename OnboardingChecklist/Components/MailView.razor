@@ -1,4 +1,5 @@
 @using System.Globalization
+@using System.Text.RegularExpressions
 @inject IJSRuntime JS
 
 @* The send-out, rendered the same way whether it went out or is still being
@@ -152,105 +153,128 @@
                 {
                     <p class="rcp-none">Ingen prisliste i regnskabssystemet for @rec.Company.</p>
                 }
-                else
+                else if (Sheet is { } tab)
                 {
-                    @* The sheet as the accounting system holds it: the cells, not a
-                       summary of them. Letters and row numbers are the spreadsheet's
-                       own furniture, so they are hidden from a screen reader, which
-                       gets the header row instead. *@
+                    @* The workbook as it lies: every cell of the open worksheet, its
+                       sheets along the bottom, and ruled rows carrying on past the
+                       numbers. Letters and row numbers are the spreadsheet's own
+                       furniture, so a screen reader skips them. *@
                     <div class="xl">
+                        @if (autoCol is not null)
+                        {
+                            <div class="t-backdrop" @onclick="CloseAuto"></div>
+                        }
                         <div class="xl-grid">
                             <table class="xl-t">
                                 <thead>
                                     <tr class="xl-head" aria-hidden="true">
                                         <td class="xl-corner"></td>
-                                        <td>A</td>
-                                        <td>B</td>
-                                        <td>C</td>
-                                        <td>D</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="xl-n" aria-hidden="true">1</td>
-                                        <th scope="col">Beskrivelse</th>
-                                        <th scope="col" class="num">Antal</th>
-                                        <th scope="col" class="num">Stykpris</th>
-                                        <th scope="col" class="num">I alt</th>
+                                        @for (var c = 0; c < Wide; c++)
+                                        {
+                                            <td>@Accounting.ColumnName(c)</td>
+                                        }
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @{ var row = 1; }
-                                    @foreach (var l in rec.Lines)
+                                    @for (var r = 0; r < tab.Rows.Count + 40; r++)
                                     {
-                                        var line = l;
-                                        var at = row - 1;
-                                        row++;
-                                        <tr>
-                                            <td class="xl-n" aria-hidden="true">@row</td>
-                                            @if (Preview)
+                                        var line = r;
+                                        var real = line < tab.Rows.Count;
+                                        if (Hidden(tab, line)) { continue; }
+                                        <tr class="@(real ? null : "xl-empty")" aria-hidden="@(real ? null : "true")">
+                                            <td class="xl-n">@(line + 1)</td>
+                                            @for (var c = 0; c < Wide; c++)
                                             {
-                                                @* A draft's sheet can still be corrected; a sent one is
-                                                   what went out, so it only reads. D is Excel's own
-                                                   =B*C, so it is worked out, not typed. *@
-                                                <td class="xl-edit">
-                                                    <input aria-label="Beskrivelse, række @row" value="@line.Description"
-                                                           @onchange="e => SetCell(rec.Company, at, 'A', e.Value?.ToString() ?? string.Empty)" />
-                                                </td>
-                                                <td class="xl-edit num">
-                                                    <input class="num" inputmode="numeric" aria-label="Antal, række @row" value="@line.Qty"
-                                                           @onchange="e => SetCell(rec.Company, at, 'B', e.Value?.ToString() ?? string.Empty)" />
-                                                </td>
-                                                <td class="xl-edit num">
-                                                    <input class="num" inputmode="decimal" aria-label="Stykpris, række @row" value="@line.Unit.ToString("0.##")"
-                                                           @onchange="e => SetCell(rec.Company, at, 'C', e.Value?.ToString() ?? string.Empty)" />
-                                                </td>
-                                            }
-                                            else
-                                            {
-                                                <td>@line.Description</td>
-                                                <td class="num">@line.Qty</td>
-                                                <td class="num">@line.Unit.ToString("N0")</td>
-                                            }
-                                            <td class="num">@line.Total.ToString("N0")</td>
-                                        </tr>
-                                    }
-                                    <tr class="xl-sum">
-                                        <td class="xl-n" aria-hidden="true">@(row + 1)</td>
-                                        <th scope="row">I alt</th>
-                                        <td></td>
-                                        <td></td>
-                                        <td class="num">@rec.Total.ToString("N0")</td>
-                                    </tr>
+                                                var col = c;
+                                                var cell = tab.At(line, col);
+                                                var shownText = real ? Formulas.Display(tab, line, col) : "";
+                                                var numeric = Formulas.Value(tab, line, col) is not null;
+                                                var typedText = cell.Formula is null ? cell.Value : "=" + cell.Formula;
+                                                var cellName = Accounting.ColumnName(col) + (line + 1);
+                                                <td class="@Classes(cell, numeric)">
+                                                    @if (Preview)
+                                                    {
+                                                        @* A draft's workbook can still be corrected; a sent
+                                                           one is what went out, so it only reads. What is
+                                                           typed lands in the cell — "=" and all, as in
+                                                           Excel. *@
+                                                        <input aria-label="@cellName"
+                                                               value="@typedText"
+                                                               @onchange="e => Typed(rec.Company, line, col, e.Value?.ToString() ?? string.Empty)" />
+                                                    }
+                                                    else
+                                                    {
+                                                        @shownText
+                                                    }
 
-                                    @* A spreadsheet does not stop where its numbers do: the
-                                       ruled rows carry on past them. They are the paper, not
-                                       the sheet's content, so a screen reader skips them. *@
-                                    @for (var empty = row + 2; empty <= row + 41; empty++)
-                                    {
-                                        <tr class="xl-empty" aria-hidden="true">
-                                            <td class="xl-n">@empty</td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
+                                                    @if (line == 0 && real && Sorts(tab))
+                                                    {
+                                                        @* Excel's autofilter: the header cell opens the
+                                                           column's own sort and filter. *@
+                                                        <button type="button" class="xl-af" id="af-@col"
+                                                                data-on="@(Narrowed(col) ? "" : null)"
+                                                                aria-haspopup="dialog" aria-expanded="@(autoCol == col ? "true" : "false")"
+                                                                aria-label="Sortér og filtrér @cellName"
+                                                                @onclick="() => ToggleAuto(col)">@Icons.Chevron</button>
+
+                                                        @if (autoCol == col)
+                                                        {
+                                                            var numberColumn = IsNumberColumn(tab, col);
+                                                            <div class="t-menu xl-af-menu" role="dialog" tabindex="-1"
+                                                                 aria-label="Sortér og filtrér @shownText" @ref="autoMenu" @onkeydown="AutoKey">
+                                                                <span class="t-menu-head">Sortér</span>
+                                                                <button type="button" class="t-menu-item" @onclick="() => Sort(tab, col, true)">
+                                                                    <span class="t-menu-ico">@Icons.ArrowUp</span>
+                                                                    @(numberColumn ? "Mindst øverst" : "A til Å")
+                                                                </button>
+                                                                <button type="button" class="t-menu-item" @onclick="() => Sort(tab, col, false)">
+                                                                    <span class="t-menu-ico xl-down">@Icons.ArrowUp</span>
+                                                                    @(numberColumn ? "Størst øverst" : "Å til A")
+                                                                </button>
+
+                                                                <div class="t-menu-filter">
+                                                                    <span class="t-menu-head">Vis</span>
+                                                                    <ul class="t-menu-list">
+                                                                        @foreach (var v in ValuesIn(tab, col))
+                                                                        {
+                                                                            var value = v;
+                                                                            <li>
+                                                                                <label class="t-menu-check">
+                                                                                    <input type="checkbox" checked="@Showing(col, value)"
+                                                                                           @onchange="() => ToggleValue(tab, col, value)" />
+                                                                                    <span title="@value">@value</span>
+                                                                                </label>
+                                                                            </li>
+                                                                        }
+                                                                    </ul>
+                                                                </div>
+
+                                                                @if (Narrowed(col))
+                                                                {
+                                                                    <button type="button" class="t-menu-clear" @onclick="() => ClearAuto(col)">Ryd filter</button>
+                                                                }
+                                                            </div>
+                                                        }
+                                                    }
+                                                </td>
+                                            }
                                         </tr>
                                     }
                                 </tbody>
                             </table>
                         </div>
 
-                        @* One tab per customer in the send-out, the way a workbook
-                           keeps its sheets — each is its own file, and the tab is
-                           the shortest way between two of them. *@
+                        @* The workbook's own sheets, along the bottom where a workbook
+                           keeps them. *@
                         <div class="xl-foot">
-                            <div class="xl-tabs" role="tablist" aria-label="Prislister i udsendelsen">
-                                @foreach (var company in M.Recipients.Select(r => r.Company).Distinct())
+                            <div class="xl-tabs" role="tablist" aria-label="Ark i @rec.Attachment">
+                                @for (var t = 0; t < Tabs.Length; t++)
                                 {
-                                    var sheet = company;
-                                    <button type="button" class="xl-tab" role="tab"
-                                            title="@sheet — @Accounting.FileFor(sheet), arket hedder @Accounting.SheetName(sheet)"
-                                            aria-selected="@(sheet == rec.Company ? "true" : "false")"
-                                            data-on="@(sheet == rec.Company ? "" : null)"
-                                            @onclick="() => ShowCompany(sheet)">@sheet</button>
+                                    var at = t;
+                                    <button type="button" class="xl-tab" role="tab" title="@Tabs[at].Name — @rec.Attachment"
+                                            aria-selected="@(at == sheetTab ? "true" : "false")"
+                                            data-on="@(at == sheetTab ? "" : null)"
+                                            @onclick="() => sheetTab = at">@Tabs[at].Name</button>
                                 }
                             </div>
                             @if (Preview && Accounting.IsEdited(rec.Company))
@@ -295,6 +319,160 @@
 
     private int tab;
     private string? shown;
+    private int sheetTab;
+
+    /// The open customer's workbook, and the worksheet showing from it.
+    private Tab[] Tabs => Current is { } rec ? Accounting.TabsFor(rec.Company) : [];
+
+    private Tab? Sheet => sheetTab < Tabs.Length ? Tabs[sheetTab] : Tabs.FirstOrDefault();
+
+    /// Four columns at the least, so a narrow sheet still reads as paper.
+    private int Wide => Math.Max(4, Sheet?.Width ?? 4);
+
+    // ---- the worksheet's own sort and filter, as Excel's autofilter ----
+
+    private int? autoCol;
+    private ElementReference autoMenu;
+    private bool focusAuto;
+    private string? focusAfter;
+
+    /// The values a column is narrowed to. No entry means the column shows
+    /// everything, which is not the same as an entry that happens to be empty.
+    private readonly Dictionary<string, HashSet<string>> narrow = [];
+
+    private string Key(int column) => $"{Current?.Company}:{sheetTab}:{column}";
+
+    /// The rows the filter and the sort work on: under the header, down to the
+    /// first blank or bold row. A sum is bold, and it stays where it is.
+    private static (int From, int To) DataRange(Tab tab)
+    {
+        var to = 0;
+
+        for (var row = 1; row < tab.Rows.Count; row++)
+        {
+            if (tab.Rows[row].All(cell => cell.Blank) || tab.Rows[row].Any(cell => cell.Bold)) break;
+            to = row;
+        }
+
+        return (1, to);
+    }
+
+    private static bool Sorts(Tab tab) => DataRange(tab) is var (from, to) && to >= from;
+
+    private static bool IsNumberColumn(Tab tab, int column)
+    {
+        var (from, to) = DataRange(tab);
+        return to >= from && Enumerable.Range(from, to - from + 1).All(row => Formulas.Value(tab, row, column) is not null);
+    }
+
+    private IEnumerable<string> ValuesIn(Tab tab, int column)
+    {
+        var (from, to) = DataRange(tab);
+        return Enumerable.Range(from, Math.Max(0, to - from + 1))
+            .Select(row => Formulas.Display(tab, row, column))
+            .Distinct()
+            .Order();
+    }
+
+    private bool Narrowed(int column) => narrow.ContainsKey(Key(column));
+
+    private bool Showing(int column, string value) =>
+        !narrow.TryGetValue(Key(column), out var set) || set.Contains(value);
+
+    private bool Hidden(Tab tab, int line)
+    {
+        var (from, to) = DataRange(tab);
+        if (line < from || line > to) return false;
+
+        for (var column = 0; column < Wide; column++)
+        {
+            if (narrow.TryGetValue(Key(column), out var set) && !set.Contains(Formulas.Display(tab, line, column))) return true;
+        }
+
+        return false;
+    }
+
+    private void ToggleValue(Tab tab, int column, string value)
+    {
+        var all = ValuesIn(tab, column).ToList();
+        var key = Key(column);
+
+        if (!narrow.TryGetValue(key, out var set)) narrow[key] = set = [.. all];
+        if (!set.Remove(value)) set.Add(value);
+        if (set.Count == all.Count) narrow.Remove(key);
+    }
+
+    private void ClearAuto(int column)
+    {
+        narrow.Remove(Key(column));
+        focusAuto = true;
+    }
+
+    private void ToggleAuto(int column)
+    {
+        autoCol = autoCol == column ? null : column;
+        focusAuto = autoCol is not null;
+    }
+
+    private void CloseAuto()
+    {
+        if (autoCol is { } column) focusAfter = $"af-{column}";
+        autoCol = null;
+    }
+
+    private void AutoKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") CloseAuto();
+    }
+
+    /// Sorting moves rows, and a moved row takes its formulas with it — so the
+    /// references in them are rewritten to the row they land on, the way Excel
+    /// does it. The sum below the range keeps pointing at the same range.
+    private async Task Sort(Tab tab, int column, bool ascending)
+    {
+        var (from, to) = DataRange(tab);
+        if (to <= from)
+        {
+            CloseAuto();
+            return;
+        }
+
+        var rows = Enumerable.Range(from, to - from + 1)
+            .Select(row => (row, cells: tab.Rows[row], text: Formulas.Display(tab, row, column), number: Formulas.Value(tab, row, column)))
+            .ToList();
+
+        var sorted = IsNumberColumn(tab, column)
+            ? (ascending ? rows.OrderBy(r => r.number) : rows.OrderByDescending(r => r.number)).ToList()
+            : (ascending ? rows.OrderBy(r => r.text, StringComparer.CurrentCulture) : rows.OrderByDescending(r => r.text, StringComparer.CurrentCulture)).ToList();
+
+        for (var i = 0; i < sorted.Count; i++)
+        {
+            tab.Rows[from + i] = Moved(sorted[i].cells, sorted[i].row, from + i);
+        }
+
+        if (Current is { } rec) Accounting.Touch(rec.Company);
+        CloseAuto();
+        await SheetEdited.InvokeAsync();
+    }
+
+    private static List<Cell> Moved(List<Cell> cells, int was, int now)
+    {
+        if (was == now) return cells;
+
+        return [.. cells.Select(cell => cell.Formula is null
+            ? cell
+            : cell with { Formula = Regex.Replace(cell.Formula, $@"(?<col>\$?[A-Z]+\$?){was + 1}\b", $"${{col}}{now + 1}") })];
+    }
+
+    private string? Classes(Cell cell, bool numeric)
+    {
+        var classes = new List<string>();
+        if (Preview) classes.Add("xl-edit");
+        if (numeric) classes.Add("num");
+        if (cell.Bold) classes.Add("xl-b");
+
+        return classes.Count == 0 ? null : string.Join(' ', classes);
+    }
 
     /// The recipient whose sheet the third tab shows. Defaults to the first, so
     /// the tab is never blank when there is something to show.
@@ -306,39 +484,26 @@
     private void Show(string email)
     {
         shown = email;
+        sheetTab = 0;
         tab = 2;
-    }
-
-    /// The tab strip switches customer, not worksheet: two people at the same
-    /// company share one sheet, so the tabs follow the sheets.
-    private void ShowCompany(string company)
-    {
-        if (M.Recipients.FirstOrDefault(r => r.Company == company) is { } first) shown = first.Email;
     }
 
     private void Step(int by)
     {
         var next = Index + by;
-        if (next >= 0 && next < M.Recipients.Length) shown = M.Recipients[next].Email;
+        if (next < 0 || next >= M.Recipients.Length) return;
+
+        shown = M.Recipients[next].Email;
+        sheetTab = 0;
     }
 
-    /// A cell was typed into. The sheet is the accounting system's, so the edit
-    /// goes there and every figure that reads from it — this grid, the
-    /// recipient's sum, the total out in the list — follows on the next render.
-    private async Task SetCell(string company, int at, char column, string typed)
+    /// A cell was typed into. The workbook is the accounting system's, so the
+    /// edit goes there and every figure reading from it — this grid, the
+    /// recipient's sum, the send-out's total in the list — follows on the next
+    /// render.
+    private async Task Typed(string company, int row, int column, string text)
     {
-        var lines = Accounting.SheetFor(company).ToArray();
-        if (at < 0 || at >= lines.Length) return;
-
-        var line = lines[at];
-        lines[at] = column switch
-        {
-            'A' => line with { Description = typed.Trim() },
-            'B' => int.TryParse(typed, NumberStyles.Any, CultureInfo.CurrentCulture, out var qty) ? line with { Qty = qty } : line,
-            _ => decimal.TryParse(typed, NumberStyles.Any, CultureInfo.CurrentCulture, out var unit) ? line with { Unit = unit } : line,
-        };
-
-        Accounting.Replace(company, lines);
+        Accounting.SetCell(company, sheetTab, row, column, text);
         await SheetEdited.InvokeAsync();
     }
 
@@ -357,6 +522,20 @@
 
     private static string Show(string value, string fallback) =>
         value.Trim().Length > 0 ? value : fallback;
+
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (focusAuto)
+        {
+            focusAuto = false;
+            await JS.InvokeVoidAsync("app.focusIn", autoMenu);
+        }
+        else if (focusAfter is { } id)
+        {
+            focusAfter = null;
+            await JS.InvokeVoidAsync("app.focusId", id);
+        }
+    }
 
     private void TabKey(KeyboardEventArgs e)
     {

@@ -1231,9 +1231,46 @@ body {
 .xl-corner,
 .xl-n { width: 28px; }
 
-/* The header line the accountant wrote, and the sum under the figures. */
-.xl-t thead tr:not(.xl-head) th { font-weight: 600; }
-.xl-sum > * { border-top: 1px solid var(--line-2); font-weight: 600; }
+/* Whatever the accountant made bold — a heading, a sum — stays bold. */
+.xl-b, .xl-b input { font-weight: 600; }
+
+/* Excel's autofilter: a small button in the header cell, opening that column's
+   own sort and filter. The cell is the anchor, so the panel hangs under the
+   column it belongs to. */
+.xl-t td { position: relative; }
+.xl-t tbody tr:first-child td { padding-right: 28px; }   /* room for the button */
+.xl-t tbody tr:first-child input { padding-right: 0; }
+.xl-af {
+  position: absolute;
+  right: 3px;
+  top: 50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--line-2);
+  border-radius: 0;
+  transform: translateY(-50%);
+  background: var(--surface);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background-color 130ms ease, color 130ms ease;
+}
+.xl-af svg { display: block; }
+.xl-af:hover { background: var(--hover); color: var(--ink-1); }
+.xl-af[data-on] { border-color: var(--accent); color: var(--accent); }
+.xl-af:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* 30px, not 40: the row above and below hold cells you can type in, and a hit
+   area that reached them would take their clicks. */
+.xl-af::after { content: ""; position: absolute; inset: -6px; }
+
+/* Hangs under its own column, and opens leftwards unless it is the first one,
+   where there is nothing to the left to open into. */
+.xl-af-menu { top: calc(100% + 2px); left: auto; right: 0; width: 220px; }
+.xl-t td:nth-child(2) .xl-af-menu { left: 0; right: auto; }
+.xl-down svg { transform: rotate(180deg); }
 
 .xl-foot {
   flex: none;
@@ -1284,7 +1321,7 @@ body {
   font-size: 12px;
   color: var(--ink-1);
 }
-.xl-edit input.num { text-align: right; font-variant-numeric: tabular-nums; }
+.xl-t td.num input { text-align: right; font-variant-numeric: tabular-nums; }
 .xl-edit input:hover { background: var(--hover); }
 .xl-edit input:focus { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--surface); }
 /* 16px on touch, or iOS zooms the page when a cell takes focus. */
