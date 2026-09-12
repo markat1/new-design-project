@@ -7,10 +7,9 @@
    right. Sorting and filtering are plain LINQ. *@
 <div class="split-page">
 
-    <header class="split-head">
-        <h1 class="page-h1">Mails</h1>
-        <p class="page-lede">Hver udsendelse går til flere kunder — én prisliste hver.</p>
-    </header>
+    @* The side menu already names the page and marks it current, so the title
+       is here for a screen reader and gives its height to the panes. *@
+    <h1 class="sr-only">Mails</h1>
 
     <div class="split" @ref="split">
 

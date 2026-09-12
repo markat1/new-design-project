@@ -683,13 +683,6 @@ body {
    layout class from a single column, and each pane scrolls on its own. */
 .split-page { height: 100vh; display: flex; flex-direction: column; }
 
-.split-head {
-  flex: none;
-  padding: 22px 24px 18px;
-  border-bottom: 1px solid var(--line);
-}
-.page-h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
-.page-lede { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
 .split { --detail-w: 400px; flex: 1; display: flex; min-height: 0; }
 
 .split-list { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
