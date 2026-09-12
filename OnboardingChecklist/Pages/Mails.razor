@@ -61,7 +61,11 @@
                                     @if (isOpen)
                                     {
                                         var order = OrderLabels(col.Key);
-                                        <div class="t-menu" role="dialog" aria-label="Sortér og filtrér @col.Label" @ref="menu" @onkeydown="MenuKey">
+                                        @* tabindex so a click on the panel's own background lands
+                                           here rather than on the body, where Escape stops
+                                           reaching the panel that is open. *@
+                                        <div class="t-menu" role="dialog" tabindex="-1" aria-label="Sortér og filtrér @col.Label"
+                                             @ref="menu" @onkeydown="MenuKey">
                                             <span class="t-menu-head">Sorteringsrækkefølge</span>
                                             @* Low end first, as Outlook lists it: Ældste before
                                                Nyeste, A before Å. *@
@@ -80,7 +84,10 @@
                                             {
                                                 var shown = Shown(col.Key).ToArray();
                                                 <div class="t-menu-filter">
-                                                    <span class="t-menu-head">@heading</span>
+                                                    @if (heading.Length > 0)
+                                                    {
+                                                        <span class="t-menu-head">@heading</span>
+                                                    }
                                                     @* The field shortens this list and nothing else — the
                                                        table answers to the boxes, as in a spreadsheet. *@
                                                     <div class="t-find">
@@ -196,15 +203,16 @@
 </div>
 
 @code {
-    /// A column offers a filter when it has a word for what its list holds.
-    /// "Gik til" on Modtagere: a send reaches many customers, so the value
+    /// A column with Filter set offers one, and the string heads its list —
+    /// empty where the values say plainly enough what they are. "Gik til" on
+    /// Modtagere earns its line: a send reaches many customers, so the value
     /// sits inside the row rather than in the cell.
     private record Col(string Key, string Label, bool Num = false, string? Filter = null);
 
     private static readonly Col[] Columns =
     [
-        new("ref", "Reference", Filter: "Vis"),
-        new("subject", "Emne", Filter: "Vis"),
+        new("ref", "Reference", Filter: ""),
+        new("subject", "Emne", Filter: ""),
         new("recipients", "Modtagere", true, "Gik til"),
         new("total", "I alt", true),
         new("sent", "Sendt", true),
