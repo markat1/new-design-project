@@ -42,7 +42,8 @@
                                     <button type="button" class="t-th" id="th-@col.Key"
                                             aria-haspopup="dialog" aria-expanded="@(isOpen ? "true" : "false")"
                                             @onclick="() => Toggle(col.Key)">
-                                        @col.Label
+                                        @* The mark leads the label in every column, and its slot is
+                                           there even when empty, so the label never moves. *@
                                         @if (sorted && filtered)
                                         {
                                             @* Both at once: one mark, the way Outlook draws it. *@
@@ -56,6 +57,11 @@
                                         {
                                             <span class="t-mark" role="img" aria-label="filtreret">@Icons.Filter</span>
                                         }
+                                        else
+                                        {
+                                            <span class="t-mark"></span>
+                                        }
+                                        @col.Label
                                     </button>
 
                                     @if (isOpen)

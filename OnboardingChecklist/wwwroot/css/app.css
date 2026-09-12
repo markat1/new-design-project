@@ -812,8 +812,7 @@ body {
    high. Height comes from line-height + padding (16 + 24 = 40) because a
    baseline row sticks to the top of a min-height box. */
 .t-th {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 15px;
+  display: flex;
   align-items: baseline;
   gap: 5px;
   width: 100%;
@@ -834,20 +833,25 @@ body {
 /* 40px suits a mouse; a finger gets the 44px floor. */
 @media (pointer: coarse) { .t-th { padding-block: 14px; } }
 
-/* The mark follows the label in every column, and its 15px is kept whether
-   or not there is one — the widest mark is the combined one, so nothing moves
-   when a column gains a filter or changes direction. The slot is what lets
-   number columns keep a trailing mark at all: without it the label would jump
-   sideways each time the sort landed on it. In those columns the mark ends on
-   the figures' own edge, with the label a slot's width inside it. */
-.t th.num .t-th { text-align: right; }
-.t th.num .t-mark { justify-self: end; }
+/* The mark leads the label in every column, right up against the word: at
+   the column's far end it read as belonging to the edge rather than to the
+   header. Its slot is 15px — the widest mark, the combined one — and is kept
+   whether or not a mark is in it, so the label never moves; the glyph sits at
+   the slot's right, so the gap to the word is the same 5px in every state.
+   Number columns push the pair to the right, where their figures are. */
+.t th.num .t-th { justify-content: flex-end; }
 
 /* One mark per header, in Outlook's glyphs: the arrow when the column is
    sorted, the filter lines when it is filtered, the two drawn as one when it
    is both. Each is cap height and sits on the baseline. The arrow says which
    way by turning; the combined mark comes in both directions. */
-.t-mark { display: block; color: var(--accent); }
+.t-mark {
+  display: flex;
+  justify-content: flex-end;
+  flex: none;
+  width: 15px;
+  color: var(--accent);
+}
 .t-mark svg { display: block; }
 .t-sort:not([data-asc]) svg { transform: rotate(180deg); }
 
@@ -1036,6 +1040,11 @@ body {
 .t tbody tr[data-picked] .t-muted { color: var(--accent); }
 
 .t td { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+/* The left-hand columns start where their header's label does, past the mark
+   slot, so heading and content read down one line. The right-hand ones need
+   nothing: their figures and their labels both end on the padding edge. */
+.t td:nth-child(1),
+.t td:nth-child(2) { padding-left: 34px; }
 .t .num { text-align: right; font-variant-numeric: tabular-nums; }
 .t-muted { color: var(--ink-2); }
 .t-ref { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
