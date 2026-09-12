@@ -590,7 +590,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 20px 12px;
+  /* No side padding: the rows carry it themselves, so a selected row runs the
+     full width of the pane and meets its own edge. A square highlight that
+     stops short of the edge reads as a rounded one with the corners cut off —
+     square only earns its keep full-bleed, which is how the classic folder
+     pane draws it. */
+  padding: 20px 0;
   background: var(--surface);
   border-right: 1px solid var(--line);
 }
@@ -606,9 +611,11 @@ body {
   gap: 9px;
   width: 100%;
   min-height: 44px;
-  padding: 8px 10px;
+  /* 22 = the 12 the pane used to hold plus the 10 that was here, so the icon
+     has not moved. */
+  padding: 8px 22px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
   color: var(--ink-2);
   font: inherit;
@@ -639,7 +646,7 @@ body {
    the item they hang under. The line landed in the parent's icon column and
    read as a stray stroke. Their markers sit in that column instead, and their
    labels line up with the parent's — a hierarchy you can see without a wire. */
-.side-steps { margin: 6px 0 0 2px; }
+.side-steps { margin: 6px 0 0; }
 
 
 .side-step {
@@ -650,9 +657,9 @@ body {
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: 7px 8px;
+  padding: 7px 22px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
   font: inherit;
   text-align: left;
