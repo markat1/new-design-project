@@ -10,10 +10,21 @@ public record Person(string Name, string Email, string Company)
     public bool HasSheet => Accounting.HasSheet(Company);
 }
 
+/// A marketing list: the people a send-out goes to. The same person can be on
+/// more than one, which is why a send names the list it went to.
+public record Group(string Name, Person[] People)
+{
+    public int Customers => People.Select(p => p.Company).Distinct().Count();
+
+    /// The same rule the sent list uses: a sheet counts once per person who
+    /// gets it, because each of them gets their own copy attached.
+    public decimal Total => People.Sum(p => Accounting.SheetFor(p.Company).Sum(line => line.Total));
+}
+
 public static class MarketingGroup
 {
     // Two at Kestrel on purpose: same company, same sheet, two mails.
-    public static readonly Person[] All =
+    private static readonly Person[] People =
     [
         new("Bartholomew Featherstonehaugh-Villanueva",
             "bartholomew.featherstonehaugh-villanueva@internationalsystems-engineering.co.uk",
@@ -26,4 +37,30 @@ public static class MarketingGroup
         new("Mia Brandt", "ops@brightharbour.co", "Bright Harbour Logistics"),
         new("Ida Solberg", "hei@solbergmedia.no", "Solberg Media"),
     ];
+
+    private static Person Find(string email) => People.First(p => p.Email == email);
+
+    /// The lists as the marketing side keeps them. Bo Halden is on two of them
+    /// on purpose: the lists overlap, and a send-out belongs to one of them.
+    public static readonly Group[] Lists =
+    [
+        new("Rammeaftale 2027", People),
+        new("Fragtkunder",
+        [
+            Find("ops@brightharbour.co"),
+            Find("einkauf@ferrous-mfg.de"),
+            Find("bo@halden.dk"),
+        ]),
+        new("Norden",
+        [
+            Find("anna@velarobotics.com"),
+            Find("finance@kestrel.io"),
+            Find("jonas@kestrel.io"),
+            Find("bo@halden.dk"),
+            Find("hei@solbergmedia.no"),
+        ]),
+    ];
+
+    /// Everybody, whichever list they are on — what the sent mails compose from.
+    public static readonly Person[] All = People;
 }

@@ -1425,6 +1425,24 @@ body {
    ============================================================ */
 .pick { list-style: none; margin: 0 0 4px; padding: 0; }
 
+/* The list rows carry the same shape as the people below them, so the step
+   reads as one choice followed by its consequence. */
+.pick-lists { margin-bottom: 14px; }
+
+.pick-count {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-1);
+}
+.pick-count-s { font-size: 12px; font-weight: 400; color: var(--ink-3); }
+
 .pick-row {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto;

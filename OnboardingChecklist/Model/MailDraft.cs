@@ -7,8 +7,24 @@ public class MailDraft
     public string Subject { get; set; } = "";
     public string Note { get; set; } = "";
 
-    /// Emails of the people picked from the marketing group.
-    public HashSet<string> Picked { get; } = [];
+    /// The marketing list this send-out goes to. One send, one list.
+    public Group List { get; private set; } = MarketingGroup.Lists[0];
+
+    private readonly Dictionary<string, HashSet<string>> picks = [];
+
+    /// Everybody on the list is on the send-out until somebody is taken off:
+    /// sending to the whole group is the normal case, and eight ticks to say
+    /// so is not a choice, it is a chore. Kept per list, so looking at another
+    /// one and coming back costs nothing.
+    public HashSet<string> Picked =>
+        picks.TryGetValue(List.Name, out var set) ? set : picks[List.Name] = [.. List.People.Select(p => p.Email)];
+
+    public void Choose(Group list)
+    {
+        List = list;
+        Errors.Remove("recipients");
+        NotifyChanged();
+    }
 
     public bool TouchedNote { get; set; }
 
@@ -29,7 +45,7 @@ public class MailDraft
     public string StepKey { get; set; } = "recipients";
 
     public Recipient[] Recipients =>
-        [.. MarketingGroup.All.Where(p => Picked.Contains(p.Email)).Select(p => p.Compose())];
+        [.. List.People.Where(p => Picked.Contains(p.Email)).Select(p => p.Compose())];
 
     public decimal Total => Recipients.Sum(r => r.Total);
 
@@ -125,7 +141,8 @@ public class MailDraft
     {
         Subject = "";
         Note = "";
-        Picked.Clear();
+        picks.Clear();
+        List = MarketingGroup.Lists[0];
         TouchedNote = false;
         Errors.Clear();
         StepKey = "recipients";

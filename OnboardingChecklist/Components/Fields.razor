@@ -7,8 +7,34 @@
 
     @if (TaskKey == "recipients")
     {
-        <ul class="pick" aria-label="Marketinggruppen">
-            @foreach (var p in MarketingGroup.All)
+        @* The list is the choice; the people are what it means. Sending to a
+           whole marketing group is the normal case, so they all start on it. *@
+        <ul class="pick pick-lists" aria-label="Marketinglister">
+            @foreach (var g in MarketingGroup.Lists)
+            {
+                var group = g;
+                var chosen = S.List.Name == group.Name;
+                <li @key="group.Name">
+                    <label class="pick-row" data-on="@(chosen ? "" : null)">
+                        <input type="radio" name="marketing-list" checked="@chosen"
+                               @onchange="() => S.Choose(group)" />
+                        <span class="pick-txt">
+                            <span class="pick-name">@group.Name</span>
+                            <span class="pick-co">@group.People.Length personer · @group.Customers kunder</span>
+                        </span>
+                        <span class="pick-sum num">@group.Total.ToString("N0")</span>
+                    </label>
+                </li>
+            }
+        </ul>
+
+        <p class="pick-count">
+            <span>@S.Picked.Count af @S.List.People.Length personer med</span>
+            <span class="pick-count-s">Fravælg enkelte herunder</span>
+        </p>
+
+        <ul class="pick" aria-label="Personer på @S.List.Name">
+            @foreach (var p in S.List.People)
             {
                 var person = p;
                 var on = S.Picked.Contains(person.Email);
