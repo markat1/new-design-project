@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace OnboardingChecklist.Model;
 
 public enum MailStatus { Draft, Sent }
@@ -26,27 +24,19 @@ public record QuoteLine(string Description, int Qty, decimal Unit)
 /// Somebody on the send list, with the sheet their company gets. The lines are
 /// copied in at send time: what was sent stays what was sent, even after the
 /// accounting system moves on.
-public partial record Recipient(string Name, string Email, string Company, QuoteLine[] Lines, RecipientStatus Status)
+public record Recipient(string Name, string Email, string Company, QuoteLine[] Lines, RecipientStatus Status)
 {
     public decimal Total => Lines.Sum(l => l.Total);
 
-    public string Attachment => $"priser-{Slug(Company)}.xlsx";
+    public string Attachment => Accounting.FileFor(Company);
 
-    public string AttachmentSize => Lines.Length == 0 ? "—" : $"{12 + Lines.Length * 2} KB";
+    /// The workbook's real size on disk, not an estimate of one.
+    public string AttachmentSize => Accounting.SizeFor(Company);
 
     public string Initials =>
         string.Concat(Name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                           .Take(2).Select(w => char.ToUpperInvariant(w[0])));
 
-    /// "Halden & Co." has three non-letters in a row, so the runs have to
-    /// collapse — a single Replace("--", "-") leaves halden--co behind.
-    private static string Slug(string s) =>
-        SlugRuns().Replace(
-            new string(s.ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray()),
-            "-").Trim('-');
-
-    [GeneratedRegex("-{2,}")]
-    private static partial Regex SlugRuns();
 }
 
 /// One send-out: a single mail to a marketing group, where every customer gets

@@ -1223,8 +1223,18 @@ body {
   border-top: 0;
   background: var(--sunk);
 }
+.xl-file {
+  flex: 1;
+  min-width: 0;
+  padding-left: 9px;
+  font-size: 11px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .xl-tab {
-  max-width: 62%;
+  flex: none;
   padding: 6px 12px;
   background: var(--surface);
   border-right: 1px solid var(--line-2);

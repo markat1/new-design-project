@@ -189,9 +189,11 @@
                             </table>
                         </div>
 
-                        @* The file the mail carries, where a spreadsheet keeps its name. *@
+                        @* The worksheet's own name, off the tab inside the workbook,
+                           then the file the mail carries and what it weighs. *@
                         <div class="xl-foot">
-                            <span class="xl-tab" title="@rec.Attachment">@rec.Attachment</span>
+                            <span class="xl-tab">@Accounting.SheetName(rec.Company)</span>
+                            <span class="xl-file" title="@rec.Attachment">@rec.Attachment</span>
                             <span class="xl-size">@rec.AttachmentSize</span>
                         </div>
                     </div>
