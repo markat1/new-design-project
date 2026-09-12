@@ -25,16 +25,6 @@
                 tabindex="@(tab == 2 ? 0 : -1)" @onclick="() => tab = 2">Vedhæftning</button>
     </div>
 
-    @* Under the tabs rather than over them: the tabs open the pane, and the
-       mail's stamp belongs to what is inside it. *@
-    @if (!Preview)
-    {
-        <div class="d-top">
-            <span class="t-pill" data-s="@M.Status.ToString().ToLowerInvariant()">@M.Label</span>
-            <span class="d-ref">@M.Ref</span>
-        </div>
-    }
-
     @if (tab == 0)
     {
         <div class="d-panel" role="tabpanel" id="d-panel-mail" aria-labelledby="d-tab-mail">
@@ -205,7 +195,7 @@
                                                 var numeric = Formulas.Value(tab, line, col) is not null;
                                                 var typedText = cell.Formula is null ? cell.Value : "=" + cell.Formula;
                                                 var cellName = Accounting.ColumnName(col) + (line + 1);
-                                                <td class="@Classes(cell, numeric)">
+                                                <td class="@Classes(cell, numeric)" data-open="@(autoCol == col && line == 0 ? "" : null)">
                                                     @if (Preview)
                                                     {
                                                         @* A draft's workbook can still be corrected; a sent

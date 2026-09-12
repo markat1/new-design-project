@@ -1086,9 +1086,6 @@ body {
 /* Excel for the web, to the pane's edges. */
 .xl-office { flex: 1; min-height: 0; width: 100%; border: 0; background: var(--surface); }
 
-.d-top { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; }
-.d-ref { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-
 /* The mail and the file it carries are two documents, so they get two tabs
    rather than one long column. */
 /* The tabs open the pane: at the top of it, and out to its edges. */
@@ -1218,6 +1215,13 @@ body {
   text-align: left;
   overflow: hidden;                  /* the column's width is the file's, not the text's */
 }
+/* Except the header row, which hosts the autofilter: a clipped cell clips the
+   panel hanging out of it. Its text is kept off the button by the padding. */
+.xl-t tbody tr:first-child > td { overflow: visible; }
+/* The cell with the panel open rises over the backdrop. A sticky cell with a
+   z-index is its own stacking context, so the panel's own z-index counts only
+   inside it — the cell is what has to clear the backdrop's 5. */
+.xl-t tbody tr:first-child > td[data-open] { z-index: 8; }
 .xl-t tr > :last-child { border-right: 0; }
 .xl-t tbody tr:last-child > * { border-bottom: 0; }
 /* The paper below the numbers: ruled, empty, and not in anybody's way. */
