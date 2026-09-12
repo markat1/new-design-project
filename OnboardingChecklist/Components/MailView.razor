@@ -220,15 +220,39 @@
                                         <td></td>
                                         <td class="num">@rec.Total.ToString("N0")</td>
                                     </tr>
+
+                                    @* A spreadsheet does not stop where its numbers do: the
+                                       ruled rows carry on past them. They are the paper, not
+                                       the sheet's content, so a screen reader skips them. *@
+                                    @for (var empty = row + 2; empty <= row + 41; empty++)
+                                    {
+                                        <tr class="xl-empty" aria-hidden="true">
+                                            <td class="xl-n">@empty</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+                                    }
                                 </tbody>
                             </table>
                         </div>
 
-                        @* The worksheet's own name, off the tab inside the workbook,
-                           then the file the mail carries and what it weighs. *@
+                        @* One tab per customer in the send-out, the way a workbook
+                           keeps its sheets — each is its own file, and the tab is
+                           the shortest way between two of them. *@
                         <div class="xl-foot">
-                            <span class="xl-tab">@Accounting.SheetName(rec.Company)</span>
-                            <span class="xl-file" title="@rec.Attachment">@rec.Attachment</span>
+                            <div class="xl-tabs" role="tablist" aria-label="Prislister i udsendelsen">
+                                @foreach (var company in M.Recipients.Select(r => r.Company).Distinct())
+                                {
+                                    var sheet = company;
+                                    <button type="button" class="xl-tab" role="tab"
+                                            title="@sheet — @Accounting.FileFor(sheet), arket hedder @Accounting.SheetName(sheet)"
+                                            aria-selected="@(sheet == rec.Company ? "true" : "false")"
+                                            data-on="@(sheet == rec.Company ? "" : null)"
+                                            @onclick="() => ShowCompany(sheet)">@sheet</button>
+                                }
+                            </div>
                             @if (Preview && Accounting.IsEdited(rec.Company))
                             {
                                 <span class="xl-dirty">ikke gemt</span>
@@ -283,6 +307,13 @@
     {
         shown = email;
         tab = 2;
+    }
+
+    /// The tab strip switches customer, not worksheet: two people at the same
+    /// company share one sheet, so the tabs follow the sheets.
+    private void ShowCompany(string company)
+    {
+        if (M.Recipients.FirstOrDefault(r => r.Company == company) is { } first) shown = first.Email;
     }
 
     private void Step(int by)

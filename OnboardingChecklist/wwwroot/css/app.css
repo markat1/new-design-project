@@ -1074,6 +1074,10 @@ body {
    gutter the pane keeps for a scrollbar would be a strip of empty paper down
    the side of the grid. */
 .split-detail:has(.d-panel-file) { overflow-y: hidden; scrollbar-gutter: auto; }
+/* Bound, not merely tall enough: the sheet's ruled rows run past the bottom of
+   the pane, and a column that only has a minimum height grows with them and
+   carries the tab strip out of sight. */
+.split-detail:has(.d-panel-file) .d { height: 100%; }
 
 .d-panel-file { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 -22px -40px; }
 .d-panel-file .sheet-for { padding: 0 22px 16px; margin-bottom: 0; }
@@ -1201,6 +1205,7 @@ body {
 .xl-t { border-collapse: collapse; min-width: 100%; font-size: 12px; white-space: nowrap; }
 .xl-t th,
 .xl-t td {
+  height: 26px;
   padding: 5px 9px;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -1209,6 +1214,8 @@ body {
 }
 .xl-t tr > :last-child { border-right: 0; }
 .xl-t tbody tr:last-child > * { border-bottom: 0; }
+/* The paper below the numbers: ruled, empty, and not in anybody's way. */
+.xl-empty td { cursor: default; }
 .xl-t .num { text-align: right; font-variant-numeric: tabular-nums; }
 .xl-t td:nth-child(2) { min-width: 150px; }
 
@@ -1237,27 +1244,32 @@ body {
   border-top: 1px solid var(--line-2);
   background: var(--sunk);
 }
-.xl-file {
-  flex: 1;
-  min-width: 0;
-  padding-left: 9px;
-  font-size: 11px;
-  color: var(--ink-3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* The sheet tabs, as a workbook keeps them. The strip scrolls rather than
+   squeezing the names, and the open one is white with a line under it —
+   colour and ground, never weight, so the tabs beside it hold still. */
+.xl-tabs { flex: 1 1 0; display: flex; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; }
 .xl-tab {
   flex: none;
-  padding: 6px 12px;
-  background: var(--surface);
+  max-width: 160px;
+  padding: 8px 12px;
+  border: 0;
   border-right: 1px solid var(--line-2);
+  background: transparent;
+  font: inherit;
   font-size: 12px;
   font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: background-color 130ms ease, color 130ms ease;
 }
+.xl-tab:hover { background: var(--hover); color: var(--ink-1); }
+.xl-tab[data-on] { background: var(--surface); color: var(--ink-1); box-shadow: inset 0 -2px 0 var(--accent); }
+.xl-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* A finger gets the 44px floor; a mouse does not need the strip that tall. */
+@media (pointer: coarse) { .xl-tab { padding-block: 13px; } }
 /* A draft's cells can be typed into: the input fills its cell, so the grid
    still reads as a grid and the cell shows where you are. A sent mail's sheet
    only reads — it is what went out. */
@@ -1278,7 +1290,7 @@ body {
 /* 16px on touch, or iOS zooms the page when a cell takes focus. */
 @media (pointer: coarse) { .xl-edit input { font-size: 16px; } }
 
-.xl-dirty { margin-left: auto; font-size: 11px; color: var(--ink-3); }
+.xl-dirty { flex: none; font-size: 11px; color: var(--ink-3); white-space: nowrap; }
 .xl-save {
   position: relative;
   flex: none;
@@ -1300,7 +1312,7 @@ body {
 /* The strip is thin; the target is not. */
 .xl-save::after { content: ""; position: absolute; inset: -7px; }
 
-.xl-size { margin-left: auto; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.xl-size { flex: none; padding-left: 9px; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .d-none { padding: 18px 0; }
 .d-none p { margin: 0; font-size: 13px; }
