@@ -1204,7 +1204,10 @@ body {
    the description out of shape. */
 .xl { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .xl-grid { flex: 1; min-height: 0; overflow: auto; border-top: 1px solid var(--line-2); background: var(--surface); }
-.xl-t { border-collapse: collapse; min-width: 100%; font-size: 12px; white-space: nowrap; }
+/* max-content, or a fixed layout squeezes the columns to fit the pane instead
+   of keeping the widths the file gave them and letting the grid scroll. */
+.xl-t { border-collapse: collapse; table-layout: fixed; width: max-content; min-width: 100%; font-size: 12px; white-space: nowrap; }
+.xl-c-n { width: 30px; }
 .xl-t th,
 .xl-t td {
   height: 26px;
@@ -1213,13 +1216,13 @@ body {
   border-bottom: 1px solid var(--line);
   font-weight: 400;
   text-align: left;
+  overflow: hidden;                  /* the column's width is the file's, not the text's */
 }
 .xl-t tr > :last-child { border-right: 0; }
 .xl-t tbody tr:last-child > * { border-bottom: 0; }
 /* The paper below the numbers: ruled, empty, and not in anybody's way. */
 .xl-empty td { cursor: default; }
 .xl-t .num { text-align: right; font-variant-numeric: tabular-nums; }
-.xl-t td:nth-child(2) { min-width: 150px; }
 
 /* The spreadsheet's own furniture, in the sunk grey it has everywhere else. */
 .xl-head td,

@@ -166,10 +166,24 @@
                         }
                         <div class="xl-grid">
                             <table class="xl-t">
+                                <colgroup>
+                                    <col class="xl-c-n" />
+                                    @for (var c = 0; c < Wide; c++)
+                                    {
+                                        <col style="width: @(Accounting.WidthPx(tab, c))px" />
+                                    }
+                                    @for (var c = Wide; c < Cols - 1; c++)
+                                    {
+                                        <col style="width: 64px" />
+                                    }
+                                    @* The last one takes whatever is left, so the grid
+                                       reaches the pane's edge at any width. *@
+                                    <col />
+                                </colgroup>
                                 <thead>
                                     <tr class="xl-head" aria-hidden="true">
                                         <td class="xl-corner"></td>
-                                        @for (var c = 0; c < Wide; c++)
+                                        @for (var c = 0; c < Cols; c++)
                                         {
                                             <td>@Accounting.ColumnName(c)</td>
                                         }
@@ -183,11 +197,11 @@
                                         if (Hidden(tab, line)) { continue; }
                                         <tr class="@(real ? null : "xl-empty")" aria-hidden="@(real ? null : "true")">
                                             <td class="xl-n">@(line + 1)</td>
-                                            @for (var c = 0; c < Wide; c++)
+                                            @for (var c = 0; c < Cols; c++)
                                             {
                                                 var col = c;
-                                                var cell = tab.At(line, col);
-                                                var shownText = real ? Formulas.Display(tab, line, col) : "";
+                                                var cell = col < Wide ? tab.At(line, col) : new Cell();
+                                                var shownText = real && col < Wide ? Formulas.Display(tab, line, col) : "";
                                                 var numeric = Formulas.Value(tab, line, col) is not null;
                                                 var typedText = cell.Formula is null ? cell.Value : "=" + cell.Formula;
                                                 var cellName = Accounting.ColumnName(col) + (line + 1);
@@ -210,7 +224,7 @@
                                                         @shownText
                                                     }
 
-                                                    @if (line == 0 && real && Sorts(tab))
+                                                    @if (line == 0 && real && col < Wide && !cell.Blank && Sorts(tab))
                                                     {
                                                         @* Excel's autofilter: the header cell opens the
                                                            column's own sort and filter. *@
@@ -331,6 +345,11 @@
 
     /// Four columns at the least, so a narrow sheet still reads as paper.
     private int Wide => Math.Max(4, Sheet?.Width ?? 4);
+
+    /// The sheet's own columns, then eight of Excel's empty ones, then one
+    /// that takes the rest of the pane — the grid carries on sideways the way
+    /// it carries on downwards.
+    private int Cols => Wide + 9;
 
     // ---- the worksheet's own sort and filter, as Excel's autofilter ----
 

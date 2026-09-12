@@ -122,7 +122,7 @@ public static partial class Accounting
     private static Tab ReadTab(WorkbookPart workbook, XlSheet entry, SharedStringTable? strings, HashSet<uint> bold)
     {
         var part = (WorksheetPart)workbook.GetPartById(entry.Id!);
-        var tab = new Tab(entry.Name?.Value ?? "Ark", []);
+        var tab = new Tab(entry.Name?.Value ?? "Ark", []) { Widths = ColumnWidths(part) };
 
         foreach (var row in part.Worksheet?.Descendants<Row>() ?? [])
         {
@@ -138,6 +138,35 @@ public static partial class Accounting
         }
 
         return tab;
+    }
+
+    /// The widths the sheet carries. Excel writes them as spans — "columns 3
+    /// to 4 are 12 wide" — so they are spread out one column each.
+    private static double[] ColumnWidths(WorksheetPart part)
+    {
+        var spans = part.Worksheet?.GetFirstChild<Columns>()?.Elements<Column>().ToArray() ?? [];
+        if (spans.Length == 0) return [];
+
+        var widths = new double[spans.Max(span => (int)(span.Max?.Value ?? 0))];
+
+        foreach (var span in spans)
+        {
+            for (var at = (int)(span.Min?.Value ?? 1); at <= (int)(span.Max?.Value ?? 0); at++)
+            {
+                if (at - 1 < widths.Length) widths[at - 1] = span.Width?.Value ?? 0;
+            }
+        }
+
+        return widths;
+    }
+
+    /// Excel counts a column in characters of its default font; the screen
+    /// counts pixels. Seven to a character plus the cell's own padding is the
+    /// conversion everyone uses, and 64px is Excel's own default width.
+    public static int WidthPx(Tab tab, int column)
+    {
+        var width = column < tab.Widths.Length ? tab.Widths[column] : 0;
+        return width <= 0 ? 64 : (int)Math.Round(width * 7 + 5);
     }
 
     /// Which style slots carry a bold font. Read so a heading stays a heading

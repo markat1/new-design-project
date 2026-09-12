@@ -14,6 +14,10 @@ public record Cell(string Value = "", string? Formula = null, bool Bold = false)
 /// A worksheet: the name on its tab, and its rows of cells.
 public record Tab(string Name, List<List<Cell>> Rows)
 {
+    /// The column widths the workbook carries, in Excel's character units.
+    /// A column the file says nothing about keeps Excel's default.
+    public double[] Widths { get; init; } = [];
+
     public int Width => Rows.Count == 0 ? 0 : Rows.Max(row => row.Count);
 
     public Cell At(int row, int column) =>

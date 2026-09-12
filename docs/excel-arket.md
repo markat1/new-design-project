@@ -158,6 +158,18 @@ De frosne celler streger sig selv op med en indre skygge i stedet for en kant: i
 
 **Gitteret viser cellerne, ikke en fortolkning af dem.** Kolonnebogstaverne dannes af `Accounting.ColumnName(0) == "A"`, rækketallene af rækkens plads, og hver celle vises gennem `Formulas.Display`. Er der fed i filen, er der fed i gitteret.
 
+**Kolonnerne er så brede, som filen siger.** Excel gemmer bredden i tegn — `A` er 34, `B` er 8 — og skriver dem som spænd ("kolonne 3 til 4 er 12 brede"), så de foldes ud én kolonne ad gangen og regnes om til pixels med den sædvanlige omregning, syv pr. tegn plus cellens egen luft:
+
+```csharp
+public static int WidthPx(Tab tab, int column)
+{
+    var width = column < tab.Widths.Length ? tab.Widths[column] : 0;
+    return width <= 0 ? 64 : (int)Math.Round(width * 7 + 5);
+}
+```
+
+Efter arkets egne kolonner følger otte tomme af Excels standardbredde og til sidst én, der tager resten af ruden. Så fortsætter gitteret til højre, ligesom det fortsætter nedad, og cellerne holder deres form, uanset hvor bred ruden er. Tabellen skal have `width: max-content`, ellers presser et `table-layout: fixed` kolonnerne sammen for at passe i ruden i stedet for at lade gitteret rulle. Autofilteret sidder kun i de kolonner, arket faktisk bruger.
+
 ### Sortering og filter i arket
 
 Overskriftsrækken har Excels autofilter: en lille knap i hver celle, der åbner kolonnens egen sortering og filter.
