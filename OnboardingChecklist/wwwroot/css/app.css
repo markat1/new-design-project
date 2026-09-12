@@ -608,7 +608,10 @@ body {
 .side-nav-item {
   display: flex;
   align-items: center;
-  gap: 9px;
+  /* 13 after a 15px icon, 10 after the steps' 18px marker: different gaps on
+     purpose, because what has to line up is the labels, not the gaps. Both
+     land at 50 from the pane's edge. */
+  gap: 13px;
   width: 100%;
   min-height: 44px;
   /* 22 = the 12 the pane used to hold plus the 10 that was here, so the icon
@@ -655,7 +658,10 @@ body {
   /* The mark belongs to the row, not to its first line: centred against both
      lines it reads as one item, where top-aligned it read as a bullet. */
   align-items: center;
-  gap: 6px;
+  /* The marker is a filled circle where the nav's is a drawn outline, and a
+     solid shape crowds the word beside it sooner. Six was tight; ten is the
+     same optical distance the icon above keeps at thirteen. */
+  gap: 10px;
   width: 100%;
   padding: 7px 22px;
   border: 0;
