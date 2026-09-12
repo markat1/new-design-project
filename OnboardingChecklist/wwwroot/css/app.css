@@ -1087,6 +1087,8 @@ body {
   border-bottom: 1px solid var(--line);
 }
 .d-tabs { display: flex; gap: 2px; }
+/* The word that names the pane, quiet and in line with the tabs. */
+.d-what { flex: none; margin-right: 2px; }
 
 .d-tab {
   position: relative;

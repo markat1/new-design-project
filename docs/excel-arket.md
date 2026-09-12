@@ -132,7 +132,7 @@ Alt andet vises, som det blev skrevet (`=NOGET(…)`), i stedet for at stå tomt
 
 ## Visningen
 
-Fanen *Vedhæftning* viser arket som et regneark: kolonnebogstaver, rækketal, ruller i hver celle, fed overskriftslinje, sum, og ruller der fortsætter under tallene — fyrre tomme rækker, fordi et regneark ikke stopper, hvor tallene gør.
+Fanen *Prislister* viser arket som et regneark: kolonnebogstaver, rækketal, ruller i hver celle, fed overskriftslinje, sum, og ruller der fortsætter under tallene — fyrre tomme rækker, fordi et regneark ikke stopper, hvor tallene gør.
 
 ```razor
 <tr class="xl-head" aria-hidden="true">
@@ -276,7 +276,7 @@ Blazor sender `byte[]` over som en `Uint8Array`. Filen lander i Downloads. Skal 
 
 ## Åbn i Excel
 
-Fanens bjælke har en knap, der åbner arket i skrivebordets Excel. Den bruger Office' egen URI-ordning, så det er Excel selv, der henter adressen:
+Rudens bjælke har en knap, der åbner arket i skrivebordets Excel. Den bruger Office' egen URI-ordning, så det er Excel selv, der henter adressen:
 
 ```csharp
 private string OpenInExcel(Recipient rec) =>

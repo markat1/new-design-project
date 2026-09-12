@@ -10,7 +10,12 @@
 <div class="d" @key="M.Ref">
 
     <div class="d-bar">
-        <div class="d-tabs" role="tablist" aria-label="Mail, modtagere og vedhæftning" @onkeydown="TabKey">
+        @* What the pane is, in one word. It used to sit over the tabs with a
+           reference the send-out had not been given yet; alone, and in the bar,
+           it says something true without taking a row. *@
+        <span class="t-pill d-what" data-s="@(Preview ? "draft" : M.Status.ToString().ToLowerInvariant())">@(Preview ? "Udkast" : M.Label)</span>
+
+        <div class="d-tabs" role="tablist" aria-label="Mail, modtagere og prislister" @onkeydown="TabKey">
         <button type="button" class="d-tab" role="tab" id="d-tab-mail"
                 aria-selected="@(tab == 0 ? "true" : "false")" aria-controls="d-panel-mail"
                 tabindex="@(tab == 0 ? 0 : -1)" @onclick="() => tab = 0">Mail</button>
@@ -25,7 +30,16 @@
         </button>
             <button type="button" class="d-tab" role="tab" id="d-tab-file"
                     aria-selected="@(tab == 2 ? "true" : "false")" aria-controls="d-panel-file"
-                    tabindex="@(tab == 2 ? 0 : -1)" @onclick="() => tab = 2">Vedhæftning</button>
+                    tabindex="@(tab == 2 ? 0 : -1)" @onclick="() => tab = 2">
+                Prislister
+                @if (M.Companies > 0)
+                {
+                    @* The count is customers, not people: two at the same company
+                       share one sheet, and the difference from the tab beside it
+                       is the point. *@
+                    <span class="d-tab-n">@M.Companies</span>
+                }
+            </button>
         </div>
 
         @* What you can do to the open sheet, in the bar rather than beside the
@@ -322,7 +336,7 @@
                 <div class="d-file" data-empty>
                     @Icons.Sheet
                     <span class="d-file-txt">
-                        <span class="d-file-n">Ingen vedhæftning endnu</span>
+                        <span class="d-file-n">Ingen prislister endnu</span>
                         <span class="d-file-s">Vælg modtagere, så bygges arkene her</span>
                     </span>
                 </div>
