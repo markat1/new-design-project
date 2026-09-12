@@ -15,6 +15,13 @@ window.app = {
     (el || container).focus({ preventScroll: true });
   },
 
+  // A search field takes focus on a mouse, where it saves a click, and not on
+  // touch, where it would throw the keyboard up the screen unasked.
+  focusSearch(container) {
+    if (!container || !matchMedia('(pointer: fine)').matches) return;
+    container.querySelector('input')?.focus({ preventScroll: true });
+  },
+
   focusId(id) {
     document.getElementById(id)?.focus({ preventScroll: true });
   },

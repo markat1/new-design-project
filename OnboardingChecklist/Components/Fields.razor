@@ -7,70 +7,120 @@
 
     @if (TaskKey == "recipients")
     {
-        @* The list is the choice; the people are what it means. Sending to a
-           whole marketing group is the normal case, so they all start on it. *@
-        <ul class="pick pick-lists" aria-label="Marketinglister">
-            @foreach (var g in MarketingGroup.Lists)
+        @* At three lists a row each was right; at a hundred the choice is a field
+           you search. Recently used first, because that answers it most days. *@
+        <div class="grp">
+            <button type="button" class="grp-pick" id="grp-pick"
+                    aria-haspopup="dialog" aria-expanded="@(listOpen ? "true" : "false")"
+                    @onclick="ToggleLists">
+                <span class="pick-txt">
+                    <span class="pick-name">@S.List.Name</span>
+                    <span class="pick-co">@S.List.People.Length personer · @S.List.Customers kunder</span>
+                </span>
+                <span class="pick-sum num">@S.List.Total.ToString("N0")</span>
+                <span class="grp-chev" aria-hidden="true">@Icons.Chevron</span>
+            </button>
+
+            @if (listOpen)
             {
-                var group = g;
-                var chosen = S.List.Name == group.Name;
-                <li @key="group.Name">
-                    <label class="pick-row" data-on="@(chosen ? "" : null)">
-                        <input type="radio" name="marketing-list" checked="@chosen"
-                               @onchange="() => S.Choose(group)" />
-                        <span class="pick-txt">
-                            <span class="pick-name">@group.Name</span>
-                            <span class="pick-co">@group.People.Length personer · @group.Customers kunder</span>
-                        </span>
-                        <span class="pick-sum num">@group.Total.ToString("N0")</span>
-                    </label>
-                </li>
+                <div class="t-menu grp-menu" role="dialog" tabindex="-1" aria-label="Vælg marketingliste"
+                     @ref="listMenu" @onkeydown="ListKey" @onkeydown:stopPropagation="true">
+                    <div class="t-find">
+                        <span class="t-find-ico">@Icons.Search</span>
+                        <input class="t-find-input" type="search" placeholder="Søg i lister, personer og kunder"
+                               autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"
+                               value="@listFind" @oninput="e => listFind = e.Value?.ToString() ?? string.Empty" />
+                        @if (listFind.Length > 0)
+                        {
+                            <button type="button" class="t-find-x" aria-label="Ryd søgning"
+                                    @onclick="() => listFind = string.Empty">@Icons.X</button>
+                        }
+                    </div>
+
+                    <div class="grp-scroll">
+                        @{ var hits = MailDraft.Search(listFind).ToArray(); }
+                        @if (listFind.Trim().Length == 0)
+                        {
+                            <span class="t-menu-head">Senest brugt</span>
+                            @foreach (var g in S.Recent)
+                            {
+                                @ListRow(g)
+                            }
+                            <span class="t-menu-head">Alle lister · @MarketingGroup.Lists.Length</span>
+                            @foreach (var g in MarketingGroup.Lists.OrderBy(l => l.Name, StringComparer.CurrentCulture))
+                            {
+                                @ListRow(g)
+                            }
+                        }
+                        else if (hits.Length == 0)
+                        {
+                            <p class="t-menu-none">Ingen lister med "@listFind.Trim()"</p>
+                        }
+                        else
+                        {
+                            <span class="t-menu-head">@hits.Length @(hits.Length == 1 ? "liste" : "lister")</span>
+                            @foreach (var g in hits)
+                            {
+                                @ListRow(g)
+                            }
+                        }
+                    </div>
+                </div>
             }
-        </ul>
+        </div>
+
+        @if (listOpen)
+        {
+            <div class="t-backdrop" @onclick="CloseLists"></div>
+        }
 
         <p class="pick-count">
             <span>@S.Picked.Count af @S.List.People.Length personer med</span>
-            <span class="pick-count-s">Fravælg enkelte herunder</span>
+            <span class="pick-count-s">Klik en række for at se prislisten</span>
         </p>
 
-        <ul class="pick" aria-label="Personer på @S.List.Name">
-            @foreach (var p in S.List.People)
-            {
-                var person = p;
-                var on = S.Picked.Contains(person.Email);
-                var total = Accounting.SheetFor(person.Company).Sum(l => l.Total);
-                <li @key="person.Email">
-                    @* Two jobs, two targets: the box decides whether they are on
-                       the send, the row shows what they would get. Double click
-                       toggles as well, for the hand that expects it — but never
-                       as the only way, since a keyboard and a finger have none. *@
-                    <div class="pick-row" data-on="@(on ? "" : null)" data-shown="@(S.Show?.Email == person.Email ? "" : null)"
-                         @ondblclick="() => Toggle(person.Email)">
-                        <label class="pick-check">
-                            <input type="checkbox" checked="@on" @onchange="() => Toggle(person.Email)" />
-                            <span class="sr-only">Med i udsendelsen: @person.Name</span>
-                        </label>
-
-                        <button type="button" class="pick-open" disabled="@(!on || !person.HasSheet)"
-                                title="@(on && person.HasSheet ? "Vis prislisten" : null)"
-                                @onclick="() => S.ShowSheet(person.Email)">
-                            <span class="pick-txt">
-                                <span class="pick-name" title="@person.Name">@person.Name</span>
-                                <span class="pick-co" title="@person.Company">@person.Company</span>
-                            </span>
+        @* A table, not cards: at this size the eye wants columns to run down,
+           and the header carries the one control cards had nowhere to put. *@
+        <table class="pick-t">
+            <thead>
+                <tr>
+                    <th scope="col" class="pick-t-box">
+                        <input type="checkbox" aria-label="Vælg alle" checked="@AllPicked"
+                               @onchange="ToggleAll" />
+                    </th>
+                    <th scope="col">Person</th>
+                    <th scope="col">Kunde</th>
+                    <th scope="col" class="num">Prisliste</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in S.List.People)
+                {
+                    var person = p;
+                    var on = S.Picked.Contains(person.Email);
+                    var total = Accounting.SheetFor(person.Company).Sum(l => l.Total);
+                    <tr @key="person.Email" data-on="@(on ? "" : null)" data-shown="@(S.Show?.Email == person.Email ? "" : null)"
+                        tabindex="0" @onclick="() => ShowSheet(person, on)" @onkeydown="e => RowKey(e, person, on)">
+                        <td class="pick-t-box" @onclick:stopPropagation="true">
+                            <input type="checkbox" checked="@on" @onchange="() => Toggle(person.Email)"
+                                   aria-label="Med i udsendelsen: @person.Name" />
+                        </td>
+                        <td class="pick-t-name" title="@person.Name">@person.Name</td>
+                        <td class="pick-t-co" title="@person.Company">@person.Company</td>
+                        <td class="num">
                             @if (person.HasSheet)
                             {
-                                <span class="pick-sum num">@total.ToString("N0")</span>
+                                @total.ToString("N0")
                             }
                             else
                             {
                                 <span class="pick-none">Ingen prisliste</span>
                             }
-                        </button>
-                    </div>
-                </li>
-            }
-        </ul>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
 
         @if (S.Errors.TryGetValue("recipients", out var rcpErr))
         {
@@ -123,11 +173,100 @@
 
     private ElementReference root;
 
+    // ---- the marketing list picker ----
+
+    private bool listOpen;
+    private string listFind = "";
+    private ElementReference listMenu;
+    private bool focusFind;
+
+    private RenderFragment ListRow(Group group) =>
+        @<button type="button" class="t-menu-item grp-row" aria-pressed="@(S.List.Name == group.Name ? "true" : "false")"
+                 @onclick="() => Pick(group)">
+            <span class="t-menu-ico">@if (S.List.Name == group.Name) { @Icons.TickSm }</span>
+            <span class="grp-row-txt">
+                <span class="grp-row-name">@group.Name</span>
+                <span class="grp-row-s">@group.People.Length personer · @group.Customers kunder</span>
+            </span>
+            <span class="grp-row-sum num">@group.Total.ToString("N0")</span>
+        </button>;
+
+    private void ToggleLists()
+    {
+        listOpen = !listOpen;
+        focusFind = listOpen;
+        if (!listOpen) listFind = "";
+    }
+
+    private void CloseLists()
+    {
+        listOpen = false;
+        listFind = "";
+    }
+
+    private async Task Pick(Group group)
+    {
+        S.Choose(group);
+        CloseLists();
+        await Changed.InvokeAsync();
+    }
+
+    /// Escape closes it; Enter takes the first list the search found, which is
+    /// the one the eye is already on.
+    private async Task ListKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") { CloseLists(); return; }
+
+        if (e.Key == "Enter" && listFind.Trim().Length > 0
+            && MailDraft.Search(listFind).FirstOrDefault() is { } first)
+        {
+            await Pick(first);
+        }
+    }
+
+    private bool AllPicked => S.List.People.All(p => S.Picked.Contains(p.Email));
+
+    private async Task ToggleAll()
+    {
+        var all = AllPicked;
+
+        foreach (var person in S.List.People)
+        {
+            if (S.Picked.Contains(person.Email) == all) S.Toggle(person.Email);
+        }
+
+        await Changed.InvokeAsync();
+    }
+
+    /// The row shows what that person would get; the box in it decides whether
+    /// they get anything. Somebody who is off has no sheet to show.
+    private async Task ShowSheet(Person person, bool on)
+    {
+        if (!on || !person.HasSheet) return;
+
+        S.ShowSheet(person.Email);
+        await Changed.InvokeAsync();
+    }
+
+    private async Task RowKey(KeyboardEventArgs e, Person person, bool on)
+    {
+        if (e.Key is "Enter" or " ") await ShowSheet(person, on);
+    }
+
     private string? Invalid(string key) => S.Errors.ContainsKey(key) ? "true" : null;
 
     private Task NotifyChanged() => Changed.InvokeAsync();
 
     public ValueTask FocusFirstAsync() => JS.InvokeVoidAsync("app.focusFirst", root);
+
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (focusFind)
+        {
+            focusFind = false;
+            await JS.InvokeVoidAsync("app.focusSearch", listMenu);
+        }
+    }
 
     private async Task Toggle(string email)
     {

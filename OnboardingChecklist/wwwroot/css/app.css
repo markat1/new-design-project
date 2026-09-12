@@ -732,7 +732,10 @@ body {
    into an 850px box is a worse form than a card with room to spare. */
 .v3-panel .f-group .f-input { max-width: 460px; }
 .v3-panel .f-group .f-textarea { max-width: 620px; }
-.split-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+/* No reserved gutter: it left a strip of paper between the table and the
+   divider. It came in during the jitter hunt and was never the cause — the
+   sticky footer inside the scroller was. */
+.split-scroll { flex: 1; min-height: 0; overflow: auto; }
 
 .split-detail {
   flex: 0 0 var(--detail-w);
@@ -1443,48 +1446,67 @@ body {
 }
 .pick-count-s { font-size: 12px; font-weight: 400; color: var(--ink-3); }
 
-/* Two targets in one row: the box decides who is on the send, the rest of the
-   row shows what they would get. The list rows above still toggle as a whole,
-   because there is only one thing to do to them. */
-.pick-row {
+/* The list picker: one field that says which list, and a panel that searches
+   a hundred of them. Same language as the table's column menus. */
+.grp { position: relative; margin-bottom: 14px; }
+
+.grp-pick {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 11px;
+  width: 100%;
   min-height: 56px;
   padding: 8px 11px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-2);
   border-radius: 10px;
-  margin-bottom: 6px;
+  background: var(--surface);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
   transition: border-color 130ms ease, background-color 130ms ease;
 }
-.pick li > .pick-row { grid-template-columns: 18px minmax(0, 1fr); cursor: default; }
-.pick-lists li > .pick-row { grid-template-columns: 18px minmax(0, 1fr) auto; cursor: pointer; }
+.grp-pick:hover { background: var(--sunk); }
+.grp-pick[aria-expanded="true"] { border-color: var(--accent); }
+.grp-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.grp-chev { display: inline-flex; color: var(--ink-3); }
+.grp-pick[aria-expanded="true"] .grp-chev svg { transform: rotate(180deg); }
 
-.pick-check { display: grid; place-items: center; height: 100%; cursor: pointer; }
+.grp-menu { top: calc(100% + 6px); left: 0; width: 100%; padding: 6px 0 0; z-index: 7; }
+.grp-scroll { max-height: 330px; overflow-y: auto; padding-bottom: 6px; }
 
-.pick-open {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 11px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  color: inherit;
+.grp-row { min-height: 44px; }
+.grp-row-txt { display: grid; min-width: 0; }
+.grp-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grp-row-s { font-size: 12px; color: var(--ink-3); }
+.grp-row-sum { margin-left: auto; padding-left: 10px; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+/* The people, as a table: columns run down, and the header carries the one
+   control a row of cards had nowhere to put — all of them at once. */
+.pick-t { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 14px; }
+.pick-t th {
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-3);
   text-align: left;
-  cursor: pointer;
 }
-.pick-open:disabled { cursor: default; }
-.pick-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.pick-t td { padding: 10px; border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-t .num { text-align: right; font-variant-numeric: tabular-nums; }
+.pick-t-box { width: 36px; }
+.pick-t-box input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.pick-t th:last-child, .pick-t td:last-child { width: 110px; }
+.pick-t-name { font-weight: 500; }
+.pick-t-co { color: var(--ink-2); }
 
-/* The one the preview is showing, so the two panes point at the same person. */
-.pick-row[data-shown] { box-shadow: inset 0 0 0 1px var(--accent); }
-.pick-row:hover { border-color: var(--line-2); background: var(--sunk); }
-.pick-row[data-on] { border-color: var(--accent); background: var(--accent-soft); }
-.pick-row:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pick-t tbody tr { cursor: pointer; transition: background-color 130ms ease; }
+.pick-t tbody tr:hover { background: var(--hover); }
+.pick-t tbody tr[data-shown] { background: var(--accent-soft); }
+.pick-t tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* Off the send, the row goes quiet rather than disappearing. */
+.pick-t tbody tr:not([data-on]) td { color: var(--ink-3); }
+@media (pointer: coarse) { .pick-t td { padding-block: 13px; } }
 
 .pick-row input[type="checkbox"] {
   width: 16px;

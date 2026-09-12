@@ -31,11 +31,34 @@ public class MailDraft
         NotifyChanged();
     }
 
+    /// The lists this user has sent to lately, newest first. At a hundred
+    /// lists this is what answers the question most of the time; search is for
+    /// the rest.
+    private readonly List<string> recent = [MarketingGroup.Lists[0].Name];
+
+    public IEnumerable<Group> Recent =>
+        recent.Select(name => MarketingGroup.Lists.First(l => l.Name == name)).Take(4);
+
     public void Choose(Group list)
     {
         List = list;
+        recent.Remove(list.Name);
+        recent.Insert(0, list.Name);
         Errors.Remove("recipients");
         NotifyChanged();
+    }
+
+    /// Name first, but people and companies too: the question is often "which
+    /// list has Kestrel on it", and nobody knows that list's name.
+    public static IEnumerable<Group> Search(string word)
+    {
+        var find = word.Trim();
+        if (find.Length == 0) return MarketingGroup.Lists;
+
+        return MarketingGroup.Lists.Where(list =>
+            list.Name.Contains(find, StringComparison.OrdinalIgnoreCase)
+            || list.People.Any(p => p.Name.Contains(find, StringComparison.OrdinalIgnoreCase)
+                                 || p.Company.Contains(find, StringComparison.OrdinalIgnoreCase)));
     }
 
     public bool TouchedNote { get; set; }
