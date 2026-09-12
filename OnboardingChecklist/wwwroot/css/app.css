@@ -1244,6 +1244,48 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* A draft's cells can be typed into: the input fills its cell, so the grid
+   still reads as a grid and the cell shows where you are. A sent mail's sheet
+   only reads — it is what went out. */
+.xl-edit { padding: 0; }
+.xl-edit input {
+  width: 100%;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-1);
+}
+.xl-edit input.num { text-align: right; font-variant-numeric: tabular-nums; }
+.xl-edit input:hover { background: var(--hover); }
+.xl-edit input:focus { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--surface); }
+/* 16px on touch, or iOS zooms the page when a cell takes focus. */
+@media (pointer: coarse) { .xl-edit input { font-size: 16px; } }
+
+.xl-dirty { margin-left: auto; font-size: 11px; color: var(--ink-3); }
+.xl-save {
+  position: relative;
+  flex: none;
+  margin: 5px 0 5px 9px;
+  padding: 5px 11px;
+  border: 0;
+  border-radius: 0;
+  background: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 130ms ease, transform 130ms ease;
+}
+.xl-save:hover { background: var(--accent-2); }
+.xl-save:active { transform: scale(0.96); }
+.xl-save:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The strip is thin; the target is not. */
+.xl-save::after { content: ""; position: absolute; inset: -7px; }
+
 .xl-size { margin-left: auto; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
 .d-none { padding: 18px 0; }

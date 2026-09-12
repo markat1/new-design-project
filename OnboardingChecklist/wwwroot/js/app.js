@@ -19,6 +19,17 @@ window.app = {
     document.getElementById(id)?.focus({ preventScroll: true });
   },
 
+  // The workbook is built in C# with the Open XML SDK; this only hands the
+  // bytes to the browser as a file. Blazor sends byte[] over as a Uint8Array.
+  saveFile(name, bytes, type) {
+    const url = URL.createObjectURL(new Blob([bytes], { type }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
     // The drag lives in JS, not Blazor: a re-render per pointermove would be a
   // render storm for something that is only ever a layout change.
   splitter: {

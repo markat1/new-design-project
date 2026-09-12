@@ -74,7 +74,7 @@
         @* Composing in the same view the sent list shows afterwards, so the thing
            you are making looks like the thing you will get. *@
         <aside class="split-detail" aria-label="Sådan bliver mailen">
-            <MailView M="S.Preview(Store.NextRef())" Preview="true" />
+            <MailView M="S.Preview(Store.NextRef())" Preview="true" SheetEdited="SheetEdited" />
         </aside>
 
     </div>
@@ -121,6 +121,10 @@
             await fields.FocusFirstAsync();
         }
     }
+
+    /// A price sheet was edited in the preview. The draft composes its
+    /// recipients from the sheets, so saying so is enough to redraw it.
+    private void SheetEdited() => S.NotifyChanged();
 
     private void Commit(bool skipped)
     {

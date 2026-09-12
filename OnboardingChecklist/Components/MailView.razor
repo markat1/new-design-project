@@ -1,3 +1,6 @@
+@using System.Globalization
+@inject IJSRuntime JS
+
 @* The send-out, rendered the same way whether it went out or is still being
    written. The recipients are a tab of their own: each customer gets a
    different sheet, so they are a list, not a line in the header. *@
@@ -169,13 +172,36 @@
                                     @{ var row = 1; }
                                     @foreach (var l in rec.Lines)
                                     {
+                                        var line = l;
+                                        var at = row - 1;
                                         row++;
                                         <tr>
                                             <td class="xl-n" aria-hidden="true">@row</td>
-                                            <td>@l.Description</td>
-                                            <td class="num">@l.Qty</td>
-                                            <td class="num">@l.Unit.ToString("N0")</td>
-                                            <td class="num">@l.Total.ToString("N0")</td>
+                                            @if (Preview)
+                                            {
+                                                @* A draft's sheet can still be corrected; a sent one is
+                                                   what went out, so it only reads. D is Excel's own
+                                                   =B*C, so it is worked out, not typed. *@
+                                                <td class="xl-edit">
+                                                    <input aria-label="Beskrivelse, række @row" value="@line.Description"
+                                                           @onchange="e => SetCell(rec.Company, at, 'A', e.Value?.ToString() ?? string.Empty)" />
+                                                </td>
+                                                <td class="xl-edit num">
+                                                    <input class="num" inputmode="numeric" aria-label="Antal, række @row" value="@line.Qty"
+                                                           @onchange="e => SetCell(rec.Company, at, 'B', e.Value?.ToString() ?? string.Empty)" />
+                                                </td>
+                                                <td class="xl-edit num">
+                                                    <input class="num" inputmode="decimal" aria-label="Stykpris, række @row" value="@line.Unit.ToString("0.##")"
+                                                           @onchange="e => SetCell(rec.Company, at, 'C', e.Value?.ToString() ?? string.Empty)" />
+                                                </td>
+                                            }
+                                            else
+                                            {
+                                                <td>@line.Description</td>
+                                                <td class="num">@line.Qty</td>
+                                                <td class="num">@line.Unit.ToString("N0")</td>
+                                            }
+                                            <td class="num">@line.Total.ToString("N0")</td>
                                         </tr>
                                     }
                                     <tr class="xl-sum">
@@ -194,7 +220,15 @@
                         <div class="xl-foot">
                             <span class="xl-tab">@Accounting.SheetName(rec.Company)</span>
                             <span class="xl-file" title="@rec.Attachment">@rec.Attachment</span>
-                            <span class="xl-size">@rec.AttachmentSize</span>
+                            @if (Preview && Accounting.IsEdited(rec.Company))
+                            {
+                                <span class="xl-dirty">ikke gemt</span>
+                                <button type="button" class="xl-save" @onclick="() => Save(rec.Company)">Gem ark</button>
+                            }
+                            else
+                            {
+                                <span class="xl-size">@rec.AttachmentSize</span>
+                            }
                         </div>
                     </div>
                 }
@@ -218,8 +252,13 @@
     [Parameter, EditorRequired] public Mail M { get; set; } = default!;
 
     /// A mail still being written: empty fields say what is still missing rather
-    /// than leaving a gap that reads as a rendering fault.
+    /// than leaving a gap that reads as a rendering fault, and its price sheets
+    /// can still be corrected.
     [Parameter] public bool Preview { get; set; }
+
+    /// Raised when a cell changes, so the page above rebuilds the draft from
+    /// the sheets it now holds.
+    [Parameter] public EventCallback SheetEdited { get; set; }
 
     private int tab;
     private string? shown;
@@ -241,6 +280,37 @@
     {
         var next = Index + by;
         if (next >= 0 && next < M.Recipients.Length) shown = M.Recipients[next].Email;
+    }
+
+    /// A cell was typed into. The sheet is the accounting system's, so the edit
+    /// goes there and every figure that reads from it — this grid, the
+    /// recipient's sum, the total out in the list — follows on the next render.
+    private async Task SetCell(string company, int at, char column, string typed)
+    {
+        var lines = Accounting.SheetFor(company).ToArray();
+        if (at < 0 || at >= lines.Length) return;
+
+        var line = lines[at];
+        lines[at] = column switch
+        {
+            'A' => line with { Description = typed.Trim() },
+            'B' => int.TryParse(typed, NumberStyles.Any, CultureInfo.CurrentCulture, out var qty) ? line with { Qty = qty } : line,
+            _ => decimal.TryParse(typed, NumberStyles.Any, CultureInfo.CurrentCulture, out var unit) ? line with { Unit = unit } : line,
+        };
+
+        Accounting.Replace(company, lines);
+        await SheetEdited.InvokeAsync();
+    }
+
+    /// Written back out as a real workbook, by the same SDK that read it, and
+    /// handed to the browser as a file. Saving in place would need somewhere to
+    /// put it: the accounting system's own store, or the browser's file access.
+    private async Task Save(string company)
+    {
+        var file = Accounting.Write(company);
+        await JS.InvokeVoidAsync("app.saveFile", Accounting.FileFor(company), file,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        await SheetEdited.InvokeAsync();
     }
 
     private static bool Blank(string s) => s.Trim().Length == 0;
