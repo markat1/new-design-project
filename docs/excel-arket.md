@@ -274,6 +274,19 @@ Blazor sender `byte[]` over som en `Uint8Array`. Filen lander i Downloads. Skal 
 
 **Prøvet af:** ret 12 til 15 i appen, gem, læs filen igen — arket hedder stadig "Priser", værdierne er de nye, og `=B2*C2` og `=SUM(D2:D3)` står der stadig.
 
+## Åbn i Excel
+
+Fanens bjælke har en knap, der åbner arket i skrivebordets Excel. Den bruger Office' egen URI-ordning, så det er Excel selv, der henter adressen:
+
+```csharp
+private string OpenInExcel(Recipient rec) =>
+    $"ms-excel:ofe|u|{Nav.BaseUri}sheets/{rec.Attachment}";
+```
+
+Tre ting at vide: det kræver Office installeret på maskinen — er det ikke der, sker der ingenting, og derfor står *Gem ark* ved siden af. Excel henter **filen fra serveren**, så en rettelse, du ikke har gemt endnu, er ikke med. Og over http åbner Excel den skrivebeskyttet; skal man kunne gemme tilbage, skal filen ligge et sted, Excel kan skrive til.
+
+Knapperne sidder i rudens egen bjælke ved siden af fanerne, ikke i arkfane-strimlen i bunden: strimlen siger *hvilket* ark, knapperne gør noget *ved* det. I en smal rude ombrydes de til deres egen linje i stedet for at klippe navnet væk.
+
 ## Excel for the web
 
 Har et ark en adresse, Microsoft kan nå, viser fanen **Office på nettet** i stedet for vores gitter — rigtig Excel, i en iframe, i fuld bredde og højde:

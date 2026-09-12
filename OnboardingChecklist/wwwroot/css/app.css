@@ -561,19 +561,6 @@ body {
   .side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
 }
 
-.side-brand {
-  display: block;
-  padding: 0 10px;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .side-nav { display: flex; flex-direction: column; gap: 2px; }
 
 .side-nav-item,
@@ -1088,14 +1075,18 @@ body {
 
 /* The mail and the file it carries are two documents, so they get two tabs
    rather than one long column. */
-/* The tabs open the pane: at the top of it, and out to its edges. */
-.d-tabs {
+/* The tabs open the pane: at the top of it, and out to its edges. What can be
+   done to what they open sits at the other end of the same bar. */
+.d-bar {
   display: flex;
-  gap: 2px;
+  flex-wrap: wrap;                   /* a narrow pane puts the actions on their own line */
+  align-items: center;
+  gap: 0 12px;
   margin: 0 -22px 18px;
   padding: 0 22px;
   border-bottom: 1px solid var(--line);
 }
+.d-tabs { display: flex; gap: 2px; }
 
 .d-tab {
   position: relative;
@@ -1535,6 +1526,28 @@ body {
   margin-bottom: 16px;
   border-bottom: 1px solid var(--line);
 }
+
+.sheet-acts { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; padding: 5px 0; }
+
+/* Hands the file to Excel through Office's own URI scheme. A link, because
+   that is what it is — and if Office is not there, nothing happens, which is
+   why Gem ark stays beside it. */
+.sheet-open {
+  position: relative;
+  flex: none;
+  padding: 6px 11px;
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-1);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 130ms ease, border-color 130ms ease;
+}
+.sheet-open:hover { background: var(--hover); border-color: var(--ink-3); }
+.sheet-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sheet-open::after { content: ""; position: absolute; inset: -7px; }
 
 .sheet-nav { display: inline-flex; align-items: center; gap: 2px; }
 

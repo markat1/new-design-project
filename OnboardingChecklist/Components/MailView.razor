@@ -1,5 +1,6 @@
 @implements IDisposable
 @using System.Globalization
+@inject NavigationManager Nav
 @using System.Text.RegularExpressions
 @inject IJSRuntime JS
 
@@ -8,7 +9,8 @@
    different sheet, so they are a list, not a line in the header. *@
 <div class="d" @key="M.Ref">
 
-    <div class="d-tabs" role="tablist" aria-label="Mail, modtagere og vedhæftning" @onkeydown="TabKey">
+    <div class="d-bar">
+        <div class="d-tabs" role="tablist" aria-label="Mail, modtagere og vedhæftning" @onkeydown="TabKey">
         <button type="button" class="d-tab" role="tab" id="d-tab-mail"
                 aria-selected="@(tab == 0 ? "true" : "false")" aria-controls="d-panel-mail"
                 tabindex="@(tab == 0 ? 0 : -1)" @onclick="() => tab = 0">Mail</button>
@@ -21,9 +23,25 @@
                 <span class="d-tab-n">@M.Recipients.Length</span>
             }
         </button>
-        <button type="button" class="d-tab" role="tab" id="d-tab-file"
-                aria-selected="@(tab == 2 ? "true" : "false")" aria-controls="d-panel-file"
-                tabindex="@(tab == 2 ? 0 : -1)" @onclick="() => tab = 2">Vedhæftning</button>
+            <button type="button" class="d-tab" role="tab" id="d-tab-file"
+                    aria-selected="@(tab == 2 ? "true" : "false")" aria-controls="d-panel-file"
+                    tabindex="@(tab == 2 ? 0 : -1)" @onclick="() => tab = 2">Vedhæftning</button>
+        </div>
+
+        @* What you can do to the open sheet, in the bar rather than beside the
+           name: a narrow pane squeezed the name out of its own row. *@
+        @if (tab == 2 && Current is { } open)
+        {
+            <span class="sheet-acts">
+                @if (Preview && Accounting.IsEdited(open.Company))
+                {
+                    <span class="xl-dirty">ikke gemt</span>
+                    <button type="button" class="xl-save" @onclick="() => Save(open.Company)">Gem ark</button>
+                }
+                <a class="sheet-open" href="@OpenInExcel(open)"
+                   title="Åbner filen i Excel, som den ligger på serveren">Åbn i Excel</a>
+            </span>
+        }
     </div>
 
     @if (tab == 0)
@@ -294,15 +312,7 @@
                                             @onclick="() => sheetTab = at">@Tabs[at].Name</button>
                                 }
                             </div>
-                            @if (Preview && Accounting.IsEdited(rec.Company))
-                            {
-                                <span class="xl-dirty">ikke gemt</span>
-                                <button type="button" class="xl-save" @onclick="() => Save(rec.Company)">Gem ark</button>
-                            }
-                            else
-                            {
-                                <span class="xl-size">@rec.AttachmentSize</span>
-                            }
+                            <span class="xl-size">@rec.AttachmentSize</span>
                         </div>
                     </div>
                 }
@@ -491,6 +501,11 @@
             ? cell
             : cell with { Formula = Regex.Replace(cell.Formula, $@"(?<col>\$?[A-Z]+\$?){was + 1}\b", $"${{col}}{now + 1}") })];
     }
+
+    /// Office's own URI scheme: Excel opens the address itself. It is the file
+    /// on the server, so an edit that has not been saved is not in it yet.
+    private string OpenInExcel(Recipient rec) =>
+        $"ms-excel:ofe|u|{Nav.BaseUri}sheets/{rec.Attachment}";
 
     private string? Classes(Cell cell, bool numeric)
     {
