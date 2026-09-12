@@ -4,8 +4,48 @@ namespace OnboardingChecklist.Model;
 /// re-renders and a trip to the other page and back.
 public class MailDraft
 {
-    public string Subject { get; set; } = "";
-    public string Note { get; set; } = "";
+    // ---- the letters ----
+    // One letter per language in play, started from the company's own template
+    // and editable from there. Kept by language, not by recipient: everybody in
+    // Sweden gets the same letter, with their own name in it.
+    private readonly Dictionary<string, Letter> letters = [];
+
+    /// The languages this send-out will actually go out in, in template order.
+    /// Nobody chooses them — the recipients' countries do.
+    public string[] Langs => [.. Templates.All.Select(t => t.Code).Where(c => Recipients.Any(r => r.Lang == c))];
+
+    public Letter LetterFor(string lang)
+    {
+        if (letters.TryGetValue(lang, out var written)) return written;
+
+        var template = Templates.Get(lang);
+        return letters[lang] = new Letter(lang, template.Subject, template.Body);
+    }
+
+    public void Write(string lang, string? subject = null, string? body = null)
+    {
+        var letter = LetterFor(lang);
+        letters[lang] = letter with { Subject = subject ?? letter.Subject, Body = body ?? letter.Body };
+        Errors.Remove("template");
+    }
+
+    /// True once the letter differs from the template it started as, which is
+    /// the only thing worth saying about it in a summary.
+    public bool Edited(string lang) =>
+        letters.TryGetValue(lang, out var written) && written != new Letter(lang, Templates.Get(lang).Subject, Templates.Get(lang).Body);
+
+    /// What the list of send-outs shows: the first language in play, because a
+    /// send-out has one headline and three letters.
+    public string Subject => Langs.Length == 0 ? "" : LetterFor(Langs[0]).Subject;
+
+    public string Note => Langs.Length == 0 ? "" : LetterFor(Langs[0]).Body;
+
+    // ---- how it goes out ----
+    public bool ViaCrm { get; set; } = true;
+    public bool SaveLocally { get; set; }
+    public bool CopyToMe { get; set; }
+
+    public bool AnyDestination => ViaCrm || SaveLocally;
 
     /// A send-out goes to one list, or to two. Never three: past two, nobody can
     /// hold in their head who is about to get a mail. None is allowed while you
@@ -45,12 +85,14 @@ public class MailDraft
     public HashSet<string> Picked => [.. lists.SelectMany(PicksFor)];
 
     /// The person the preview has been asked to show, with a nonce so asking
-    /// for the same one twice still counts as asking.
+    /// for the same one twice still counts as asking. Which pane opens is the
+    /// step's business, not the ask's: their sheet while you pick recipients,
+    /// their letter while you write it.
     public (string Email, int Nonce)? Show { get; private set; }
 
     private int asks;
 
-    public void ShowSheet(string email)
+    public void ShowPerson(string email)
     {
         Show = (email, ++asks);
         NotifyChanged();
@@ -100,8 +142,6 @@ public class MailDraft
                                  || p.Company.Contains(find, StringComparison.OrdinalIgnoreCase)));
     }
 
-    public bool TouchedNote { get; set; }
-
     public Dictionary<string, string> Errors { get; } = [];
 
     // ---- shared navigation ----
@@ -128,8 +168,11 @@ public class MailDraft
     public bool IsDone(string key) => key switch
     {
         "recipients" => Picked.Count > 0,
-        "subject" => Subject.Trim().Length > 0,
-        "note" => TouchedNote,
+        // The templates arrive written, so this step starts done. That is the
+        // truth: there is a letter for everybody. It comes undone only if you
+        // empty one.
+        "template" => Langs.Length > 0 && Langs.All(l => LetterFor(l).Subject.Trim().Length > 0),
+        "send" => Picked.Count > 0 && AnyDestination,
         _ => false,
     };
 
@@ -142,12 +185,24 @@ public class MailDraft
         "recipients" => Picked.Count == 0 ? null
             : Companies == 1 ? $"{Picked.Count} hos 1 kunde"
             : $"{Picked.Count} hos {Companies} kunder",
-        "subject" => Subject.Trim().Length > 0 ? Subject.Trim() : null,
-        "note" => !TouchedNote ? null
-            : Note.Trim().Length == 0 ? "Ingen besked"
-            : Note.Trim(),
+        "template" => Langs.Length == 0 ? null
+            : Langs.Length == 1 ? $"{Templates.Name(Langs[0])}"
+            : string.Join(" · ", Langs.Select(Templates.Name)),
+        "send" => Picked.Count == 0 ? null : string.Join(" · ", Destinations),
         _ => null,
     };
+
+    /// Where the send-out ends up, in the order it happens.
+    public IEnumerable<string> Destinations
+    {
+        get
+        {
+            if (ViaCrm) yield return "CRM";
+            if (SaveLocally) yield return "Gemt lokalt";
+            if (CopyToMe) yield return "Kopi til mig";
+            if (!ViaCrm && !SaveLocally) yield return "Ingen steder endnu";
+        }
+    }
 
     public bool Validate(string key)
     {
@@ -161,9 +216,15 @@ public class MailDraft
             return false;
         }
 
-        if (key == "subject" && Subject.Trim().Length == 0)
+        if (key == "template" && Langs.FirstOrDefault(l => LetterFor(l).Subject.Trim().Length == 0) is { } empty)
         {
-            Errors["subject"] = "Emnelinjen er det første modtagerne ser.";
+            Errors["template"] = $"Den {Templates.Name(empty).ToLowerInvariant()} skabelon mangler en emnelinje.";
+            return false;
+        }
+
+        if (key == "send" && !AnyDestination)
+        {
+            Errors["send"] = "Vælg mindst ét sted, udsendelsen skal ende.";
             return false;
         }
 
@@ -188,10 +249,7 @@ public class MailDraft
         if (Show?.Email == email && !Picked.Contains(email)) Show = null;
     }
 
-    public void MarkVisited(string key)
-    {
-        if (key == "note") TouchedNote = true;
-    }
+    public void MarkVisited(string key) { }
 
     public void Open(string key)
     {
@@ -218,22 +276,25 @@ public class MailDraft
     }
 
     public Mail ToMail(string reference, string sentOn) =>
-        new(reference, Subject.Trim(), Note.Trim(), MailStatus.Sent, sentOn, Recipients, [.. lists.Select(l => l.Name)]);
+        new(reference, Subject.Trim(), Note.Trim(), MailStatus.Sent, sentOn, Recipients,
+            [.. lists.Select(l => l.Name)], [.. Langs.Select(LetterFor)]);
 
     /// The draft as it would look sent, for the preview beside the form.
     public Mail Preview(string reference) =>
         new(reference, Subject, Note, MailStatus.Draft,
-            DateTime.Now.ToString("yyyy-MM-dd"), Recipients, [.. lists.Select(l => l.Name)]);
+            DateTime.Now.ToString("yyyy-MM-dd"), Recipients,
+            [.. lists.Select(l => l.Name)], [.. Langs.Select(LetterFor)]);
 
     public void Reset()
     {
-        Subject = "";
-        Note = "";
+        letters.Clear();
+        ViaCrm = true;
+        SaveLocally = false;
+        CopyToMe = false;
         picks.Clear();
         lists.Clear();
         lists.Add(MarketingGroup.Lists[0]);
         Show = null;
-        TouchedNote = false;
         Errors.Clear();
         StepKey = "recipients";
         Nudge = null;

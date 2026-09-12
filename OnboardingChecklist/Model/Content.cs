@@ -11,12 +11,12 @@ public static class Content
         new("recipients", "Modtagere", true,
             "Hvem skal have den?",
             "Hver kunde får sin egen prisliste vedhæftet, hentet fra regnskabssystemet."),
-        new("subject", "Emne", true,
-            "Hvad er emnet?",
-            "Emnelinjen er ens for alle modtagere."),
-        new("note", "Besked", false,
-            "Vil du skrive noget med?",
-            "En kort besked i selve mailen. Arkene taler for sig selv, så den kan springes over."),
+        new("template", "Skabelon", true,
+            "Hvad skal der stå?",
+            "Skabelonen følger modtagerens eget land: dansk til danskere, svensk til svenskere, engelsk til alle andre."),
+        new("send", "Afsendelse", true,
+            "Hvordan skal den ud?",
+            "Udsendelsen kan lægges i CRM og gemmes lokalt. Prislisterne følger med uanset hvad."),
     ];
 
     public static TaskDef Task(string key) => Tasks.First(t => t.Key == key);

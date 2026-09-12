@@ -1506,6 +1506,83 @@ body {
 .grp-card[aria-disabled] .grp-card-name,
 .grp-card[aria-disabled] .grp-card-sum { color: var(--ink-3); }
 
+/* Who the draft is being shown as. The letter is per country, so a preview
+   with no name on it would be a letter nobody actually receives. */
+.d-as {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.d-as-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.d-as b { font-weight: 500; color: var(--ink-1); }
+.d-as .sheet-nav { margin-left: auto; flex: none; }
+
+/* ============================================================
+   THE TEMPLATE STEP — one letter per language in play
+   ============================================================ */
+/* A tab strip, because the languages are views of the same letter rather than
+   three separate answers. They are never more than three. */
+.lang { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+.lang-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 10px 13px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-size: 13.5px;
+  /* Never bolder when chosen: the strip would resize under the pointer. */
+  font-weight: 500;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+.lang-tab:hover { color: var(--ink-1); }
+.lang-tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.lang-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (pointer: coarse) { .lang-tab { min-height: 44px; } }
+
+.lang-n {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--hover);
+  font-size: 11.5px;
+  line-height: 16px;
+  text-align: center;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.lang-tab[aria-selected="true"] .lang-n { background: var(--accent-soft); color: var(--accent); }
+
+.lang-panel .f-help code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--hover);
+  font-size: 12px;
+}
+
+/* ============================================================
+   THE SEND STEP — where it ends up
+   ============================================================ */
+.send-sum {
+  margin: 0 0 4px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.send-sum b { font-weight: 600; color: var(--ink-1); font-variant-numeric: tabular-nums; }
+.send-w { margin-top: 6px; }
+.send-txt { min-width: 0; }
+
 /* No list chosen yet. Not an error state — nothing has gone wrong, the
    question is open — so it is ruled quietly and holds roughly the room the
    people will take, rather than snapping the panel shorter. */

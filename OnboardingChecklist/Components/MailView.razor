@@ -56,8 +56,30 @@
     @if (tab == 0)
     {
         <div class="d-panel" role="tabpanel" id="d-panel-mail" aria-labelledby="d-tab-mail">
-            <h2 class="d-subject" data-empty="@(Blank(M.Subject) ? "" : null)">
-                @Show(M.Subject, "Ingen emnelinje endnu")
+            @* The draft as one person gets it, not as an average of everybody:
+               the letter follows the recipient's country, so it only means
+               something with a name on it. *@
+            @if (Current is { } who)
+            {
+                <div class="d-as">
+                    <span class="d-as-t">
+                        Som <b>@who.Name</b> får den · @Templates.Name(who.Lang).ToLowerInvariant()
+                    </span>
+                    @if (M.Recipients.Length > 1)
+                    {
+                        <span class="sheet-nav">
+                            <button type="button" class="sheet-step" aria-label="Forrige modtager"
+                                    disabled="@(Index <= 0)" @onclick="() => Step(-1)">@Icons.ArrowL</button>
+                            <span class="sheet-count">@(Index + 1) / @M.Recipients.Length</span>
+                            <button type="button" class="sheet-step sheet-next" aria-label="Næste modtager"
+                                    disabled="@(Index >= M.Recipients.Length - 1)" @onclick="() => Step(1)">@Icons.ArrowL</button>
+                        </span>
+                    }
+                </div>
+            }
+
+            <h2 class="d-subject" data-empty="@(Blank(Head) ? "" : null)">
+                @Show(Head, "Ingen emnelinje endnu")
             </h2>
 
             <dl class="d-meta">
@@ -87,8 +109,8 @@
                 }
             </dl>
 
-            <div class="d-body" data-empty="@(Blank(M.Note) ? "" : null)">
-                @(Blank(M.Note) ? (Preview ? "Ingen besked — den kan springes over." : "Sendt uden besked.") : M.Note)
+            <div class="d-body" data-empty="@(Blank(Text) ? "" : null)">
+                @(Blank(Text) ? (Preview ? "Ingen tekst endnu — skabelonen skrives i trin 2." : "Sendt uden tekst.") : Text)
             </div>
         </div>
     }
@@ -357,6 +379,22 @@
     /// that asking twice for the same one still opens it.
     [Parameter] public (string Email, int Nonce)? Focus { get; set; }
 
+    /// While the letter is being written, a click on a person means "show me
+    /// what this one gets", and that is the mail — not their sheet.
+    [Parameter] public bool LetterFirst { get; set; }
+
+    /// Who this pane is showing, so the form beside it can follow — pick a
+    /// Swede here and the Swedish letter is the one being edited over there.
+    [Parameter] public EventCallback<string> Showed { get; set; }
+
+    /// The letter on screen: the shown recipient's, with their name and company
+    /// put in. With nobody on the send yet there is nothing to fill it from.
+    private Letter? Shown => Current is { } who ? M.LetterFor(who) : null;
+
+    private string Head => Shown?.Subject ?? M.Subject;
+
+    private string Text => Shown?.Body ?? M.Note;
+
     private int seen;
 
     protected override void OnParametersSet()
@@ -367,7 +405,7 @@
             shown = ask.Email;
             sheetTab = 0;
             editing = null;
-            tab = 2;
+            tab = LetterFirst ? 0 : 2;
         }
     }
 
@@ -551,21 +589,23 @@
 
     private int Index => Current is null ? -1 : Array.FindIndex(M.Recipients, r => r.Email == Current.Email);
 
-    private void Show(string email)
+    private async Task Show(string email)
     {
         shown = email;
         sheetTab = 0;
         editing = null;
-        tab = 2;
+        tab = LetterFirst ? 0 : 2;
+        await Showed.InvokeAsync(email);
     }
 
-    private void Step(int by)
+    private async Task Step(int by)
     {
         var next = Index + by;
         if (next < 0 || next >= M.Recipients.Length) return;
 
         shown = M.Recipients[next].Email;
         sheetTab = 0;
+        await Showed.InvokeAsync(shown);
     }
 
     /// A cell was typed into. The workbook is the accounting system's, so the

@@ -38,7 +38,8 @@ python3 docs/guide-to-markdown.py
 | `docs/blazor-checklist-guide.html` | Kilden — ret her, ikke i de to andre |
 | [`docs/kolonne-dropdown.md`](docs/kolonne-dropdown.md) | Listens kolonnemenu: sortering og filter i ét panel |
 | [`docs/excel-arket.md`](docs/excel-arket.md) | Prislisterne: rigtige .xlsx, læst og skrevet med Open XML SDK |
-| [`docs/liste-vaelger.md`](docs/liste-vaelger.md) | Marketinglisten: tre kort og et søgefelt til de øvrige hundrede |
+| [`docs/liste-vaelger.md`](docs/liste-vaelger.md) | Trin 1: tre kort og et søgefelt til de øvrige hundrede |
+| [`docs/skabelonen.md`](docs/skabelonen.md) | Trin 2 og 3: ét brev pr. sprog, og hvor udsendelsen ender |
 
 Guiden er en beslutningslog: den fortæller hvorfor hver ting ser ud som den gør,
 og hvilke fælder der ligger undervejs. Den gengiver **ikke** hele kildekoden —

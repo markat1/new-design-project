@@ -202,32 +202,90 @@
         </p>
     }
 
-    else if (TaskKey == "subject")
+    else if (TaskKey == "template")
     {
-        <div class="f-group">
-            <label class="f-label" for="f-subject">Emne</label>
-            <input class="f-input" id="f-subject" type="text"
-                   placeholder="Priser på …"
-                   @bind="S.Subject" @bind:event="oninput" @bind:after="NotifyChanged"
-                   aria-invalid="@Invalid("subject")"
-                   aria-describedby="@(S.Errors.ContainsKey("subject") ? "f-subject-err" : null)" />
-            @if (S.Errors.TryGetValue("subject", out var subjErr))
-            {
-                <p class="f-err" id="f-subject-err">@Icons.Warn @subjErr</p>
-            }
-            <p class="f-help">Den samme emnelinje går til alle modtagere.</p>
-        </div>
+        @if (S.Langs.Length == 0)
+        {
+            <p class="pick-none-yet">
+                Ingen modtagere endnu, så der er ikke noget sprog at skrive i.
+                Vælg en liste i trin 1.
+            </p>
+        }
+        else
+        {
+            @* One tab per language actually in play — never three when the send
+               is Danish all the way through. Nobody picked these: the
+               recipients' countries did. *@
+            <div class="lang" role="tablist" aria-label="Sprog" @ref="langBar">
+                @foreach (var code in S.Langs)
+                {
+                    var lang = code;
+                    var count = S.Recipients.Count(r => r.Lang == lang);
+
+                    <button type="button" class="lang-tab" role="tab" id="lang-@lang"
+                            aria-selected="@(Lang == lang ? "true" : "false")"
+                            aria-controls="lang-panel" tabindex="@(Lang == lang ? 0 : -1)"
+                            @onclick="() => ShowLang(lang)" @onkeydown="e => LangKey(e, lang)">
+                        @Templates.Name(lang)
+                        <span class="lang-n">@count</span>
+                    </button>
+                }
+            </div>
+
+            <div class="lang-panel" id="lang-panel" role="tabpanel" aria-labelledby="lang-@Lang">
+                <div class="f-group">
+                    <label class="f-label" for="f-subject">Emne</label>
+                    <input class="f-input" id="f-subject" type="text"
+                           value="@S.LetterFor(Lang).Subject"
+                           @oninput="e => Write(subject: e.Value?.ToString() ?? string.Empty)"
+                           aria-invalid="@Invalid("template")" />
+                </div>
+
+                <div class="f-group">
+                    <label class="f-label" for="f-body">Tekst</label>
+                    <textarea class="f-input f-textarea" id="f-body" rows="9"
+                              value="@S.LetterFor(Lang).Body"
+                              @oninput="e => Write(body: e.Value?.ToString() ?? string.Empty)"></textarea>
+                </div>
+
+                @if (S.Errors.TryGetValue("template", out var tplErr))
+                {
+                    <p class="f-err">@Icons.Warn @tplErr</p>
+                }
+
+                <p class="f-help">
+                    <code>{navn}</code> og <code>{firma}</code> sættes ind pr. modtager.
+                    Prislisten hænger ved uanset sproget.
+                </p>
+            </div>
+        }
     }
 
-    else if (TaskKey == "note")
+    else if (TaskKey == "send")
     {
-        <div class="f-group">
-            <label class="f-label" for="f-note">Besked <span class="f-opt">— valgfri</span></label>
-            <textarea class="f-input f-textarea" id="f-note" rows="4"
-                      placeholder="Hej — her er priserne vi talte om."
-                      @bind="S.Note" @bind:event="oninput" @bind:after="NoteChanged"></textarea>
-            <p class="f-help">Står i selve mailen, over vedhæftningen.</p>
-        </div>
+        <p class="send-sum">
+            <b>@S.Picked.Count @(S.Picked.Count == 1 ? "mail" : "mails")</b> med
+            @S.Companies @(S.Companies == 1 ? "prisliste" : "prislister"),
+            skrevet på @S.Langs.Length @(S.Langs.Length == 1 ? "sprog" : "sprog").
+        </p>
+
+        <fieldset class="f-fieldset send-w">
+            <legend class="sr-only">Hvor udsendelsen skal ende</legend>
+
+            @Where("Læg den i CRM", "Hver mail havner på kundens kort, så den står der næste gang nogen kigger.",
+                   S.ViaCrm, on => { S.ViaCrm = on; S.Errors.Remove("send"); })
+            @Where("Gem en kopi lokalt", "Mailen og de vedhæftede ark lægges i udsendelsesmappen.",
+                   S.SaveLocally, on => { S.SaveLocally = on; S.Errors.Remove("send"); })
+            @Where("Send en kopi til mig selv", "Én mail til dig, så du kan se hvad der gik ud.",
+                   S.CopyToMe, on => S.CopyToMe = on)
+        </fieldset>
+
+        @if (S.Errors.TryGetValue("send", out var sendErr))
+        {
+            <p class="f-err">@Icons.Warn @sendErr</p>
+        }
+
+        <p class="f-help">Intet sendes, før du trykker Send mail.</p>
     }
 
 </div>
@@ -423,7 +481,7 @@
     {
         if (!on || !person.HasSheet) return;
 
-        S.ShowSheet(person.Email);
+        S.ShowPerson(person.Email);
         await Changed.InvokeAsync();
     }
 
@@ -459,11 +517,79 @@
         await Changed.InvokeAsync();
     }
 
-    private async Task NoteChanged()
+    // ---- the template step ----
+
+    private ElementReference langBar;
+    private string? langShown;
+
+    /// The language on screen: the one asked for, while it is still in play.
+    /// Take the last Swede off the list and the Swedish tab goes with them.
+    private string Lang =>
+        langShown is { } asked && S.Langs.Contains(asked) ? asked : S.Langs.FirstOrDefault() ?? Templates.En;
+
+    /// Choosing a language points the preview at somebody who speaks it: a
+    /// letter with no reader on the other side of the pane is just text.
+    private async Task ShowLang(string lang)
     {
-        S.TouchedNote = true;
+        langShown = lang;
+
+        if (S.Recipients.FirstOrDefault(r => r.Lang == lang) is { } who && who.Email != S.Show?.Email)
+        {
+            S.ShowPerson(who.Email);
+        }
+
         await Changed.InvokeAsync();
     }
+
+    /// And the other way round: the pane beside this one showed somebody, so
+    /// the tab moves to the letter that person actually gets.
+    private int seenShow;
+
+    protected override void OnParametersSet()
+    {
+        if (S.Show is not { } ask || ask.Nonce == seenShow) return;
+
+        seenShow = ask.Nonce;
+
+        if (S.Recipients.FirstOrDefault(r => r.Email == ask.Email) is { } who) langShown = who.Lang;
+    }
+
+    private async Task Write(string? subject = null, string? body = null)
+    {
+        S.Write(Lang, subject, body);
+        await Changed.InvokeAsync();
+    }
+
+    /// A tab strip is one stop on the tab key; the arrows move between the tabs.
+    private async Task LangKey(KeyboardEventArgs e, string lang)
+    {
+        var step = e.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => 1,
+            "ArrowLeft" or "ArrowUp" => -1,
+            _ => 0,
+        };
+
+        if (step == 0) return;
+
+        var langs = S.Langs;
+        var next = langs[(Array.IndexOf(langs, lang) + step + langs.Length) % langs.Length];
+        focusWanted = $"lang-{next}";
+        await ShowLang(next);
+    }
+
+    // ---- the send step ----
+
+    private RenderFragment Where(string title, string sub, bool on, Action<bool> set) =>
+        @<label class="f-switch send-row">
+            <input type="checkbox" checked="@on"
+                   @onchange="async e => { set(e.Value is true); await Changed.InvokeAsync(); }" />
+            <span class="f-track" aria-hidden="true"><span class="f-knob"></span></span>
+            <span class="send-txt">
+                <span class="f-sw-title">@title</span>
+                <span class="f-sw-desc">@sub</span>
+            </span>
+        </label>;
 
     // Enter anywhere in the panel means "next step". The checkbox list handles
     // Space itself, which is what a checkbox expects.

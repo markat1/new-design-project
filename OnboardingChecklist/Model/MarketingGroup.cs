@@ -2,10 +2,14 @@ namespace OnboardingChecklist.Model;
 
 /// The people a price mail can go to. Each brings their company, and the company
 /// is what decides which sheet they receive.
-public record Person(string Name, string Email, string Company)
+/// The country is the customer's own, as the CRM has it, and it is the only
+/// thing that decides which of the three letters they get.
+public record Person(string Name, string Email, string Company, string Country)
 {
     public Recipient Compose() =>
-        new(Name, Email, Company, Accounting.SheetFor(Company), RecipientStatus.Sent);
+        new(Name, Email, Company, Accounting.SheetFor(Company), RecipientStatus.Sent, Country);
+
+    public string Lang => Templates.For(Country);
 
     public bool HasSheet => Accounting.HasSheet(Company);
 }
@@ -23,19 +27,21 @@ public record Group(string Name, Person[] People)
 
 public static class MarketingGroup
 {
-    // Two at Kestrel on purpose: same company, same sheet, two mails.
+    // Two at Kestrel on purpose: same company, same sheet, two mails. And all
+    // three languages on purpose too — a send that is Danish all the way
+    // through would never show what the template step is for.
     private static readonly Person[] People =
     [
         new("Bartholomew Featherstonehaugh-Villanueva",
             "bartholomew.featherstonehaugh-villanueva@internationalsystems-engineering.co.uk",
-            "Featherstonehaugh-Villanueva International Systems"),
-        new("Anna Sørensen", "anna@velarobotics.com", "Vela Robotics"),
-        new("Bo Halden", "bo@halden.dk", "Halden & Co."),
-        new("Klaus Richter", "einkauf@ferrous-mfg.de", "Ferrous Manufacturing Group"),
-        new("Cecilie Nord", "finance@kestrel.io", "Kestrel Analytics"),
-        new("Jonas Vik", "jonas@kestrel.io", "Kestrel Analytics"),
-        new("Mia Brandt", "ops@brightharbour.co", "Bright Harbour Logistics"),
-        new("Ida Solberg", "hei@solbergmedia.no", "Solberg Media"),
+            "Featherstonehaugh-Villanueva International Systems", "GB"),
+        new("Anna Sørensen", "anna@velarobotics.com", "Vela Robotics", "DK"),
+        new("Bo Halden", "bo@halden.dk", "Halden & Co.", "DK"),
+        new("Klaus Richter", "einkauf@ferrous-mfg.de", "Ferrous Manufacturing Group", "DE"),
+        new("Cecilie Nord", "finance@kestrel.io", "Kestrel Analytics", "SE"),
+        new("Jonas Vik", "jonas@kestrel.io", "Kestrel Analytics", "SE"),
+        new("Mia Brandt", "ops@brightharbour.co", "Bright Harbour Logistics", "GB"),
+        new("Ida Solberg", "hei@solbergmedia.no", "Solberg Media", "NO"),
     ];
 
     private static Person Find(string email) => People.First(p => p.Email == email);
