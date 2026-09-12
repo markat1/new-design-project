@@ -57,6 +57,15 @@
 
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
 
+  /* A filled button that should read as raised gets a stacked shadow, not a
+     flat field: one tight layer just under it, one wider and softer for the
+     ambient light. Both in the accent's own hue — a neutral shadow under a
+     saturated fill goes muddy rather than dark. Pressed, it comes down to the
+     surface, which is the whole story the three states tell. */
+  --lift: 0 1px 2px oklch(0.38 0.10 259 / 0.26), 0 2px 6px -1px oklch(0.38 0.10 259 / 0.22);
+  --lift-hover: 0 2px 4px oklch(0.38 0.10 259 / 0.28), 0 6px 14px -3px oklch(0.38 0.10 259 / 0.28);
+  --lift-down: 0 1px 1px oklch(0.38 0.10 259 / 0.24);
+
   /* Both pages cap their content here, so switching pages doesn't shift it. */
   --page-w: 940px;
 
@@ -188,9 +197,14 @@ body {
     background-color 140ms ease,
     border-color 140ms ease,
     color 140ms ease,
-    transform 90ms ease;
+    box-shadow 140ms ease,
+    /* A transition, not a keyframe: let go halfway and it returns from where
+       it is rather than restarting. */
+    transform 150ms ease-out;
 }
-.btn:active { transform: scale(0.985); }
+/* 0.96 exactly. It was 0.985 — 0.57px on a 38px button, which is a press
+   nobody can feel. Below 0.95 it reads as exaggerated. */
+.btn:active { transform: scale(0.96); }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Guarantees the 44px touch floor without inflating the button visually — the
@@ -206,20 +220,32 @@ body {
   transform: translateY(-50%);
 }
 
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-2); }
+.btn-primary { background: var(--accent); color: #fff; box-shadow: var(--lift); }
+.btn-primary:hover { background: var(--accent-2); box-shadow: var(--lift-hover); }
+.btn-primary:active { box-shadow: var(--lift-down); }
 
 .btn-ghost { background: transparent; color: var(--ink-2); }
 .btn-ghost:hover { background: var(--hover); color: var(--ink-1); }
 
-.btn-outline { background: var(--surface); border-color: var(--line-2); color: var(--ink-1); }
-.btn-outline:hover { background: var(--canvas); }
+/* The same story in neutral: an edge that lifts a little rather than a line
+   drawn round a flat shape. */
+.btn-outline {
+  background: var(--surface);
+  border-color: var(--line-2);
+  color: var(--ink-1);
+  box-shadow: 0 1px 2px oklch(0.24 0.002 68 / 0.08);
+}
+.btn-outline:hover { background: var(--surface); border-color: var(--ink-3); box-shadow: 0 2px 5px -1px oklch(0.24 0.002 68 / 0.12); }
+.btn-outline:active { box-shadow: none; }
 
 /* not-ready state — muted, but genuinely enabled: activating it walks you to
    the step that's blocking, and its accessible description says what's left */
+/* Not ready is not raised: it stays on the surface until it has something to
+   do. Otherwise the lift promises a button that is going to work. */
 .btn[data-notready] {
   background: var(--press);
   border-color: transparent;
+  box-shadow: none;
   color: var(--ink-3);
 }
 .btn[data-notready]:hover { background: var(--line-2); color: var(--ink-2); }
