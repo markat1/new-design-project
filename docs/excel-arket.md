@@ -149,12 +149,24 @@ Den åbne fane er hvid med en streg under — bund og farve, aldrig vægt, så d
 **Overskriften står fast.** Kolonnebogstaverne og overskriftsrækken er frosne i toppen, og rækketallene i venstre side — ruller man, er det kun cellerne, der flytter sig:
 
 ```css
+.xl-t { --xl-row: 26px; }
+.xl-t th, .xl-t td { height: var(--xl-row); }
+
 .xl-t .xl-head td { position: sticky; top: 0; z-index: 3; }
-.xl-t tbody tr:first-child > * { position: sticky; top: 22px; z-index: 2; background: var(--surface); }
+.xl-t tbody tr:first-child > * { position: sticky; top: var(--xl-row); z-index: 2; background: var(--surface); }
 .xl-t .xl-n { position: sticky; left: 0; z-index: 1; }
+
+/* The shadow replaces the border on a frozen cell; it does not join it. */
+.xl-t .xl-head td,
+.xl-t tbody tr:first-child > *,
+.xl-t .xl-n { border-right: 0; border-bottom: 0; box-shadow: inset -1px -1px 0 var(--line); }
 ```
 
-De frosne celler streger sig selv op med en indre skygge i stedet for en kant: i en tabel med `border-collapse: collapse` hører kanten til tabellen og ruller væk med den. Og selektorerne skal være stærke nok — `.xl-t td { position: relative }` (som autofilteret bruger) står senere i filen og vinder ellers over `position: sticky`.
+De frosne celler streger sig selv op med en indre skygge i stedet for en kant: i en tabel med `border-collapse: collapse` hører kanten til tabellen og ruller væk med den.
+
+Skyggen **erstatter** kanten — den lægger sig ikke oveni. Bærer cellen begge, står de en pixel fra hinanden, og hver eneste frosne kant bliver til to streger. Rækkehøjden står ét sted (`--xl-row`), fordi den frosne headerrække hænger på den: skrevet ud to gange drev de fra hinanden, og headeren lagde sig 4px op over bogstavrækken, når man rullede.
+
+Og selektorerne skal være stærke nok — `.xl-t td { position: relative }` (som autofilteret bruger) står senere i filen og vinder ellers over `position: sticky`.
 
 **Gitteret viser cellerne, ikke en fortolkning af dem.** Kolonnebogstaverne dannes af `Accounting.ColumnName(0) == "A"`, rækketallene af rækkens plads, og hver celle vises gennem `Formulas.Display`. Er der fed i filen, er der fed i gitteret.
 

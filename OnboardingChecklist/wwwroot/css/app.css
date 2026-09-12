@@ -1225,11 +1225,21 @@ body {
 .xl-grid { flex: 1; min-height: 0; overflow: auto; border-top: 1px solid var(--line-2); background: var(--surface); }
 /* max-content, or a fixed layout squeezes the columns to fit the pane instead
    of keeping the widths the file gave them and letting the grid scroll. */
-.xl-t { border-collapse: collapse; table-layout: fixed; width: max-content; min-width: 100%; font-size: 12px; white-space: nowrap; }
+.xl-t {
+  /* One number for a row's height: the frozen header hangs off it, and when
+     the two were written out separately they drifted apart. */
+  --xl-row: 26px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: max-content;
+  min-width: 100%;
+  font-size: 12px;
+  white-space: nowrap;
+}
 .xl-c-n { width: 30px; }
 .xl-t th,
 .xl-t td {
-  height: 26px;
+  height: var(--xl-row);
   padding: 5px 9px;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -1280,15 +1290,28 @@ body {
    numbers stay at the left, and only the cells travel. The frozen cells rule
    themselves with an inset shadow — a collapsed border belongs to the table
    and scrolls away with it. */
-.xl-t .xl-head td { position: sticky; top: 0; z-index: 3; box-shadow: inset -1px -1px 0 var(--line); }
+.xl-t .xl-head td { position: sticky; top: 0; z-index: 3; }
 .xl-t tbody tr:first-child > * {
   position: sticky;
-  top: 22px;                         /* the letters row: 15 + 6 padding + 1 rule */
+  top: var(--xl-row);                /* directly under the letters */
   z-index: 2;
   background: var(--surface);
+}
+.xl-t .xl-n { position: sticky; left: 0; z-index: 1; }
+
+/* The shadow REPLACES the border on a frozen cell, it does not join it. Carry
+   both and they sit a pixel apart: every frozen edge doubles, and the sheet
+   reads as ruled twice. */
+.xl-t .xl-head td,
+.xl-t tbody tr:first-child > *,
+.xl-t .xl-n {
+  border-right: 0;
+  border-bottom: 0;
   box-shadow: inset -1px -1px 0 var(--line);
 }
-.xl-t .xl-n { position: sticky; left: 0; z-index: 1; box-shadow: inset -1px -1px 0 var(--line); }
+/* Nothing to the right of the last column to divide it from. */
+.xl-t .xl-head td:last-child,
+.xl-t tbody tr:first-child > :last-child { box-shadow: inset 0 -1px 0 var(--line); }
 .xl-t .xl-head .xl-corner { left: 0; z-index: 4; }
 .xl-t tbody tr:first-child .xl-n { z-index: 3; }
 .xl-corner,
