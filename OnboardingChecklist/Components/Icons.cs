@@ -43,8 +43,10 @@ public static class Icons
     public static readonly MarkupString SortFilterUp = new(
         """<svg width="15" height="9" viewBox="0 0 15 9" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 .5h7M0 4.5h5M0 8.5h3"/><path d="M11.5 9V1"/><path d="M8.5 3.5l3-3 3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>""");
 
+    // Drawn to its own edges rather than inside a padded 24-grid, so the glass
+    // fills the field's glyph slot instead of sitting small in the middle.
     public static readonly MarkupString Search = new(
-        """<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>""");
+        """<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><circle cx="5.6" cy="5.6" r="4.2"/><path d="M9.1 9.1 12.9 12.9"/></svg>""");
 
     public static readonly MarkupString Sheet = new(
         """<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M11 13v4"/></svg>""");

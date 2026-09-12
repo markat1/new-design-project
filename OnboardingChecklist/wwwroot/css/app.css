@@ -347,7 +347,7 @@ body {
 .f-sw-desc { display: block; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); margin-top: 3px; }
 
 @media (forced-colors: active) {
-  .f-input:focus, .btn:focus-visible { outline: 2px solid Highlight; }
+  .f-input:focus, .t-find-input:focus, .btn:focus-visible { outline: 2px solid Highlight; }
   .f-track { border: 1px solid CanvasText; }
 }
 
@@ -909,13 +909,18 @@ body {
 
 /* The column's filter, under a rule like the one between Outlook's sections. */
 .t-menu-filter { margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--line); }
-/* The search field that shortens the list under it. Both decorations lie on
-   top of the field, so the whole thing is one target and the clear button
-   hands the field back when it disappears. */
-.t-find { position: relative; margin: 2px 10px 8px; }
+/* The search field is a row of the menu, not a box inside it: it runs the
+   full width, past the menu's padding, and a rule under it holds it apart
+   from the list. Both decorations lie on top of the field, so the whole row
+   is one target and the clear button hands the field back as it goes. */
+.t-find {
+  position: relative;
+  margin: 0 -6px;
+  border-bottom: 1px solid var(--line);
+}
 .t-find-ico {
   position: absolute;
-  left: 9px;
+  left: 16px;
   top: 50%;
   display: block;
   transform: translateY(-50%);
@@ -924,15 +929,27 @@ body {
 }
 .t-find-input {
   width: 100%;
-  min-height: 34px;
-  padding: 6px 32px 6px 30px;
+  min-height: 40px;
+  padding: 10px 34px 10px 38px;
+  border: 0;
   border-radius: 0;
+  background: transparent;
+  font: inherit;
+  /* 13px to sit with the rows around it; 16px on touch, or iOS zooms. */
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-1);
 }
+@media (pointer: coarse) { .t-find-input { min-height: 44px; font-size: 16px; } }
+.t-find-input::placeholder { color: var(--ink-3); }
+/* The row has no border to colour, so the ring draws inside it. */
+.t-find-input:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
 /* Ours is drawn below; the browser's sits in the padding and doubles it. */
 .t-find-input::-webkit-search-cancel-button { appearance: none; }
 .t-find-x {
   position: absolute;
-  right: 3px;
+  /* Its glyph ends on the same edge the rows' text does. */
+  right: 9px;
   top: 50%;
   display: grid;
   place-items: center;

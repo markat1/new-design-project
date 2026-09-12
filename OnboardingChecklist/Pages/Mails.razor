@@ -85,7 +85,7 @@
                                                        table answers to the boxes, as in a spreadsheet. *@
                                                     <div class="t-find">
                                                         <span class="t-find-ico">@Icons.Search</span>
-                                                        <input class="f-input t-find-input" id="find-@col.Key" type="search" placeholder="Søg"
+                                                        <input class="t-find-input" id="find-@col.Key" type="search" placeholder="Søg"
                                                                autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"
                                                                value="@Find(col.Key)"
                                                                @oninput="e => SetFind(col.Key, e.Value?.ToString() ?? string.Empty)" />
