@@ -3,10 +3,15 @@
    different sheet, so they are a list, not a line in the header. *@
 <div class="d" @key="M.Ref">
 
-    <div class="d-top">
-        <span class="t-pill" data-s="@M.Status.ToString().ToLowerInvariant()">@(Preview ? "Udkast" : M.Label)</span>
-        <span class="d-ref">@M.Ref</span>
-    </div>
+    @* Only over a mail that exists. While one is being written, "Udkast" and a
+       reference it has not been given yet said nothing the page did not. *@
+    @if (!Preview)
+    {
+        <div class="d-top">
+            <span class="t-pill" data-s="@M.Status.ToString().ToLowerInvariant()">@M.Label</span>
+            <span class="d-ref">@M.Ref</span>
+        </div>
+    }
 
     <div class="d-tabs" role="tablist" aria-label="Mail, modtagere og vedhæftning" @onkeydown="TabKey">
         <button type="button" class="d-tab" role="tab" id="d-tab-mail"
