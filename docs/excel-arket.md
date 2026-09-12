@@ -146,6 +146,16 @@ Bogstaverne og rækketallene er regnearkets møbler, ikke indhold, så de er `ar
 
 Den åbne fane er hvid med en streg under — bund og farve, aldrig vægt, så de andre faner holder sig i ro. Til højre står filstørrelsen.
 
+**Overskriften står fast.** Kolonnebogstaverne og overskriftsrækken er frosne i toppen, og rækketallene i venstre side — ruller man, er det kun cellerne, der flytter sig:
+
+```css
+.xl-t .xl-head td { position: sticky; top: 0; z-index: 3; }
+.xl-t tbody tr:first-child > * { position: sticky; top: 22px; z-index: 2; background: var(--surface); }
+.xl-t .xl-n { position: sticky; left: 0; z-index: 1; }
+```
+
+De frosne celler streger sig selv op med en indre skygge i stedet for en kant: i en tabel med `border-collapse: collapse` hører kanten til tabellen og ruller væk med den. Og selektorerne skal være stærke nok — `.xl-t td { position: relative }` (som autofilteret bruger) står senere i filen og vinder ellers over `position: sticky`.
+
 **Gitteret viser cellerne, ikke en fortolkning af dem.** Kolonnebogstaverne dannes af `Accounting.ColumnName(0) == "A"`, rækketallene af rækkens plads, og hver celle vises gennem `Formulas.Display`. Er der fed i filen, er der fed i gitteret.
 
 ### Sortering og filter i arket
@@ -187,6 +197,17 @@ public static void SetCell(string company, int tab, int row, int column, string 
 ```
 
 Skriver du `=B2*C2` i en celle, er det en formel — den regnes ud i gitteret og skrives som formel, når arket gemmes.
+
+**Cellen viser sin værdi, ikke sin formel.** Dobbeltklikker du, bytter den om og viser formlen, som Excel gør, når man åbner en celle. Det er den samme formel, der ender i filen:
+
+```razor
+<input value="@(Editing(line, col) ? typedText : shownText)"
+       @ondblclick="() => editing = (line, col)"
+       @onchange="e => Typed(rec.Company, line, col, e.Value?.ToString() ?? string.Empty)"
+       @onblur="() => editing = null" />
+```
+
+Rækkefølgen af browserens hændelser bærer det: `change` kommer før `blur`, så rettelsen er gemt, inden cellen falder tilbage til sin værdi.
 
 Rettelsen lander i regnskabssystemets ark, og alt der læser derfra følger med ved næste tegning: gitterets linjetotal og sum, modtagerens beløb i *Modtagere*-fanen, udsendelsens total ude i listen. `SheetEdited` er en `EventCallback`, som `NewMail` bruger til at bygge kladden op igen — den komponeres af arkene, så det er nok at sige, at de har ændret sig.
 

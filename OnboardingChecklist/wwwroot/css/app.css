@@ -1068,7 +1068,7 @@ body {
 /* ---- detail ---- */
 /* A column, so the attachment tab can hand its whole remaining height to the
    sheet: Office's own frame, or the grid the app draws. */
-.d { display: flex; flex-direction: column; min-height: 100%; padding: 22px 22px 40px; animation: v3In 180ms var(--ease) both; }
+.d { display: flex; flex-direction: column; min-height: 100%; padding: 0 22px 40px; animation: v3In 180ms var(--ease) both; }
 
 /* The sheet fills the pane, so there is nothing to scroll past it — and the
    gutter the pane keeps for a scrollbar would be a strip of empty paper down
@@ -1086,15 +1086,17 @@ body {
 /* Excel for the web, to the pane's edges. */
 .xl-office { flex: 1; min-height: 0; width: 100%; border: 0; background: var(--surface); }
 
-.d-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.d-top { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; }
 .d-ref { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
 /* The mail and the file it carries are two documents, so they get two tabs
    rather than one long column. */
+/* The tabs open the pane: at the top of it, and out to its edges. */
 .d-tabs {
   display: flex;
   gap: 2px;
-  margin: 14px 0 18px;
+  margin: 0 -22px 18px;
+  padding: 0 22px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -1226,8 +1228,25 @@ body {
   background: var(--sunk);
   color: var(--ink-3);
   font-size: 11px;
+  line-height: 15px;
   text-align: center;
 }
+
+/* Frozen panes: the letters and the header row stay at the top, the row
+   numbers stay at the left, and only the cells travel. The frozen cells rule
+   themselves with an inset shadow — a collapsed border belongs to the table
+   and scrolls away with it. */
+.xl-t .xl-head td { position: sticky; top: 0; z-index: 3; box-shadow: inset -1px -1px 0 var(--line); }
+.xl-t tbody tr:first-child > * {
+  position: sticky;
+  top: 22px;                         /* the letters row: 15 + 6 padding + 1 rule */
+  z-index: 2;
+  background: var(--surface);
+  box-shadow: inset -1px -1px 0 var(--line);
+}
+.xl-t .xl-n { position: sticky; left: 0; z-index: 1; box-shadow: inset -1px -1px 0 var(--line); }
+.xl-t .xl-head .xl-corner { left: 0; z-index: 4; }
+.xl-t tbody tr:first-child .xl-n { z-index: 3; }
 .xl-corner,
 .xl-n { width: 28px; }
 
