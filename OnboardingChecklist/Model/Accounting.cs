@@ -72,6 +72,25 @@ public static partial class Accounting
         Books[company] = book with { Edited = true };
     }
 
+    /// A column was dragged wider or narrower. The width goes back into the
+    /// workbook in Excel's own unit, so it is there when the file is written.
+    public static void SetWidth(string company, int tab, int column, int px)
+    {
+        if (!Books.TryGetValue(company, out var book) || tab < 0 || tab >= book.Tabs.Length) return;
+
+        var sheet = book.Tabs[tab];
+        var widths = sheet.Widths;
+
+        if (column >= widths.Length)
+        {
+            Array.Resize(ref widths, column + 1);
+        }
+
+        widths[column] = Math.Max(1, (px - 5) / 7.0);
+        book.Tabs[tab] = sheet with { Widths = widths };
+        Books[company] = book with { Edited = true };
+    }
+
     /// The workbook changed shape rather than content — rows moved — so the
     /// file is behind again.
     public static void Touch(string company)
@@ -207,7 +226,7 @@ public static partial class Accounting
             {
                 var part = workbook.AddNewPart<WorksheetPart>();
                 var rows = new SheetData();
-                part.Worksheet = new Worksheet(Widths(), rows);
+                part.Worksheet = new Worksheet(Widths(tab), rows);
 
                 for (var r = 0; r < tab.Rows.Count; r++)
                 {
@@ -270,10 +289,27 @@ public static partial class Accounting
     // Style slots, in the order Styles() lists them.
     private const uint Plain = 0, Head = 1, Money = 2, HeadMoney = 3;
 
-    private static Columns Widths() =>
-        new(new Column { Min = 1, Max = 1, Width = 34, CustomWidth = true },
-            new Column { Min = 2, Max = 2, Width = 8, CustomWidth = true },
-            new Column { Min = 3, Max = 4, Width = 12, CustomWidth = true });
+    /// The sheet's own column widths, one entry each — Excel reads spans, but
+    /// it writes them back out as it pleases, and one per column is honest.
+    private static Columns Widths(Tab tab)
+    {
+        var columns = new Columns();
+
+        for (var at = 0; at < tab.Widths.Length; at++)
+        {
+            if (tab.Widths[at] <= 0) continue;
+
+            columns.Append(new Column
+            {
+                Min = (uint)(at + 1),
+                Max = (uint)(at + 1),
+                Width = tab.Widths[at],
+                CustomWidth = true,
+            });
+        }
+
+        return columns;
+    }
 
     /// The parts go in the order the format wants them, and the two fills and
     /// the Normal style are the ones Excel expects to find in every workbook —

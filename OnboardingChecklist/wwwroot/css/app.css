@@ -1218,6 +1218,21 @@ body {
 /* Except the header row, which hosts the autofilter: a clipped cell clips the
    panel hanging out of it. Its text is kept off the button by the padding. */
 .xl-t tbody tr:first-child > td { overflow: visible; }
+/* The grip between two letters, where Excel keeps it. Six pixels of hit area
+   on a mouse, twice that under a finger. */
+.xl-grip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+.xl-grip:hover,
+.xl-grip:focus-visible { background: var(--accent); outline: none; }
+@media (pointer: coarse) { .xl-grip { width: 12px; } }
+
 /* The cell with the panel open rises over the backdrop. A sticky cell with a
    z-index is its own stacking context, so the panel's own z-index counts only
    inside it — the cell is what has to clear the backdrop's 5. */

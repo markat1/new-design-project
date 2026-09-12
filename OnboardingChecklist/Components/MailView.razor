@@ -1,3 +1,4 @@
+@implements IDisposable
 @using System.Globalization
 @using System.Text.RegularExpressions
 @inject IJSRuntime JS
@@ -154,7 +155,7 @@
                         {
                             <div class="t-backdrop" @onclick="CloseAuto"></div>
                         }
-                        <div class="xl-grid">
+                        <div class="xl-grid" @ref="grid">
                             <table class="xl-t">
                                 <colgroup>
                                     <col class="xl-c-n" />
@@ -171,11 +172,20 @@
                                     <col />
                                 </colgroup>
                                 <thead>
-                                    <tr class="xl-head" aria-hidden="true">
-                                        <td class="xl-corner"></td>
+                                    @* The letters are the grid's own furniture, so they are
+                                       hidden from a screen reader — but the grip between two
+                                       of them is a control, and stays reachable. *@
+                                    <tr class="xl-head">
+                                        <td class="xl-corner" aria-hidden="true"></td>
                                         @for (var c = 0; c < Cols; c++)
                                         {
-                                            <td>@Accounting.ColumnName(c)</td>
+                                            var grip = c;
+                                            <td>
+                                                <span aria-hidden="true">@Accounting.ColumnName(grip)</span>
+                                                <span class="xl-grip" data-col="@grip" role="separator" tabindex="0"
+                                                      aria-label="Bredde på kolonne @Accounting.ColumnName(grip)"
+                                                      @onkeydown="e => GripKey(e, grip)"></span>
+                                            </td>
                                         }
                                     </tr>
                                 </thead>
@@ -543,8 +553,41 @@
     private static string Show(string value, string fallback) =>
         value.Trim().Length > 0 ? value : fallback;
 
+    private ElementReference grid;
+    private DotNetObjectReference<MailView>? self;
+
+    public void Dispose() => self?.Dispose();
+
+    /// Dragged in JS, kept in C#: the width lands back here once, when the
+    /// pointer is let go.
+    [JSInvokable]
+    public async Task ColumnResized(int column, int px)
+    {
+        if (Current is not { } rec) return;
+
+        Accounting.SetWidth(rec.Company, sheetTab, column, px);
+        await SheetEdited.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private async Task GripKey(KeyboardEventArgs e, int column)
+    {
+        if (Sheet is not { } tab || Current is not { } rec) return;
+
+        var step = e.Key switch { "ArrowRight" => 8, "ArrowLeft" => -8, _ => 0 };
+        if (step == 0) return;
+
+        await ColumnResized(column, Math.Max(24, Accounting.WidthPx(tab, column) + step));
+    }
+
     protected override async Task OnAfterRenderAsync(bool first)
     {
+        if (tab == 2 && Sheet is not null)
+        {
+            self ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("app.sheet.attach", grid, self);
+        }
+
         if (focusAuto)
         {
             focusAuto = false;

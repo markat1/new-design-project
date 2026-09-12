@@ -168,6 +168,19 @@ public static int WidthPx(Tab tab, int column)
 }
 ```
 
+**Og bredden kan trækkes**, dér hvor Excel lader dig gøre det: i grebet mellem to kolonnebogstaver. Selve trækket ligger i JavaScript, som skillelinjen mellem ruderne gør — en tegning pr. musebevægelse ville være en tegnestorm for noget, der bare er en kolonne, der bliver bredere. Når musen slippes, kommer bredden tilbage til C# én gang:
+
+```csharp
+[JSInvokable]
+public async Task ColumnResized(int column, int px)
+{
+    Accounting.SetWidth(rec.Company, sheetTab, column, px);
+    …
+}
+```
+
+Bredden omregnes tilbage til Excels tegn — `(px − 5) / 7` — og skrives med i filen, når arket gemmes. Grebet kan også nås med tastaturet: pilene flytter otte pixels ad gangen. Kolonnebogstaverne er skjult for skærmlæsere, men grebene er ikke, for de er kontroller.
+
 Efter arkets egne kolonner følger otte tomme af Excels standardbredde og til sidst én, der tager resten af ruden. Så fortsætter gitteret til højre, ligesom det fortsætter nedad, og cellerne holder deres form, uanset hvor bred ruden er. Tabellen skal have `width: max-content`, ellers presser et `table-layout: fixed` kolonnerne sammen for at passe i ruden i stedet for at lade gitteret rulle. Autofilteret sidder kun i de kolonner, arket faktisk bruger.
 
 ### Sortering og filter i arket

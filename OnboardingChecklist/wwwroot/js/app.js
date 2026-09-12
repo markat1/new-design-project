@@ -19,6 +19,44 @@ window.app = {
     document.getElementById(id)?.focus({ preventScroll: true });
   },
 
+  // Column widths are dragged in the sheet's own header, the way Excel does
+  // it. The drag lives here rather than in Blazor: a render per pointermove
+  // would be a render storm for what is only a column getting wider. One call
+  // goes back at the end, so the width lands in the workbook and in the file.
+  sheet: {
+    attach(grid, ref) {
+      if (!grid || grid.dataset.resizable) return;
+      grid.dataset.resizable = '1';
+
+      let drag = null;
+      const widthOf = index => grid.querySelectorAll('.xl-head td')[index + 1]?.getBoundingClientRect().width ?? 0;
+
+      grid.addEventListener('pointerdown', e => {
+        const grip = e.target.closest('.xl-grip');
+        if (!grip) return;
+
+        const index = Number(grip.dataset.col);
+        const col = grid.querySelectorAll('col')[index + 1];   // the row numbers come first
+        if (!col) return;
+
+        drag = { index, col, from: e.clientX, was: widthOf(index) };
+        grip.setPointerCapture(e.pointerId);
+        e.preventDefault();
+      });
+
+      grid.addEventListener('pointermove', e => {
+        if (!drag) return;
+        drag.col.style.width = Math.max(24, Math.round(drag.was + e.clientX - drag.from)) + 'px';
+      });
+
+      grid.addEventListener('pointerup', () => {
+        if (!drag) return;
+        ref.invokeMethodAsync('ColumnResized', drag.index, parseInt(drag.col.style.width, 10) || Math.round(drag.was));
+        drag = null;
+      });
+    },
+  },
+
   // The workbook is built in C# with the Open XML SDK; this only hands the
   // bytes to the browser as a file. Blazor sends byte[] over as a Uint8Array.
   saveFile(name, bytes, type) {
