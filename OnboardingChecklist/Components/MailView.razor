@@ -136,44 +136,65 @@
                     }
                 </div>
 
-                <div class="d-file">
-                    @Icons.Sheet
-                    <span class="d-file-txt">
-                        <span class="d-file-n" title="@rec.Attachment">@rec.Attachment</span>
-                        <span class="d-file-s">Regneark · @rec.AttachmentSize</span>
-                    </span>
-                </div>
-
                 @if (rec.Lines.Length == 0)
                 {
                     <p class="rcp-none">Ingen prisliste i regnskabssystemet for @rec.Company.</p>
                 }
                 else
                 {
-                    <table class="d-lines">
-                        <thead>
-                            <tr>
-                                <th scope="col">Beskrivelse</th>
-                                <th scope="col" class="num">Antal</th>
-                                <th scope="col" class="num">Stykpris</th>
-                                <th scope="col" class="num">I alt</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var l in rec.Lines)
-                            {
-                                <tr>
-                                    <td>@l.Description</td>
-                                    <td class="num d-qty">@l.Qty</td>
-                                    <td class="num">@l.Unit.ToString("N0")</td>
-                                    <td class="num d-tot">@l.Total.ToString("N0")</td>
-                                </tr>
-                            }
-                        </tbody>
-                        <tfoot>
-                            <tr><td colspan="3">I alt</td><td class="num">@rec.Total.ToString("N0")</td></tr>
-                        </tfoot>
-                    </table>
+                    @* The sheet as the accounting system holds it: the cells, not a
+                       summary of them. Letters and row numbers are the spreadsheet's
+                       own furniture, so they are hidden from a screen reader, which
+                       gets the header row instead. *@
+                    <div class="xl">
+                        <div class="xl-grid">
+                            <table class="xl-t">
+                                <thead>
+                                    <tr class="xl-head" aria-hidden="true">
+                                        <td class="xl-corner"></td>
+                                        <td>A</td>
+                                        <td>B</td>
+                                        <td>C</td>
+                                        <td>D</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="xl-n" aria-hidden="true">1</td>
+                                        <th scope="col">Beskrivelse</th>
+                                        <th scope="col" class="num">Antal</th>
+                                        <th scope="col" class="num">Stykpris</th>
+                                        <th scope="col" class="num">I alt</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{ var row = 1; }
+                                    @foreach (var l in rec.Lines)
+                                    {
+                                        row++;
+                                        <tr>
+                                            <td class="xl-n" aria-hidden="true">@row</td>
+                                            <td>@l.Description</td>
+                                            <td class="num">@l.Qty</td>
+                                            <td class="num">@l.Unit.ToString("N0")</td>
+                                            <td class="num">@l.Total.ToString("N0")</td>
+                                        </tr>
+                                    }
+                                    <tr class="xl-sum">
+                                        <td class="xl-n" aria-hidden="true">@(row + 1)</td>
+                                        <th scope="row">I alt</th>
+                                        <td></td>
+                                        <td></td>
+                                        <td class="num">@rec.Total.ToString("N0")</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        @* The file the mail carries, where a spreadsheet keeps its name. *@
+                        <div class="xl-foot">
+                            <span class="xl-tab" title="@rec.Attachment">@rec.Attachment</span>
+                            <span class="xl-size">@rec.AttachmentSize</span>
+                        </div>
+                    </div>
                 }
             }
             else

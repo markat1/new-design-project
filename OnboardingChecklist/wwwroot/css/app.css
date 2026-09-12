@@ -1178,24 +1178,63 @@ body {
 .d-file-s { display: block; margin-top: 1px; font-size: 12px; color: var(--ink-3); }
 
 
-.d-lines { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 22px; }
-.d-lines th {
-  padding: 0 0 7px;
+/* The price sheet drawn as the spreadsheet it is: letters across the top, row
+   numbers down the side, every cell ruled, and the file's name on a sheet tab
+   under it. The grid scrolls sideways in a narrow pane rather than squeezing
+   the description out of shape. */
+.xl { margin-top: 20px; }
+.xl-grid { overflow-x: auto; border: 1px solid var(--line-2); background: var(--surface); }
+.xl-t { border-collapse: collapse; min-width: 100%; font-size: 12px; white-space: nowrap; }
+.xl-t th,
+.xl-t td {
+  padding: 5px 9px;
+  border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-3);
+  font-weight: 400;
   text-align: left;
 }
-.d-lines th.num { text-align: right; padding-left: 12px; }
-.d-lines td { padding: 8px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-.d-lines .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.d-lines .d-qty { color: var(--ink-3); padding-left: 12px; }
-.d-lines .num { padding-left: 12px; }
-.d-lines .d-tot { font-weight: 500; }
-.d-lines tfoot td { border-bottom: 0; padding-top: 11px; font-weight: 600; }
+.xl-t tr > :last-child { border-right: 0; }
+.xl-t tbody tr:last-child > * { border-bottom: 0; }
+.xl-t .num { text-align: right; font-variant-numeric: tabular-nums; }
+.xl-t td:nth-child(2) { min-width: 150px; }
+
+/* The spreadsheet's own furniture, in the sunk grey it has everywhere else. */
+.xl-head td,
+.xl-n {
+  padding: 3px 6px;
+  background: var(--sunk);
+  color: var(--ink-3);
+  font-size: 11px;
+  text-align: center;
+}
+.xl-corner,
+.xl-n { width: 28px; }
+
+/* The header line the accountant wrote, and the sum under the figures. */
+.xl-t thead tr:not(.xl-head) th { font-weight: 600; }
+.xl-sum > * { border-top: 1px solid var(--line-2); font-weight: 600; }
+
+.xl-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 0 0;
+  border: 1px solid var(--line-2);
+  border-top: 0;
+  background: var(--sunk);
+}
+.xl-tab {
+  max-width: 62%;
+  padding: 6px 12px;
+  background: var(--surface);
+  border-right: 1px solid var(--line-2);
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.xl-size { margin-left: auto; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
 .d-none { padding: 18px 0; }
 .d-none p { margin: 0; font-size: 13px; }
