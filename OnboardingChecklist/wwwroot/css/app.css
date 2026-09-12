@@ -4,31 +4,48 @@
 :root {
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  --ink-1: #09090b;
-  --ink-2: #52525b;
-  /* Was #a1a1aa, which measured 2.56:1 on white — below the 4.5:1 floor for
-     body text. This passes on white (5.6:1), on --accent-soft (5.0:1) and on
-     the pill's #f0f0f1 (4.9:1), which are the three grounds it lands on. */
-  --ink-3: #67676f;
+  /* The neutrals are warm — one hue, 68°, from the near-black to the page.
+     Office's own greys carry that bias, and it is most of why a Windows tool
+     looks like a Windows tool next to a web one; the cool greys we had (286°,
+     blue-violet) read as "web app" beside Outlook and Excel.
 
-  --line: #e4e4e7;
-  --line-2: #d4d4d8;
+     Written in oklch because L is then readable: the steps below descend
+     evenly, and a contrast repair is one number. The Office name is in the
+     comment so the value can be checked against the source. */
+  --ink-1: oklch(0.240 0.002 68);      /* #201F1E  neutralDark      16.5:1 */
+  --ink-2: oklch(0.483 0.004 68);      /* #605E5C  neutralSecondary  6.5:1 */
+  /* Fluent's neutralTertiary (#A19F9D) is 2.6:1 and fails as text, the same
+     trap the old palette fell into. Same hue, L pulled down until it passes
+     on all three grounds it lands on: white 5.1:1, --sunk 4.5:1,
+     --accent-soft 4.6:1. */
+  --ink-3: oklch(0.539 0.004 68);      /* #706E6C                    5.1:1 */
+
+  --line: oklch(0.905 0.003 68);       /* #E1DFDD  neutralQuaternary */
+  --line-2: oklch(0.859 0.004 68);     /* #D2D0CE  neutralTertiaryAlt */
 
   --surface: #ffffff;
-  --canvas: #fafafa;
-  --sunk: #fbfbfc;
-  /* Hover on a header or a menu row. --sunk was the old menu hover and did
-     not show on white. */
-  --hover: #f4f4f5;
+  --canvas: oklch(0.983 0.002 68);     /* #FAF9F8  neutralLighterAlt */
+  /* A recessed strip: the sheet's furniture, a menu's footer. It used to be
+     #fbfbfc — brighter than the canvas it was supposed to sit below. */
+  --sunk: oklch(0.962 0.002 68);       /* #F3F2F1  neutralLighter */
+  --hover: oklch(0.962 0.002 68);      /* #F3F2F1 */
+  /* Pressed, or a header with its menu open — one step below hover. Replaces
+     a hardcoded #f0f0f1 that was doing this job in three places. */
+  --press: oklch(0.941 0.003 68);      /* #EDEBE9  neutralQuaternaryAlt */
 
-  --accent: #4f46e5;
-  --accent-2: #4338ca;
-  --accent-soft: #eef2ff;
+  /* Outlook's own blue, the one on the classic title bar. 259° is true blue;
+     the indigo we had sat at 277°, which is why every rule and border kept
+     reading as purple. It is also the stronger colour: 7.2:1 on white against
+     the indigo's 6.3:1. */
+  --accent: oklch(0.461 0.120 259);    /* #2B579A                    7.2:1 */
+  --accent-2: oklch(0.380 0.100 259);  /* #1F4177  pressed          10.1:1 */
+  /* The selected-row tint, on the accent's own hue. --accent on it: 6.4:1. */
+  --accent-soft: oklch(0.962 0.014 258); /* #EDF3FC */
 
-  --danger: #dc2626;
-  --danger-soft: #fef2f2;
-  --ok: #15803d;
-  --ok-soft: #f0fdf4;
+  --danger: oklch(0.475 0.162 24);     /* #A4262C  Office error      7.3:1 */
+  --danger-soft: oklch(0.946 0.024 11);  /* #FDE7E9 */
+  --ok: oklch(0.510 0.165 143);        /* #107C10  Office green      5.4:1 */
+  --ok-soft: oklch(0.950 0.041 143);   /* #DFF6DD */
 
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
 
@@ -180,19 +197,19 @@ body {
 .btn-primary:hover { background: var(--accent-2); }
 
 .btn-ghost { background: transparent; color: var(--ink-2); }
-.btn-ghost:hover { background: #f4f4f5; color: var(--ink-1); }
+.btn-ghost:hover { background: var(--hover); color: var(--ink-1); }
 
 .btn-outline { background: var(--surface); border-color: var(--line-2); color: var(--ink-1); }
-.btn-outline:hover { background: #fafafa; }
+.btn-outline:hover { background: var(--canvas); }
 
 /* not-ready state — muted, but genuinely enabled: activating it walks you to
    the step that's blocking, and its accessible description says what's left */
 .btn[data-notready] {
-  background: #e9e9ec;
+  background: var(--press);
   border-color: transparent;
-  color: #9b9ba3;
+  color: var(--ink-3);
 }
-.btn[data-notready]:hover { background: #e0e0e4; color: var(--ink-2); }
+.btn[data-notready]:hover { background: var(--line-2); color: var(--ink-2); }
 
 .f-group + .f-group { margin-top: 16px; }
 
@@ -256,7 +273,7 @@ body {
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 .f-radio + .f-radio { margin-top: 8px; }
-.f-radio:hover { background: #fafafa; }
+.f-radio:hover { background: var(--canvas); }
 .f-radio input {
   flex: none;
   width: 16px; height: 16px;
@@ -299,7 +316,7 @@ body {
   cursor: pointer;
   transition: background-color 120ms ease, color 120ms ease;
 }
-.f-chip-x:hover { background: #f0f0f1; color: var(--ink-1); }
+.f-chip-x:hover { background: var(--press); color: var(--ink-1); }
 .f-chip-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .f-empty {
@@ -456,7 +473,7 @@ body {
   flex: none;
   padding: 2px 6px;
   border-radius: 5px;
-  background: #f0f0f1;
+  background: var(--press);
   font-size: 10.5px;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -858,7 +875,7 @@ body {
 /* The open column rises over the backdrop, so its panel takes the clicks,
    and its header stays tinted so the panel is plainly that column's. */
 .t th[data-open] { z-index: 6; }
-.t th[data-open] .t-th { color: var(--ink-1); background: #f0f0f1; }
+.t th[data-open] .t-th { color: var(--ink-1); background: var(--press); }
 
 .t-backdrop { position: fixed; inset: 0; z-index: 5; }
 
@@ -1063,7 +1080,7 @@ body {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
-  background: #f4f4f5;
+  background: var(--hover);
   color: var(--ink-2);
 }
 .t-pill[data-s="accepted"] { background: var(--ok-soft); color: var(--ok); }
@@ -1161,7 +1178,7 @@ body {
   min-width: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  background: #f0f0f1;
+  background: var(--press);
   color: var(--ink-3);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
@@ -1841,7 +1858,7 @@ body {
   cursor: pointer;
   transition: background-color 130ms ease, color 130ms ease;
 }
-.sheet-step:hover:not(:disabled) { background: #f0f0f1; color: var(--ink-1); }
+.sheet-step:hover:not(:disabled) { background: var(--press); color: var(--ink-1); }
 .sheet-step:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .sheet-step:disabled { color: var(--line-2); cursor: default; }
 /* The same arrow, turned around — one icon, two directions. */
