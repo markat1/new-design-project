@@ -10,8 +10,8 @@
     {
         @* Three lists answer this on most days, so they are on screen with the
            numbers that earn them the place — choosing one is a click, not a
-           search. The other hundred are the exception, and sit behind one
-           button. *@
+           search. The field under them is for the fourth day, and reaches the
+           hundred others. *@
         <div class="grp">
             <div class="grp-cards" role="radiogroup" aria-label="Mest brugte marketinglister">
                 @foreach (var (g, i) in Cards.Select((g, i) => (g, i)))
@@ -34,11 +34,26 @@
                 }
             </div>
 
-            <button type="button" class="grp-all" id="grp-all"
-                    aria-haspopup="dialog" aria-expanded="@(listOpen ? "true" : "false")"
-                    @onclick="ToggleLists" @onkeydown="TriggerKey">
-                @Icons.Search Alle @MarketingGroup.Lists.Length lister
-            </button>
+            @* The field is the control, not a button in front of one: the
+               hundred others are one click away, and that click is the one
+               you were going to make anyway. *@
+            <div class="grp-find">
+                <span class="grp-find-ico" aria-hidden="true">@Icons.Search</span>
+                <input class="grp-find-input" id="grp-find" type="search"
+                       placeholder="Søg i alle @MarketingGroup.Lists.Length lister, personer og kunder"
+                       aria-label="Søg i alle @MarketingGroup.Lists.Length marketinglister"
+                       role="combobox" aria-expanded="@(listOpen ? "true" : "false")"
+                       aria-controls="grp-list" aria-autocomplete="list"
+                       autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"
+                       value="@listFind" @onclick="OpenLists"
+                       @oninput="e => FindChanged(e.Value?.ToString() ?? string.Empty)"
+                       @onkeydown="ListKey" @onkeydown:stopPropagation="true" />
+                @if (listFind.Length > 0)
+                {
+                    <button type="button" class="t-find-x" aria-label="Ryd søgning"
+                            @onclick="() => FindChanged(string.Empty)">@Icons.X</button>
+                }
+            </div>
 
             @if (listOpen)
             {
@@ -47,21 +62,8 @@
                    behind, so nothing else moves on the way out. *@
                 <div class="t-backdrop" @onclick="CloseLists"></div>
 
-                <div class="t-menu grp-menu" role="dialog" tabindex="-1" aria-label="Vælg marketingliste"
-                     @ref="listMenu" @onkeydown="ListKey" @onkeydown:stopPropagation="true">
-                    <div class="t-find">
-                        <span class="t-find-ico">@Icons.Search</span>
-                        <input class="t-find-input" type="search" placeholder="Søg i lister, personer og kunder"
-                               autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"
-                               value="@listFind" @oninput="e => FindChanged(e.Value?.ToString() ?? string.Empty)" />
-                        @if (listFind.Length > 0)
-                        {
-                            <button type="button" class="t-find-x" aria-label="Ryd søgning"
-                                    @onclick="() => FindChanged(string.Empty)">@Icons.X</button>
-                        }
-                    </div>
-
-                    <div class="grp-scroll" role="listbox" aria-label="Marketinglister">
+                <div class="t-menu grp-menu">
+                    <div class="grp-scroll" id="grp-list" role="listbox" aria-label="Marketinglister">
                         @{ var rows = Rows(); }
                         @if (rows.Length == 0)
                         {
@@ -195,8 +197,6 @@
 
     private bool listOpen;
     private string listFind = "";
-    private ElementReference listMenu;
-    private bool focusFind;
     private string? focusWanted;
     private int cursor;
     private bool showCursor;
@@ -246,12 +246,15 @@
             <span class="grp-row-sum num">@group.Total.ToString("N0")</span>
         </button>;
 
-    private void ToggleLists()
+    /// A click in the field is the question; the list is the answer, so it
+    /// opens right there. Tabbing past on the way to the next step is not, so
+    /// plain focus opens nothing.
+    private void OpenLists()
     {
-        listOpen = !listOpen;
-        focusFind = listOpen;
+        if (listOpen) return;
+
+        listOpen = true;
         cursor = 0;
-        if (!listOpen) listFind = "";
     }
 
     private void CloseLists()
@@ -260,15 +263,18 @@
 
         listOpen = false;
         listFind = "";
-        focusWanted = "grp-all";
+        focusWanted = "grp-find";
     }
 
     /// Typing changes what the list holds, so the keyboard's place goes back to
     /// the top rather than pointing at whatever now happens to sit at row nine.
+    /// A word with nothing under it is the one thing worth not showing.
     private void FindChanged(string word)
     {
         listFind = word;
         cursor = 0;
+        listOpen = true;
+        focusWanted = word.Length == 0 ? "grp-find" : null;
     }
 
     private async Task Pick(Group group)
@@ -278,19 +284,18 @@
         await Changed.InvokeAsync();
     }
 
-    /// Escape reaches the panel from its own fields; from the trigger, which
-    /// keeps focus if you opened it and then reached for the keyboard, it has
-    /// to be caught here.
-    private void TriggerKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape") CloseLists();
-    }
-
     /// Escape closes it; the arrows walk the list and Enter takes the row they
-    /// are standing on — a hundred rows is too many to reach by Tab.
+    /// are standing on — a hundred rows is too many to reach by Tab. The field
+    /// keeps focus throughout: it is the control, and the list is its answer.
     private async Task ListKey(KeyboardEventArgs e)
     {
         if (e.Key == "Escape") { CloseLists(); return; }
+
+        if (!listOpen)
+        {
+            if (e.Key is "ArrowDown" or "Enter") OpenLists();
+            return;
+        }
 
         var rows = Rows();
         if (rows.Length == 0) return;
@@ -372,12 +377,6 @@
         {
             showCursor = false;
             await JS.InvokeVoidAsync("app.showRow", "grp-row-at");
-        }
-
-        if (focusFind)
-        {
-            focusFind = false;
-            await JS.InvokeVoidAsync("app.focusSearch", listMenu);
         }
     }
 

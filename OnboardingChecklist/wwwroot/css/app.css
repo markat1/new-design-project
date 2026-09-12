@@ -347,7 +347,8 @@ body {
 .f-sw-desc { display: block; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); margin-top: 3px; }
 
 @media (forced-colors: active) {
-  .f-input:focus, .t-find-input:focus, .btn:focus-visible { outline: 2px solid Highlight; }
+  .f-input:focus, .t-find-input:focus, .grp-find-input:focus,
+  .btn:focus-visible { outline: 2px solid Highlight; }
   .f-track { border: 1px solid CanvasText; }
 }
 
@@ -1484,30 +1485,43 @@ body {
 .grp-card-sum { margin-top: auto; font-size: 13px; font-variant-numeric: tabular-nums; }
 .grp-card-u { font-size: 11px; color: var(--ink-3); }
 
-/* The hundred others are the exception, and read as one: dashed until you
-   reach for it. */
-.grp-all {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 40px;
-  margin-top: 10px;
-  padding: 8px 12px;
-  border: 1px dashed var(--line-2);
-  border-radius: 9px;
-  background: transparent;
-  font: inherit;
-  font-size: 13px;
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: border-color 130ms ease, background-color 130ms ease, color 130ms ease;
+/* The hundred others are reached by the field itself, not by a button in
+   front of one. Both decorations lie on top of it, so the row is one target. */
+/* Above the backdrop (5), under the sheet (7): the field stays a field while
+   its list is open — you can put the caret back, select a word, keep typing. */
+.grp-find { position: relative; z-index: 6; margin-top: 10px; }
+.grp-find-ico {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  display: block;
+  transform: translateY(-50%);
+  color: var(--ink-3);
+  pointer-events: none;
 }
-.grp-all:hover { border-style: solid; background: var(--sunk); color: var(--ink-1); }
-.grp-all:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.grp-all[aria-expanded="true"] { border-style: solid; color: var(--ink-1); }
-@media (pointer: coarse) { .grp-all { min-height: 44px; } }
+.grp-find-input {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 38px 9px 36px;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--surface);
+  font: inherit;
+  /* 13px next to the cards; 16px on touch, or iOS zooms the page on focus. */
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-1);
+  transition: border-color 130ms ease;
+}
+@media (pointer: coarse) { .grp-find-input { min-height: 44px; font-size: 16px; } }
+.grp-find-input::placeholder { color: var(--ink-3); }
+/* The border firms up rather than turning accent: a coloured ring round a
+   field you are already typing in is decoration. Forced-colors keeps its own. */
+.grp-find-input:focus { outline: none; border-color: var(--ink-3); }
+.grp-find-input::-webkit-search-cancel-button { appearance: none; }
 
 .grp-menu { top: calc(100% + 6px); left: 0; width: 100%; padding: 6px 0 0; z-index: 7; }
+.grp-scroll:first-child { padding-top: 0; }
 .grp-scroll { max-height: 330px; overflow-y: auto; padding-bottom: 6px; }
 
 .grp-row { min-height: 44px; }

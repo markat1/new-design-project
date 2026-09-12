@@ -10,12 +10,12 @@ Alt ligger i to filer: `OnboardingChecklist/Components/Fields.razor` (markup og 
 
 Afgjort ud fra fem retninger, bygget side om side på de rigtige 103 lister (prøvestanden er revet ned igen; se [Forkastet](#forkastet)).
 
-**Valgt: kort.** Tre kort med de mest brugte lister, og de øvrige hundrede bag én knap.
+**Valgt: kort.** Tre kort med de mest brugte lister, og et søgefelt til de øvrige hundrede.
 
 - **De tre er på skærmen, ikke bag et klik.** Hver dag rammer valget en af dem, og så skal det ikke koste en åbning af noget.
 - **Tallet står på kortet** — `244,200 · brugt 2 gange`. Det er dét, der giver listen pladsen; uden det ligner rækkefølgen et tilfælde.
 - **Den valgte liste er altid et af de tre kort.** Vælger du en fra den lange hale, skubber den det tredje kort ud og bliver selv det første. Ellers ville det, du lige valgte, forsvinde i samme øjeblik.
-- **De hundrede andre er undtagelsen** og ser sådan ud: én stiplet knap, `Alle 103 lister`, der åbner arket.
+- **De hundrede andre er undtagelsen**, og feltet under kortene er vejen til dem. Ikke en knap foran et felt: det klik, en knap ville koste, er alligevel det klik, du var på vej til at lave i feltet.
 
 ## Sådan opfører den sig
 
@@ -25,13 +25,11 @@ Afgjort ud fra fem retninger, bygget side om side på de rigtige 103 lister (pr�
 │ 8 personer · 7 k.  │ │ 5 personer · 4 k.  │ │ 3 personer · 3 k.  │
 │ 244,200 · brugt 2× │ │ 168,000 · brugt 1× │ │ 37,400 · brugt 1×  │
 └────────────────────┘ └────────────────────┘ └────────────────────┘
-┌──────────────────┐
-│ 🔍 Alle 103 lister│
-└──────────────────┘
-      ↓ åbner
 ┌──────────────────────────────────────────────────────────────────┐
-│ 🔍 Søg i lister, personer og kunder                              │
-├──────────────────────────────────────────────────────────────────┤
+│ 🔍 Søg i alle 103 lister, personer og kunder                     │
+└──────────────────────────────────────────────────────────────────┘
+      ↓ klik i feltet
+┌──────────────────────────────────────────────────────────────────┐
 │ Alle lister · 103                                                │
 │▌Fragt Benelux              2 personer · 2 kunder        89,000   │ ← markøren
 │ Fragt Danmark nord         6 personer · 6 kunder       159,200   │
@@ -41,9 +39,11 @@ Afgjort ud fra fem retninger, bygget side om side på de rigtige 103 lister (pr�
 ```
 
 - **Kortene er én kontrol**, ikke tre: Tab rammer gruppen, piletasterne flytter inde i den. Det er det, `role="radiogroup"` lover, og det holder tabulatorvejen gennem trinnet kort.
-- **Arket åbner med markøren på første række.** Piletasterne går ned gennem alle 103, `↵` tager den, markøren står på. At nå række tres med Tab er ikke en vej nogen går, og derfor står tasterne skrevet i bunden — kun på mus og tastatur, ikke på touch.
+- **Et klik i feltet åbner listen**, og markøren står på første række. At *få* fokus gør det ikke: tabulerer man forbi på vej til næste trin, skal der ikke folde sig hundrede rækker ud. Pil ned åbner den også.
+- **Piletasterne går ned gennem alle 103**, og `↵` tager den, markøren står på. At nå række tres med Tab er ikke en vej nogen går, og derfor står tasterne skrevet i bunden af arket — kun på mus og tastatur, ikke på touch.
 - **Søgningen rammer også personer og kunder**, ikke kun listenavne (`MailDraft.Search`), fordi man ofte husker kunden og ikke listen.
-- **Escape og klik udenfor lukker**, og fokus går tilbage til knappen, der åbnede.
+- **Escape og klik udenfor lukker**, rydder ordet og lader fokus blive i feltet. Feltet selv står over bagtæppet, så man kan sætte markøren tilbage og skrive videre, mens listen er åben.
+- **Enter i feltet må ikke springe trinnet over.** Trinnets egen "Enter = næste" lytter oppe på `.f-fields`, så feltet stopper tastens vandring (`@onkeydown:stopPropagation`).
 - Arket har ikke sin egen "Mest brugt"-sektion. **Kortene er den sektion.**
 
 ## Markup
@@ -94,6 +94,12 @@ private async Task ListKey(KeyboardEventArgs e)
 {
     if (e.Key == "Escape") { CloseLists(); return; }
 
+    if (!listOpen)
+    {
+        if (e.Key is "ArrowDown" or "Enter") OpenLists();
+        return;
+    }
+
     var rows = Rows();
     if (rows.Length == 0) return;
 
@@ -120,6 +126,10 @@ private async Task ListKey(KeyboardEventArgs e)
 
 /* Where the arrow keys are standing — not what is chosen, which is the tick. */
 .grp-row[data-cursor] { background: var(--hover); box-shadow: inset 2px 0 0 var(--accent); }
+
+/* Above the backdrop (5), under the sheet (7): the field stays a field while
+   its list is open — you can put the caret back, select a word, keep typing. */
+.grp-find { position: relative; z-index: 6; }
 
 @media (pointer: coarse) { .grp-keys { display: none; } }
 ```
