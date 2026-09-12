@@ -602,13 +602,17 @@ body {
 
 /* Quote steps, nested under their nav item. Borderless on purpose: the sidebar
    is already a surface, and a card inside it would read as a second column. */
-.side-steps { margin: 6px 0 0 10px; padding-left: 12px; border-left: 1px solid var(--line); }
+/* No rule down the side: the steps are already grouped by the indent and by
+   the item they hang under. The line landed in the parent's icon column and
+   read as a stray stroke. Their markers sit in that column instead, and their
+   labels line up with the parent's — a hierarchy you can see without a wire. */
+.side-steps { margin: 6px 0 0 2px; }
 
 
 .side-step {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
-  gap: 9px;
+  gap: 6px;
   width: 100%;
   padding: 7px 8px;
   border: 0;
