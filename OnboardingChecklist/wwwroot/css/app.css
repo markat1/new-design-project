@@ -359,7 +359,7 @@ body {
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent);
-  animation: pop 340ms var(--ease) both;
+  animation: pop 340ms var(--ease) backwards;
 }
 @keyframes pop { from { opacity: 0; transform: scale(0.82); } }
 .v1-done h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.012em; }
@@ -471,8 +471,14 @@ body {
   min-height: 392px;
   display: flex;
   flex-direction: column;
-  animation: v3In 220ms var(--ease) both;
+  animation: v3In 220ms var(--ease) backwards;
 }
+/* backwards, not both: a filled-forwards transform stays applied as an
+   identity matrix once the entrance is over, and an element with a transform
+   is what `position: fixed` measures itself against — which quietly shrank
+   every full-screen backdrop opened inside one of these panels down to the
+   panel. Backwards fills only the wait before the animation starts, which is
+   all an entrance needs. */
 @keyframes v3In { from { opacity: 0; transform: translateY(7px); } }
 .v3-panel-h { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
 .v3-panel-s { margin: 7px 0 20px; font-size: 14px; line-height: 1.55; color: var(--ink-2); max-width: 54ch; }
@@ -519,7 +525,7 @@ body {
   margin-left: auto;
   font-size: 12.5px;
   color: var(--ok);
-  animation: pop 300ms var(--ease) both;
+  animation: pop 300ms var(--ease) backwards;
 }
 
 .v3-done {
@@ -632,7 +638,7 @@ body {
 .side-step:hover { background: #f6f6f7; }
 .side-step:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 .side-step[data-active] { background: var(--accent-soft); }
-.side-step[data-nudge] { animation: nudge 300ms var(--ease) both; }
+.side-step[data-nudge] { animation: nudge 300ms var(--ease) backwards; }
 
 .side-step-txt { min-width: 0; }
 .side-step-t {
@@ -944,20 +950,12 @@ body {
 }
 @media (pointer: coarse) { .t-find-input { min-height: 44px; font-size: 16px; } }
 .t-find-input::placeholder { color: var(--ink-3); }
-/* Focus is the row's own rule turning accent, not a box drawn round the
-   field: the panel gives this field focus the moment it opens, and a ring
-   round something nobody aimed at reads as an error. Keyboard still sees it,
-   and forced-colors keeps its outline below. */
+/* The panel hands this field focus the moment it opens, so a mark for focus
+   would be lit every single time — it would say nothing and only colour the
+   panel. The caret is the indicator a text field already has; the rule under
+   the row just firms up. Forced-colors keeps its outline below. */
 .t-find-input:focus { outline: none; }
-.t-find:has(input:focus)::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 2px;
-  background: var(--accent);
-}
+.t-find:has(input:focus) { border-bottom-color: var(--line-2); }
 /* Ours is drawn below; the browser's sits in the padding and doubles it. */
 .t-find-input::-webkit-search-cancel-button { appearance: none; }
 .t-find-x {
@@ -1080,7 +1078,7 @@ body {
 /* ---- detail ---- */
 /* A column, so the attachment tab can hand its whole remaining height to the
    sheet: Office's own frame, or the grid the app draws. */
-.d { display: flex; flex-direction: column; min-height: 100%; padding: 0 22px 40px; animation: v3In 180ms var(--ease) both; }
+.d { display: flex; flex-direction: column; min-height: 100%; padding: 0 22px 40px; animation: v3In 180ms var(--ease) backwards; }
 
 /* The sheet fills the pane, so there is nothing to scroll past it — and the
    gutter the pane keeps for a scrollbar would be a strip of empty paper down
@@ -1170,7 +1168,7 @@ body {
 }
 .d-tab[aria-selected="true"] .d-tab-n { background: var(--accent-soft); color: var(--accent); }
 
-.d-panel { animation: v3In 160ms var(--ease) both; }
+.d-panel { animation: v3In 160ms var(--ease) backwards; }
 
 .d-subject { margin: 0 0 18px; font-size: 17px; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; }
 

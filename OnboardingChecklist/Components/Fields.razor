@@ -13,7 +13,7 @@
         <div class="grp">
             <button type="button" class="grp-pick" id="grp-pick"
                     aria-haspopup="dialog" aria-expanded="@(listOpen ? "true" : "false")"
-                    @onclick="ToggleLists">
+                    @onclick="ToggleLists" @onkeydown="TriggerKey">
                 <span class="pick-txt">
                     <span class="pick-name">@S.List.Name</span>
                     <span class="pick-co">@S.List.People.Length personer · @S.List.Customers kunder</span>
@@ -24,6 +24,11 @@
 
             @if (listOpen)
             {
+                @* A click anywhere else is an answer too: it means "not now".
+                   The backdrop catches it before it reaches whatever was
+                   behind, so nothing else moves on the way out. *@
+                <div class="t-backdrop" @onclick="CloseLists"></div>
+
                 <div class="t-menu grp-menu" role="dialog" tabindex="-1" aria-label="Vælg marketingliste"
                      @ref="listMenu" @onkeydown="ListKey" @onkeydown:stopPropagation="true">
                     <div class="t-find">
@@ -180,6 +185,7 @@
     private string listFind = "";
     private ElementReference listMenu;
     private bool focusFind;
+    private bool focusBack;
 
     /// The lists this workspace actually sends to, most first. Use, not order:
     /// the one you sent to yesterday is not the one you send to every week.
@@ -217,8 +223,11 @@
 
     private void CloseLists()
     {
+        if (!listOpen) return;
+
         listOpen = false;
         listFind = "";
+        focusBack = true;
     }
 
     private async Task Pick(Group group)
@@ -226,6 +235,14 @@
         S.Choose(group);
         CloseLists();
         await Changed.InvokeAsync();
+    }
+
+    /// Escape reaches the panel from its own fields; from the trigger, which
+    /// keeps focus if you opened it and then reached for the keyboard, it has
+    /// to be caught here.
+    private void TriggerKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") CloseLists();
     }
 
     /// Escape closes it; Enter takes the first list the search found, which is
@@ -278,6 +295,12 @@
 
     protected override async Task OnAfterRenderAsync(bool first)
     {
+        if (focusBack)
+        {
+            focusBack = false;
+            await JS.InvokeVoidAsync("app.focusId", "grp-pick");
+        }
+
         if (focusFind)
         {
             focusFind = false;

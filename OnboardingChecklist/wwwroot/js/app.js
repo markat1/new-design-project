@@ -22,8 +22,12 @@ window.app = {
     container.querySelector('input')?.focus({ preventScroll: true });
   },
 
+  // Held back a frame on purpose. This is how a panel hands focus to the
+  // control that opened it, and the key that closed the panel is often Enter
+  // — put the focus on a button inside that same keypress and the button
+  // catches its activation, so the panel opens right back up.
   focusId(id) {
-    document.getElementById(id)?.focus({ preventScroll: true });
+    requestAnimationFrame(() => document.getElementById(id)?.focus({ preventScroll: true }));
   },
 
   // The tab underline travels from the tab you left to the one you opened. It
