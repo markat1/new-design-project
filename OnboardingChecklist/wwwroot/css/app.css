@@ -735,7 +735,7 @@ body {
   flex: none;
   max-width: none;
   margin: 0;
-  padding: 13px 24px 14px;
+  padding: 12px 24px 16px;
   border-bottom: 1px solid var(--line);
 }
 /* One scroller, one fixed band above, one below — the same three parts the
@@ -850,7 +850,10 @@ body {
   align-items: baseline;
   gap: 5px;
   width: 100%;
-  padding: 12px 14px;
+  /* 12 + 16 + 11 + the cell's 1px rule = 40. At 125% display scaling a CSS
+     pixel is 1.25 device pixels, so only multiples of four land on the screen's
+     own grid — 41 would put every row below this one between two pixels. */
+  padding: 12px 14px 11px;
   border: 0;
   background: transparent;
   font: inherit;
@@ -1077,7 +1080,9 @@ body {
 .t tbody tr[data-picked] .t-ref,
 .t tbody tr[data-picked] .t-muted { color: var(--accent); }
 
-.t td { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+/* 12 + 16 + 4 + 16 + 7 + the 1px rule = 56. Both lines then start a multiple
+   of four from the row's top, and the row tops run 40, 96, 152, 208. */
+.t td { padding: 12px 14px 7px; border-bottom: 1px solid var(--line); }
 /* The left-hand columns start where their header's label does, past the mark
    slot, so heading and content read down one line. The right-hand ones need
    nothing: their figures and their labels both end on the padding edge. */
@@ -1085,9 +1090,9 @@ body {
 .t td:nth-child(2) { padding-left: 34px; }
 .t .num { text-align: right; font-variant-numeric: tabular-nums; }
 .t-muted { color: var(--ink-2); }
-.t-ref { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.t-ref { line-height: 16px; font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
 
-.t-client { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-client { display: block; max-width: 100%; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .t-pill {
   display: inline-flex;
@@ -1262,9 +1267,17 @@ body {
    of keeping the widths the file gave them and letting the grid scroll. */
 .xl-t {
   /* One number for a row's height: the frozen header hangs off it, and when
-     the two were written out separately they drifted apart. */
-  --xl-row: 26px;
-  border-collapse: collapse;
+     the two were written out separately they drifted apart. 28 rather than 26
+     because 28 x 1.25 is a whole number and 26 is not — at 125% scaling every
+     other row would land between two screen pixels. */
+  --xl-row: 28px;
+  /* separate, so a frozen cell keeps its own borders and carries them as it
+     sticks. Collapsed borders belong to the table, stay behind when the cell
+     travels, and split themselves across the two cells that share them — the
+     reason this grid needed inset shadows to draw its own rules, and the
+     reason every row sat on a half pixel. */
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
   width: max-content;
   min-width: 100%;
@@ -1276,6 +1289,7 @@ body {
 .xl-t td {
   height: var(--xl-row);
   padding: 5px 9px;
+  line-height: 16px;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   font-weight: 400;
@@ -1334,19 +1348,7 @@ body {
 }
 .xl-t .xl-n { position: sticky; left: 0; z-index: 1; }
 
-/* The shadow REPLACES the border on a frozen cell, it does not join it. Carry
-   both and they sit a pixel apart: every frozen edge doubles, and the sheet
-   reads as ruled twice. */
-.xl-t .xl-head td,
-.xl-t tbody tr:first-child > *,
-.xl-t .xl-n {
-  border-right: 0;
-  border-bottom: 0;
-  box-shadow: inset -1px -1px 0 var(--line);
-}
-/* Nothing to the right of the last column to divide it from. */
-.xl-t .xl-head td:last-child,
-.xl-t tbody tr:first-child > :last-child { box-shadow: inset 0 -1px 0 var(--line); }
+
 .xl-t .xl-head .xl-corner { left: 0; z-index: 4; }
 .xl-t tbody tr:first-child .xl-n { z-index: 3; }
 .xl-corner,
@@ -1431,10 +1433,16 @@ body {
 /* A draft's cells can be typed into: the input fills its cell, so the grid
    still reads as a grid and the cell shows where you are. A sent mail's sheet
    only reads — it is what went out. */
-.xl-edit { padding: 0; }
+/* .xl-t td is one specificity point heavier than .xl-edit, so the cell kept
+   its own padding and added the input's on top: 37px rows, which land between
+   screen pixels at 125%. The input is the whole cell here. */
+.xl-t td.xl-edit { padding: 0; }
 .xl-edit input {
   width: 100%;
+  /* 5 + 16 + 5 + the cell's 1px rule = 27, under the 28 the row asks for, so
+     --xl-row decides the height and every rule in the grid lands clean. */
   padding: 5px 9px;
+  line-height: 16px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -1501,9 +1509,10 @@ body {
   justify-content: space-between;
   gap: 10px;
   margin: 0 0 8px;
-  padding-top: 12px;
+  padding-top: 11px;
   border-top: 1px solid var(--line);
   font-size: 13px;
+  line-height: 20px;
   font-weight: 500;
   color: var(--ink-1);
 }
@@ -1520,11 +1529,13 @@ body {
 
 .grp-card {
   display: grid;
-  gap: 2px;
+  gap: 4px;
   /* 13 + 20 + 2 + 16 + 2 + 20 + 13 = 86, on purpose: a min-height taller than
      the content leaves the grid a remainder to split, and half of an odd
-     remainder is a half pixel under the text. */
-  padding: 13px 14px;
+     remainder is a half pixel under the text. 12 + 20 + 4 + 16 + 4 + 20 + 10
+     + 2 borders = 88, and the three lines land at +12, +36 and +56. The
+     border counts: 1 + 11 is the twelve, not 12 + 1. */
+  padding: 11px 14px;
   border: 1px solid var(--line-2);
   border-radius: 11px;
   background: var(--surface);
@@ -1740,17 +1751,19 @@ body {
    control a row of cards had nowhere to put — all of them at once. */
 .pick-t { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 14px; }
 .pick-t th {
-  padding: 0 10px 8px;
+  padding: 0 10px 11px;
   border-bottom: 1px solid var(--line);
   font-size: 12px;
+  line-height: 20px;
   font-weight: 500;
   color: var(--ink-3);
   text-align: left;
 }
-.pick-t td { padding: 10px; border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 10 + 20 + 9 + the 1px rule = 40, so the rows step in fours. */
+.pick-t td { padding: 10px 10px 9px; line-height: 20px; border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pick-t .num { text-align: right; font-variant-numeric: tabular-nums; }
 .pick-t-box { width: 36px; }
-.pick-t-box input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.pick-t-box input { display: block; width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .pick-t th:last-child, .pick-t td:last-child { width: 110px; }
 /* Only there when two lists are chosen, which is the only time it answers
    anything. */
@@ -1764,7 +1777,7 @@ body {
 .pick-t tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 /* Off the send, the row goes quiet rather than disappearing. */
 .pick-t tbody tr:not([data-on]) td { color: var(--ink-3); }
-@media (pointer: coarse) { .pick-t td { padding-block: 13px; } }
+@media (pointer: coarse) { .pick-t td { padding-block: 14px 13px; } }
 
 .pick-none { font-size: 12px; line-height: 16px; color: var(--ink-3); white-space: nowrap; }
 
@@ -1926,7 +1939,8 @@ body {
 /* A row's second line in the list: what came back from the send. */
 .t-sub {
   display: block;
-  margin-top: 2px;
+  margin-top: 4px;
   font-size: 12px;
+  line-height: 16px;
   color: var(--ink-3);
 }
