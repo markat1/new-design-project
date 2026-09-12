@@ -39,10 +39,13 @@ public record Recipient(string Name, string Email, string Company, QuoteLine[] L
 
 }
 
-/// One send-out: a single mail to a marketing group, where every customer gets
-/// their own price sheet attached.
-public record Mail(string Ref, string Subject, string Note, MailStatus Status, string Sent, Recipient[] Recipients, string List = "")
+/// One send-out: a single mail to one or two marketing lists, where every
+/// customer gets their own price sheet attached. Two lists is the exception the
+/// rule allows — somebody on both is still one mail.
+public record Mail(string Ref, string Subject, string Note, MailStatus Status, string Sent, Recipient[] Recipients, string[] Lists)
 {
+    public string ListNames => string.Join(" + ", Lists);
+
     public string Label => Status == MailStatus.Draft ? "Kladde" : "Sendt";
 
     public decimal Total => Recipients.Sum(r => r.Total);
@@ -71,7 +74,8 @@ public record Mail(string Ref, string Subject, string Note, MailStatus Status, s
         new(name, mail, company, Accounting.SheetFor(company), s);
 
     // Worst content on purpose: a very long company, two people at the same
-    // company sharing one sheet, and a draft with nobody on it yet.
+    // company sharing one sheet, a send-out that went to two lists at once,
+    // and a draft with nobody on it yet.
     public static readonly Mail[] Seed =
     [
         new("M-2418", "Priser på rammeaftale 2027",
@@ -82,7 +86,7 @@ public record Mail(string Ref, string Subject, string Note, MailStatus Status, s
                 R("Anna Sørensen", "anna@velarobotics.com", "Vela Robotics", RecipientStatus.Accepted),
                 R("Bo Halden", "bo@halden.dk", "Halden & Co.", RecipientStatus.Sent),
                 R("Klaus Richter", "einkauf@ferrous-mfg.de", "Ferrous Manufacturing Group", RecipientStatus.Viewed),
-            ], "Rammeaftale 2027"),
+            ], ["Rammeaftale 2027"]),
 
         new("M-2417", "Fornyelse 2027",
             "Samme vilkår som sidste år, onboarding er med denne gang.",
@@ -90,15 +94,15 @@ public record Mail(string Ref, string Subject, string Note, MailStatus Status, s
             [
                 R("Cecilie Nord", "finance@kestrel.io", "Kestrel Analytics", RecipientStatus.Accepted),
                 R("Jonas Vik", "jonas@kestrel.io", "Kestrel Analytics", RecipientStatus.Viewed),
-            ], "Rammeaftale 2027"),
+            ], ["Rammeaftale 2027", "Norden"]),
 
         new("M-2416", "Fragtpriser, revideret",
             "Fragtpriserne er justeret efter den nye rute. Håndteringen er uændret.",
             MailStatus.Sent, "2026-08-11",
             [
                 R("Mia Brandt", "ops@brightharbour.co", "Bright Harbour Logistics", RecipientStatus.Declined),
-            ], "Fragtkunder"),
+            ], ["Fragtkunder"]),
 
-        new("M-2415", "(intet emne endnu)", "", MailStatus.Draft, "—", [], "Norden"),
+        new("M-2415", "(intet emne endnu)", "", MailStatus.Draft, "—", [], ["Norden"]),
     ];
 }

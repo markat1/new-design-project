@@ -1,6 +1,6 @@
 # Marketinglisten
 
-Trin 1 spørger, hvem udsendelsen går til. Svaret er én marketingliste ud af **103**, og de tre, du bruger, står allerede på skærmen.
+Trin 1 spørger, hvem udsendelsen går til. Svaret er **én eller to** marketinglister ud af 103, og de tre, du bruger, står allerede på skærmen.
 
 Alt ligger i to filer: `OnboardingChecklist/Components/Fields.razor` (markup og tilstand) og `wwwroot/css/app.css` (udseende), med to små hjælpere i `wwwroot/js/app.js`. Ingen pakker.
 
@@ -14,7 +14,8 @@ Afgjort ud fra fem retninger, bygget side om side på de rigtige 103 lister (pr�
 
 - **De tre er på skærmen, ikke bag et klik.** Hver dag rammer valget en af dem, og så skal det ikke koste en åbning af noget.
 - **Tallet står på kortet** — `244,200 · brugt 2 gange`. Det er dét, der giver listen pladsen; uden det ligner rækkefølgen et tilfælde.
-- **Den valgte liste er altid et af de tre kort.** Vælger du en fra den lange hale, skubber den det tredje kort ud og bliver selv det første. Ellers ville det, du lige valgte, forsvinde i samme øjeblik.
+- **De valgte lister er altid blandt de tre kort.** Vælger du en fra den lange hale, skubber den et kort ud og bliver selv det første. Ellers ville det, du lige valgte, forsvinde i samme øjeblik.
+- **Én liste er reglen, to er undtagelsen, tre er ingenting.** Forbi to kan ingen holde i hovedet, hvem der er ved at få en mail. Og aldrig nul: en udsendelse uden liste har ingen at gå til, så den sidste liste kan ikke klikkes fra.
 - **De hundrede andre er undtagelsen**, og feltet under kortene er vejen til dem. Ikke en knap foran et felt: det klik, en knap ville koste, er alligevel det klik, du var på vej til at lave i feltet.
 
 ## Sådan opfører den sig
@@ -38,13 +39,16 @@ Afgjort ud fra fem retninger, bygget side om side på de rigtige 103 lister (pr�
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-- **Kortene er én kontrol**, ikke tre: Tab rammer gruppen, piletasterne flytter inde i den. Det er det, `role="radiogroup"` lover, og det holder tabulatorvejen gennem trinnet kort.
+- **Kortene er tre kontakter**, ikke ét valg: klik tænder, klik igen slukker (`aria-pressed`). Piletasterne flytter fokus mellem dem, men vælger ikke undervejs — med to lister tilladt ville man ellers tænde lister bag sig.
+- **Når to er valgt, kan de øvrige ikke tage imod** (`aria-disabled`, dæmpet kant og tekst). De bliver stående og kan stadig nås med tastatur — linjen under kortene siger hvad man gør i stedet. Det samme gælder rækkerne i arket.
 - **Et klik i feltet åbner listen**, og markøren står på første række. At *få* fokus gør det ikke: tabulerer man forbi på vej til næste trin, skal der ikke folde sig hundrede rækker ud. Pil ned åbner den også.
 - **Piletasterne går ned gennem alle 103**, og `↵` tager den, markøren står på. At nå række tres med Tab er ikke en vej nogen går, og derfor står tasterne skrevet i bunden af arket — kun på mus og tastatur, ikke på touch.
 - **Søgningen rammer også personer og kunder**, ikke kun listenavne (`MailDraft.Search`), fordi man ofte husker kunden og ikke listen.
 - **Escape og klik udenfor lukker**, rydder ordet og lader fokus blive i feltet. Feltet selv står over bagtæppet, så man kan sætte markøren tilbage og skrive videre, mens listen er åben.
 - **Enter i feltet må ikke springe trinnet over.** Trinnets egen "Enter = næste" lytter oppe på `.f-fields`, så feltet stopper tastens vandring (`@onkeydown:stopPropagation`).
 - Arket har ikke sin egen "Mest brugt"-sektion. **Kortene er den sektion.**
+- **Står en person på begge lister, får hun én mail.** Personlisten viser hende én gang, kolonnen *Liste* siger "Begge", og fjerner man fluebenet, ryger hun af begge på én gang. Linjen under kortene tæller dem: *"3 personer står på begge lister og får én mail."*
+- **Kolonnen *Liste* findes kun, når der er to lister.** Med én er svaret det samme i hver eneste række.
 
 ## Markup
 
@@ -77,15 +81,27 @@ Fluebenets plads er reserveret (`.grp-card-tick { width: 12px }`), så navnet ik
 Hvilke tre kort:
 
 ```csharp
-/// The three on screen. The chosen list is always one of them, even when it
-/// came from the long tail — otherwise picking it would make it vanish.
 private IEnumerable<Group> Cards =>
-    MostUsed.Any(g => g.Name == S.List.Name)
-        ? MostUsed
-        : new[] { S.List }.Concat(MostUsed).Take(3);
+    S.Lists.Where(l => !MostUsed.Any(m => m.Name == l.Name))
+        .Concat(MostUsed)
+        .Take(3);
+
+/// A card or row that cannot take a click: the second list is chosen, and
+/// this is not one of them. Told, not hidden — the rule line says why.
+private bool Blocked(Group group) => !S.Chosen(group) && !S.RoomForMore;
 ```
 
-`MostUsed` er frekvens, ikke rækkefølge — de tre lister med flest udsendelser bag sig, uafgjort brydes af den, der blev brugt sidst. Det kræver, at en udsendelse husker sin liste (`Mail.List`).
+To lister, én person:
+
+```csharp
+/// Everybody the chosen lists hold, each person once. Somebody on both
+/// lists is one mail with one sheet, not two of each.
+public Person[] People => [.. lists.SelectMany(l => l.People).DistinctBy(p => p.Email)];
+```
+
+Fluebenerne bliver ved med at ligge pr. liste (`picks[listName]`), så en liste, man tager af og på igen, husker sine fravalg. `Picked` er foreningsmængden, og `Toggle(email)` rammer alle de valgte lister, personen står på — ellers ville hun blive siddende på den anden.
+
+`MostUsed` er frekvens, ikke rækkefølge — de tre lister med flest **sendte** udsendelser bag sig, uafgjort brydes af den, der blev sendt sidst. Kladder tæller ikke: de er ikke gået nogen steder, og deres "—" som dato sorterer oven over alle rigtige. Det kræver, at en udsendelse husker sine lister (`Mail.Lists`, som nu er flertal).
 
 Markøren i arket:
 
@@ -152,5 +168,7 @@ Tastaturmodellen fra **Skriv** overlevede alligevel: det er den, arket bruger.
 **`kunder@Used(group)`.** Razor læser et `@` lige efter et ord som en mailadresse og skriver det ud som tekst. Sæt parentes om: `@(Used(group))`.
 
 **Bagtæppet dækkede kun trinkortet.** `animation: … both` lader en identitets-`transform` blive hængende, efter indgangen er slut, og et element med en transform er dét, `position: fixed` måler sig efter. Indgange skal have `backwards`.
+
+**Escape virkede kun fra feltet.** Klikker man en række i arket, står fokus på en knap inde i panelet, og tastaturhåndteringen sad kun på inputtet. Panelet lytter nu selv med.
 
 **Enter lukkede og åbnede igen.** Panelet lukkede, fokus hoppede til knappen inde i samme tastetryk, og knappen fangede tastens aktivering. `app.focusId` venter nu en frame.

@@ -7,17 +7,42 @@ public class MailDraft
     public string Subject { get; set; } = "";
     public string Note { get; set; } = "";
 
-    /// The marketing list this send-out goes to. One send, one list.
-    public Group List { get; private set; } = MarketingGroup.Lists[0];
+    /// A send-out goes to one list, or to two. Never none — a send with no list
+    /// has nobody to go to — and never three: past two, nobody can hold in their
+    /// head who is about to get a mail.
+    public const int MaxLists = 2;
+
+    private readonly List<Group> lists = [MarketingGroup.Lists[0]];
+
+    public IReadOnlyList<Group> Lists => lists;
+
+    public Group List => lists[0];
+
+    public bool Chosen(Group list) => lists.Any(l => l.Name == list.Name);
+
+    public bool RoomForMore => lists.Count < MaxLists;
+
+    /// Everybody the chosen lists hold, each person once. Somebody on both
+    /// lists is one mail with one sheet, not two of each.
+    public Person[] People => [.. lists.SelectMany(l => l.People).DistinctBy(p => p.Email)];
+
+    /// The people who stand on more than one of the chosen lists. Worth naming
+    /// in the interface: it is the one thing about two lists that surprises.
+    public Person[] OnBoth =>
+        lists.Count < 2 ? [] : [.. People.Where(p => lists.Count(l => l.People.Any(x => x.Email == p.Email)) > 1)];
+
+    public int Customers => People.Select(p => p.Company).Distinct().Count();
 
     private readonly Dictionary<string, HashSet<string>> picks = [];
 
     /// Everybody on the list is on the send-out until somebody is taken off:
     /// sending to the whole group is the normal case, and eight ticks to say
-    /// so is not a choice, it is a chore. Kept per list, so looking at another
-    /// one and coming back costs nothing.
-    public HashSet<string> Picked =>
-        picks.TryGetValue(List.Name, out var set) ? set : picks[List.Name] = [.. List.People.Select(p => p.Email)];
+    /// so is not a choice, it is a chore. Kept per list, so dropping a list and
+    /// picking it up again costs nothing.
+    private HashSet<string> PicksFor(Group list) =>
+        picks.TryGetValue(list.Name, out var set) ? set : picks[list.Name] = [.. list.People.Select(p => p.Email)];
+
+    public HashSet<string> Picked => [.. lists.SelectMany(PicksFor)];
 
     /// The person the preview has been asked to show, with a nonce so asking
     /// for the same one twice still counts as asking.
@@ -31,11 +56,44 @@ public class MailDraft
         NotifyChanged();
     }
 
-    public void Choose(Group list)
+    /// Click a list that is already on and it comes off; click another and it
+    /// joins — up to two. The last one cannot come off: that would leave the
+    /// send-out with nobody on it, and the step has no way back from there.
+    public void Toggle(Group list)
     {
-        List = list;
+        if (Chosen(list))
+        {
+            if (lists.Count > 1) lists.RemoveAll(l => l.Name == list.Name);
+        }
+        else if (RoomForMore)
+        {
+            lists.Add(list);
+        }
+        else
+        {
+            return;
+        }
+
+        Forget();
         Errors.Remove("recipients");
         NotifyChanged();
+    }
+
+    /// The one list, replacing whatever was there. Used where a single answer
+    /// is meant — dropping a whole selection for one pick.
+    public void Choose(Group list)
+    {
+        lists.Clear();
+        lists.Add(list);
+        Forget();
+        Errors.Remove("recipients");
+        NotifyChanged();
+    }
+
+    /// The preview is showing somebody who may no longer be on the send.
+    private void Forget()
+    {
+        if (Show is { } shown && !Picked.Contains(shown.Email)) Show = null;
     }
 
     /// Name first, but people and companies too: the question is often "which
@@ -70,7 +128,7 @@ public class MailDraft
     public string StepKey { get; set; } = "recipients";
 
     public Recipient[] Recipients =>
-        [.. List.People.Where(p => Picked.Contains(p.Email)).Select(p => p.Compose())];
+        [.. People.Where(p => Picked.Contains(p.Email)).Select(p => p.Compose())];
 
     public decimal Total => Recipients.Sum(r => r.Total);
 
@@ -119,9 +177,18 @@ public class MailDraft
         return true;
     }
 
+    /// Somebody standing on both lists comes off both at once: one person, one
+    /// mail, one tick.
     public void Toggle(string email)
     {
-        if (!Picked.Remove(email)) Picked.Add(email);
+        var off = Picked.Contains(email);
+
+        foreach (var list in lists.Where(l => l.People.Any(p => p.Email == email)))
+        {
+            if (off) PicksFor(list).Remove(email);
+            else PicksFor(list).Add(email);
+        }
+
         Errors.Remove("recipients");
 
         // Somebody taken off the send has no sheet in the preview to show.
@@ -158,19 +225,20 @@ public class MailDraft
     }
 
     public Mail ToMail(string reference, string sentOn) =>
-        new(reference, Subject.Trim(), Note.Trim(), MailStatus.Sent, sentOn, Recipients, List.Name);
+        new(reference, Subject.Trim(), Note.Trim(), MailStatus.Sent, sentOn, Recipients, [.. lists.Select(l => l.Name)]);
 
     /// The draft as it would look sent, for the preview beside the form.
     public Mail Preview(string reference) =>
         new(reference, Subject, Note, MailStatus.Draft,
-            DateTime.Now.ToString("yyyy-MM-dd"), Recipients, List.Name);
+            DateTime.Now.ToString("yyyy-MM-dd"), Recipients, [.. lists.Select(l => l.Name)]);
 
     public void Reset()
     {
         Subject = "";
         Note = "";
         picks.Clear();
-        List = MarketingGroup.Lists[0];
+        lists.Clear();
+        lists.Add(MarketingGroup.Lists[0]);
         Show = null;
         TouchedNote = false;
         Errors.Clear();

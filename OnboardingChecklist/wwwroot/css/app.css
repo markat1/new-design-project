@@ -1474,8 +1474,25 @@ body {
   transition: border-color 130ms ease, background-color 130ms ease;
 }
 .grp-card:hover { background: var(--sunk); }
-.grp-card[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.grp-card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .grp-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Two are already chosen and this is not one of them. Still reachable and
+   still announced — the rule line under the cards says what to do about it. */
+.grp-card[aria-disabled] { border-color: var(--line); cursor: default; }
+.grp-card[aria-disabled]:hover { background: var(--surface); }
+.grp-card[aria-disabled] .grp-card-name,
+.grp-card[aria-disabled] .grp-card-sum { color: var(--ink-3); }
+
+/* What the interface is allowed to do, said where it stops being obvious. */
+.grp-rule {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.grp-rule-b { color: var(--ink-2); }
 
 .grp-card-n { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; }
 /* Reserved, so the name doesn't step sideways when the choice moves. */
@@ -1528,6 +1545,8 @@ body {
 /* Where the arrow keys are standing — not what is chosen, which is the tick.
    Marked on the leading edge, never with weight, which would reflow the row. */
 .grp-row[data-cursor] { background: var(--hover); box-shadow: inset 2px 0 0 var(--accent); }
+.grp-row[aria-disabled] { color: var(--ink-3); cursor: default; }
+.grp-row[aria-disabled]:hover { background: transparent; }
 
 /* The keys that make a hundred rows walkable. No keyboard, no hints. */
 .grp-keys {
@@ -1577,6 +1596,9 @@ body {
 .pick-t-box { width: 36px; }
 .pick-t-box input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .pick-t th:last-child, .pick-t td:last-child { width: 110px; }
+/* Only there when two lists are chosen, which is the only time it answers
+   anything. */
+.pick-t-from { width: 130px; color: var(--ink-3); }
 .pick-t-name { font-weight: 500; }
 .pick-t-co { color: var(--ink-2); }
 

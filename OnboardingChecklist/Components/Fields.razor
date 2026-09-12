@@ -13,14 +13,15 @@
            search. The field under them is for the fourth day, and reaches the
            hundred others. *@
         <div class="grp">
-            <div class="grp-cards" role="radiogroup" aria-label="Mest brugte marketinglister">
+            <div class="grp-cards" role="group" aria-label="Mest brugte marketinglister">
                 @foreach (var (g, i) in Cards.Select((g, i) => (g, i)))
                 {
                     var group = g;
-                    var on = S.List.Name == group.Name;
+                    var on = S.Chosen(group);
+                    var shut = Blocked(group);
 
-                    <button type="button" class="grp-card" role="radio" id="grp-card-@i"
-                            aria-checked="@(on ? "true" : "false")" tabindex="@(on ? 0 : -1)"
+                    <button type="button" class="grp-card" id="grp-card-@i"
+                            aria-pressed="@(on ? "true" : "false")" aria-disabled="@(shut ? "true" : null)"
                             @onclick="() => Pick(group)" @onkeydown="e => CardKey(e, i)">
                         <span class="grp-card-n">
                             <span class="grp-card-tick" aria-hidden="true">@if (on) { @Icons.TickSm }</span>
@@ -33,6 +34,24 @@
                     </button>
                 }
             </div>
+
+            @* The rule, where the rule bites. Two ticked cards and a third that
+               will not take is a puzzle; two ticked cards and this line is an
+               instruction. *@
+            <p class="grp-rule">
+                @if (S.RoomForMore)
+                {
+                    <text>Du kan vælge én liste mere.</text>
+                }
+                else
+                {
+                    <text>Højst @MailDraft.MaxLists lister. Fjern én for at vælge en anden.</text>
+                }
+                @if (S.OnBoth.Length > 0)
+                {
+                    <span class="grp-rule-b">@S.OnBoth.Length @(S.OnBoth.Length == 1 ? "person står" : "personer står") på begge lister og får én mail.</span>
+                }
+            </p>
 
             @* The field is the control, not a button in front of one: the
                hundred others are one click away, and that click is the one
@@ -62,7 +81,10 @@
                    behind, so nothing else moves on the way out. *@
                 <div class="t-backdrop" @onclick="CloseLists"></div>
 
-                <div class="t-menu grp-menu">
+                @* The keys work from anywhere in the sheet, not only from the
+                   field: click a row and focus is in here, and Escape has to
+                   still mean escape. *@
+                <div class="t-menu grp-menu" @onkeydown="ListKey" @onkeydown:stopPropagation="true">
                     <div class="grp-scroll" id="grp-list" role="listbox" aria-label="Marketinglister">
                         @{ var rows = Rows(); }
                         @if (rows.Length == 0)
@@ -95,7 +117,7 @@
         </div>
 
         <p class="pick-count">
-            <span>@S.Picked.Count af @S.List.People.Length personer med</span>
+            <span>@S.Picked.Count af @S.People.Length personer med</span>
             <span class="pick-count-s">Klik en række for at se prislisten</span>
         </p>
 
@@ -110,11 +132,17 @@
                     </th>
                     <th scope="col">Person</th>
                     <th scope="col">Kunde</th>
+                    @if (S.Lists.Count > 1)
+                    {
+                        @* table-layout is fixed, so the width has to sit on the
+                           header cell — the body's is never measured. *@
+                        <th scope="col" class="pick-t-from">Liste</th>
+                    }
                     <th scope="col" class="num">Prisliste</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var p in S.List.People)
+                @foreach (var p in S.People)
                 {
                     var person = p;
                     var on = S.Picked.Contains(person.Email);
@@ -127,6 +155,11 @@
                         </td>
                         <td class="pick-t-name" title="@person.Name">@person.Name</td>
                         <td class="pick-t-co" title="@person.Company">@person.Company</td>
+                        @if (S.Lists.Count > 1)
+                        {
+                            var from = Where(person);
+                            <td class="pick-t-from" title="@from">@from</td>
+                        }
                         <td class="num">
                             @if (person.HasSheet)
                             {
@@ -206,14 +239,20 @@
     /// Ties go to whoever was used last.
     private IEnumerable<Group> MostUsed =>
         MarketingGroup.Lists
-            .Select(list => (list, sends: Sends(list), last: Store.All.Where(m => m.List == list.Name).Select(m => m.Sent).DefaultIfEmpty("").Max()))
+            .Select(list => (list, sends: Sends(list), last: Sent(list).Select(m => m.Sent).DefaultIfEmpty("").Max()))
             .Where(x => x.sends > 0)
             .OrderByDescending(x => x.sends)
             .ThenByDescending(x => x.last, StringComparer.Ordinal)
             .Take(3)
             .Select(x => x.list);
 
-    private int Sends(Group group) => Store.All.Count(m => m.List == group.Name);
+    /// Sent, not written: a draft naming a list has not gone anywhere yet, and
+    /// counting it would put a list on the cards for something nobody did. Its
+    /// "—" for a date would also sort above every real one.
+    private IEnumerable<Mail> Sent(Group group) =>
+        Store.All.Where(m => m.Status == MailStatus.Sent && m.Lists.Contains(group.Name));
+
+    private int Sends(Group group) => Sent(group).Count();
 
     private string Used(Group group) =>
         Sends(group) is var n && n > 0 ? $" · brugt {n} {(n == 1 ? "gang" : "gange")}" : "";
@@ -221,9 +260,13 @@
     /// The three on screen. The chosen list is always one of them, even when it
     /// came from the long tail — otherwise picking it would make it vanish.
     private IEnumerable<Group> Cards =>
-        MostUsed.Any(g => g.Name == S.List.Name)
-            ? MostUsed
-            : new[] { S.List }.Concat(MostUsed).Take(3);
+        S.Lists.Where(l => !MostUsed.Any(m => m.Name == l.Name))
+            .Concat(MostUsed)
+            .Take(3);
+
+    /// A card or row that cannot take a click: the second list is chosen, and
+    /// this is not one of them. Told, not hidden — the rule line says why.
+    private bool Blocked(Group group) => !S.Chosen(group) && !S.RoomForMore;
 
     /// What the sheet is showing: the search's hits, or every list by name.
     private Group[] Rows() =>
@@ -234,9 +277,10 @@
     private RenderFragment ListRow(Group group, bool at) =>
         @<button type="button" class="t-menu-item grp-row" role="option" id="@(at ? "grp-row-at" : null)"
                  data-cursor="@(at ? "" : null)"
-                 aria-selected="@(S.List.Name == group.Name ? "true" : "false")"
+                 aria-selected="@(S.Chosen(group) ? "true" : "false")"
+                 aria-disabled="@(Blocked(group) ? "true" : null)"
                  @onclick="() => Pick(group)">
-            <span class="t-menu-ico">@if (S.List.Name == group.Name) { @Icons.TickSm }</span>
+            <span class="t-menu-ico">@if (S.Chosen(group)) { @Icons.TickSm }</span>
             <span class="grp-row-txt">
                 <span class="grp-row-name">@group.Name</span>
                 @* Parenthesised: after a word, a bare @ reads as an email address
@@ -277,9 +321,14 @@
         focusWanted = word.Length == 0 ? "grp-find" : null;
     }
 
+    /// A click on a list adds it, or takes it off again. The sheet closes
+    /// either way: what changed is on the cards behind it, and a hundred rows
+    /// left standing over the answer is not a view of anything.
     private async Task Pick(Group group)
     {
-        S.Choose(group);
+        if (Blocked(group)) return;
+
+        S.Toggle(group);
         CloseLists();
         await Changed.InvokeAsync();
     }
@@ -310,12 +359,11 @@
         }
     }
 
-    /// The three cards are one control, as a radio group is: Tab reaches the
-    /// group, the arrows move inside it.
-    private async Task CardKey(KeyboardEventArgs e, int index)
+    /// The arrows walk the three cards; Space and Enter turn one on or off.
+    /// They no longer choose as they pass: with two lists allowed, arrowing
+    /// across would switch lists on behind you.
+    private void CardKey(KeyboardEventArgs e, int index)
     {
-        var cards = Cards.ToArray();
-
         var step = e.Key switch
         {
             "ArrowRight" or "ArrowDown" => 1,
@@ -325,18 +373,25 @@
 
         if (step == 0) return;
 
-        var next = (index + step + cards.Length) % cards.Length;
-        focusWanted = $"grp-card-{next}";
-        await Pick(cards[next]);
+        var count = Cards.Count();
+        focusWanted = $"grp-card-{(index + step + count) % count}";
     }
 
-    private bool AllPicked => S.List.People.All(p => S.Picked.Contains(p.Email));
+    private bool AllPicked => S.People.All(p => S.Picked.Contains(p.Email));
+
+    /// Which of the chosen lists this person came in on. "Begge" rather than
+    /// both names: the names are on the cards two rows up.
+    private string Where(Person person)
+    {
+        var on = S.Lists.Where(l => l.People.Any(p => p.Email == person.Email)).ToArray();
+        return on.Length > 1 ? "Begge" : on.Length == 1 ? on[0].Name : "";
+    }
 
     private async Task ToggleAll()
     {
         var all = AllPicked;
 
-        foreach (var person in S.List.People)
+        foreach (var person in S.People)
         {
             if (S.Picked.Contains(person.Email) == all) S.Toggle(person.Email);
         }
