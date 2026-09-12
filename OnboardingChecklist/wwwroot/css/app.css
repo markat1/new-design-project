@@ -600,10 +600,27 @@ body {
 
 .side-nav { display: flex; flex-direction: column; gap: 2px; }
 
-.side-nav-item,
-.side-nav-item svg,
-.side-nav-item:hover,
-.side-nav-item:focus-visible,
+.side-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 130ms ease, color 130ms ease;
+}
+.side-nav-item svg { flex: none; }
+.side-nav-item:hover { background: var(--hover); color: var(--ink-1); }
+.side-nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 .side-nav-item[data-active] { background: var(--accent-soft); color: var(--accent); }
 
 .side-nav-count {
