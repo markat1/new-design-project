@@ -812,7 +812,8 @@ body {
    high. Height comes from line-height + padding (16 + 24 = 40) because a
    baseline row sticks to the top of a min-height box. */
 .t-th {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15px;
   align-items: baseline;
   gap: 5px;
   width: 100%;
@@ -833,10 +834,14 @@ body {
 /* 40px suits a mouse; a finger gets the 44px floor. */
 @media (pointer: coarse) { .t-th { padding-block: 14px; } }
 
-/* Marks lead in number columns, so the label stays flush with the figures
-   under it whether or not the column is sorted or filtered. Trailing, they
-   pushed the label sideways every time the sort moved onto its column. */
-.t th.num .t-th { flex-direction: row-reverse; }
+/* The mark follows the label in every column, and its 15px is kept whether
+   or not there is one — the widest mark is the combined one, so nothing moves
+   when a column gains a filter or changes direction. The slot is what lets
+   number columns keep a trailing mark at all: without it the label would jump
+   sideways each time the sort landed on it. In those columns the mark ends on
+   the figures' own edge, with the label a slot's width inside it. */
+.t th.num .t-th { text-align: right; }
+.t th.num .t-mark { justify-self: end; }
 
 /* One mark per header, in Outlook's glyphs: the arrow when the column is
    sorted, the filter lines when it is filtered, the two drawn as one when it
