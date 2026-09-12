@@ -19,6 +19,19 @@ window.app = {
     document.getElementById(id)?.focus({ preventScroll: true });
   },
 
+  // The tab underline travels from the tab you left to the one you opened. It
+  // is measured here because only the browser knows how wide a label is; the
+  // move itself is a CSS transition on transform, so nothing renders per frame.
+  tabs: {
+    mark(bar) {
+      const open = bar?.querySelector('[aria-selected="true"]');
+      if (!open) return;
+
+      bar.style.setProperty('--tab-x', open.offsetLeft + 'px');
+      bar.style.setProperty('--tab-w', open.offsetWidth);
+    },
+  },
+
   // Column widths are dragged in the sheet's own header, the way Excel does
   // it. The drag lives here rather than in Blazor: a render per pointermove
   // would be a render storm for what is only a column getting wider. One call

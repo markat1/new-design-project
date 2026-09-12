@@ -10,7 +10,7 @@
 <div class="d" @key="M.Ref">
 
     <div class="d-bar">
-        <div class="d-tabs" role="tablist" aria-label="Mail, modtagere og prislister" @onkeydown="TabKey">
+        <div class="d-tabs" role="tablist" aria-label="Mail, modtagere og prislister" @ref="tabs" @onkeydown="TabKey">
         <button type="button" class="d-tab" role="tab" id="d-tab-mail"
                 aria-selected="@(tab == 0 ? "true" : "false")" aria-controls="d-panel-mail"
                 tabindex="@(tab == 0 ? 0 : -1)" @onclick="() => tab = 0">Mail</button>
@@ -577,6 +577,8 @@
     private static string Show(string value, string fallback) =>
         value.Trim().Length > 0 ? value : fallback;
 
+    private ElementReference tabs;
+    private int marked = -1;
     private ElementReference grid;
     private DotNetObjectReference<MailView>? self;
 
@@ -606,6 +608,14 @@
 
     protected override async Task OnAfterRenderAsync(bool first)
     {
+        // Only when the underline has somewhere to go: this reads layout, and
+        // a sheet being typed into re-renders on every keystroke.
+        if (marked != tab)
+        {
+            marked = tab;
+            await JS.InvokeVoidAsync("app.tabs.mark", tabs);
+        }
+
         if (tab == 2 && Sheet is not null)
         {
             self ??= DotNetObjectReference.Create(this);
