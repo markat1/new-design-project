@@ -76,32 +76,45 @@
                                                 @order.Desc
                                             </button>
 
-                                            @if (col.Filter == FilterKind.Text)
+                                            @if (col.Filter is { } heading)
                                             {
+                                                var shown = Shown(col.Key).ToArray();
                                                 <div class="t-menu-filter">
-                                                    <label class="t-menu-head" for="flt-@col.Key">Indeholder</label>
-                                                    <input class="f-input t-menu-input" id="flt-@col.Key" type="text" autocomplete="off" spellcheck="false"
-                                                           value="@TextFilter(col.Key)"
-                                                           @oninput="e => SetText(col.Key, e.Value?.ToString() ?? string.Empty)" />
-                                                </div>
-                                            }
-                                            else if (col.Filter == FilterKind.Company)
-                                            {
-                                                <div class="t-menu-filter">
-                                                    <span class="t-menu-head">Gik til</span>
-                                                    <ul class="t-menu-list">
-                                                        @foreach (var co in Companies)
+                                                    <span class="t-menu-head">@heading</span>
+                                                    @* The field shortens this list and nothing else — the
+                                                       table answers to the boxes, as in a spreadsheet. *@
+                                                    <div class="t-find">
+                                                        <span class="t-find-ico">@Icons.Search</span>
+                                                        <input class="f-input t-find-input" id="find-@col.Key" type="search" placeholder="Søg"
+                                                               autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"
+                                                               value="@Find(col.Key)"
+                                                               @oninput="e => SetFind(col.Key, e.Value?.ToString() ?? string.Empty)" />
+                                                        @if (Find(col.Key).Length > 0)
                                                         {
-                                                            var company = co;
-                                                            <li>
-                                                                <label class="t-menu-check">
-                                                                    <input type="checkbox" checked="@companies.Contains(company)"
-                                                                           @onchange="() => ToggleCompany(company)" />
-                                                                    <span title="@company">@company</span>
-                                                                </label>
-                                                            </li>
+                                                            <button type="button" class="t-find-x" aria-label="Ryd søgning"
+                                                                    @onclick="() => ClearFind(col.Key)">@Icons.X</button>
                                                         }
-                                                    </ul>
+                                                    </div>
+                                                    @if (shown.Length == 0)
+                                                    {
+                                                        <p class="t-menu-none">Ingen der hedder noget med "@Find(col.Key).Trim()"</p>
+                                                    }
+                                                    else
+                                                    {
+                                                        <ul class="t-menu-list">
+                                                            @foreach (var v in shown)
+                                                            {
+                                                                var value = v;
+                                                                <li>
+                                                                    <label class="t-menu-check">
+                                                                        <input type="checkbox" checked="@Chosen(col.Key).Contains(value)"
+                                                                               @onchange="() => TogglePick(col.Key, value)" />
+                                                                        <span title="@value">@value</span>
+                                                                    </label>
+                                                                </li>
+                                                            }
+                                                        </ul>
+                                                    }
                                                 </div>
                                             }
 
@@ -183,17 +196,16 @@
 </div>
 
 @code {
-    private enum FilterKind { None, Text, Company }
+    /// A column offers a filter when it has a word for what its list holds.
+    /// "Gik til" on Modtagere: a send reaches many customers, so the value
+    /// sits inside the row rather than in the cell.
+    private record Col(string Key, string Label, bool Num = false, string? Filter = null);
 
-    private record Col(string Key, string Label, bool Num = false, FilterKind Filter = FilterKind.None);
-
-    /// Modtagere filters by company: a send reaches many customers, and "Gik
-    /// til" is the question people ask of that column.
     private static readonly Col[] Columns =
     [
-        new("ref", "Reference", Filter: FilterKind.Text),
-        new("subject", "Emne", Filter: FilterKind.Text),
-        new("recipients", "Modtagere", true, FilterKind.Company),
+        new("ref", "Reference", Filter: "Vis"),
+        new("subject", "Emne", Filter: "Vis"),
+        new("recipients", "Modtagere", true, "Gik til"),
         new("total", "I alt", true),
         new("sent", "Sendt", true),
     ];
@@ -222,50 +234,67 @@
     /// back into the panel rather than falling to the body.
     private void ClearColumn(string key)
     {
-        if (key == "recipients") companies.Clear(); else SetText(key, "");
+        Chosen(key).Clear();
+        finds[key] = "";
         focusMenu = true;
     }
 
-    private string TextFilter(string key) => key == "ref" ? refFilter : subjectFilter;
-
     private string? openCol;
-    private string refFilter = "";
-    private string subjectFilter = "";
-    private readonly HashSet<string> companies = [];
     private ElementReference menu;
     private bool focusMenu;
-    private string? returnFocusTo;
+    private string? focusAfter;
 
-    private IEnumerable<string> Companies =>
-        Store.All.SelectMany(m => m.Recipients).Select(r => r.Company).Distinct().Order();
+    /// The values chosen per column, and the word narrowing that column's
+    /// list. The word never reaches the table: it only shortens what the
+    /// dropdown offers, the way a spreadsheet's filter search does.
+    private readonly Dictionary<string, HashSet<string>> picks = [];
+    private readonly Dictionary<string, string> finds = [];
 
-    private bool IsFiltered(string key) => key switch
+    private HashSet<string> Chosen(string key) =>
+        picks.TryGetValue(key, out var set) ? set : picks[key] = [];
+
+    private string Find(string key) => finds.GetValueOrDefault(key, "");
+
+    /// What a column can be filtered by. Modtagere lists the companies a send
+    /// went to, which is what the cell counts rather than what it prints.
+    private IEnumerable<string> Values(string key) => key switch
     {
-        "ref" => refFilter.Trim().Length > 0,
-        "subject" => subjectFilter.Trim().Length > 0,
-        "recipients" => companies.Count > 0,
-        _ => false,
+        "recipients" => Store.All.SelectMany(m => m.Recipients).Select(r => r.Company),
+        "subject" => Store.All.Select(m => m.Subject),
+        _ => Store.All.Select(m => m.Ref),
     };
+
+    private IEnumerable<string> Shown(string key)
+    {
+        var all = Values(key).Distinct().Order();
+        var word = Find(key).Trim();
+        return word.Length == 0 ? all : all.Where(v => v.Contains(word, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool IsFiltered(string key) => Chosen(key).Count > 0;
 
     private bool AnyFilter => Columns.Any(c => IsFiltered(c.Key));
 
-    private void SetText(string key, string value)
+    private void TogglePick(string key, string value)
     {
-        if (key == "ref") refFilter = value; else subjectFilter = value;
+        if (!Chosen(key).Remove(value)) Chosen(key).Add(value);
         KeepSelectionVisible();
     }
 
-    private void ToggleCompany(string company)
+    private void SetFind(string key, string word) => finds[key] = word;
+
+    /// Clearing the word hides the button doing it, so focus goes back to the
+    /// field it belongs to.
+    private void ClearFind(string key)
     {
-        if (!companies.Remove(company)) companies.Add(company);
-        KeepSelectionVisible();
+        finds[key] = "";
+        focusAfter = $"find-{key}";
     }
 
     private void ClearFilters()
     {
-        refFilter = "";
-        subjectFilter = "";
-        companies.Clear();
+        picks.Clear();
+        finds.Clear();
         openCol = null;
     }
 
@@ -284,7 +313,7 @@
 
     private void Close()
     {
-        returnFocusTo = openCol;
+        focusAfter = $"th-{openCol}";
         openCol = null;
     }
     private string sort = "sent";
@@ -317,10 +346,10 @@
             focusMenu = false;
             await JS.InvokeVoidAsync("app.focusIn", menu);
         }
-        else if (returnFocusTo is { } key)
+        else if (focusAfter is { } id)
         {
-            returnFocusTo = null;
-            await JS.InvokeVoidAsync("app.focusId", $"th-{key}");
+            focusAfter = null;
+            await JS.InvokeVoidAsync("app.focusId", id);
         }
 
         if (!first) return;
@@ -344,13 +373,14 @@
         {
             IEnumerable<Mail> rows = Store.All;
 
-            var rf = refFilter.Trim();
-            if (rf.Length > 0) rows = rows.Where(r => r.Ref.Contains(rf, StringComparison.OrdinalIgnoreCase));
+            var refs = Chosen("ref");
+            if (refs.Count > 0) rows = rows.Where(r => refs.Contains(r.Ref));
 
-            var sf = subjectFilter.Trim();
-            if (sf.Length > 0) rows = rows.Where(r => r.Subject.Contains(sf, StringComparison.OrdinalIgnoreCase));
+            var subjects = Chosen("subject");
+            if (subjects.Count > 0) rows = rows.Where(r => subjects.Contains(r.Subject));
 
             // A send has many customers, so this one looks inside the row.
+            var companies = Chosen("recipients");
             if (companies.Count > 0) rows = rows.Where(r => r.Recipients.Any(x => companies.Contains(x.Company)));
 
             Func<Mail, IComparable> key = sort switch
