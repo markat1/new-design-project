@@ -17,7 +17,12 @@ public static partial class Accounting
     /// A workbook as this app needs it: the worksheet's name, the lines the
     /// mail quotes, and the size of the file on disk. Edited says the two have
     /// parted ways — the app holds newer lines than the file does.
-    public record Sheet(string Name, QuoteLine[] Lines, int Bytes, bool Edited = false);
+    public record Sheet(string Name, QuoteLine[] Lines, int Bytes, bool Edited = false, string? Url = null);
+
+    /// A line in the system's own list of what it has made: the workbook, and
+    /// where Office for the web can reach it, when it is somewhere Microsoft
+    /// is allowed to read — a SharePoint embed link, or a public address.
+    private record Listed(string File, string? Url = null);
 
     private static readonly Dictionary<string, Sheet> Books = [];
 
@@ -34,6 +39,20 @@ public static partial class Accounting
 
     public static string SizeFor(string company) =>
         Books.TryGetValue(company, out var book) ? $"{(book.Bytes + 512) / 1024} KB" : "—";
+
+    /// Office for the web, ready to be framed. A link that is already an embed
+    /// — the one SharePoint hands out — goes in as it is; anything else is a
+    /// file at a public address, which the viewer fetches for itself. Without
+    /// a link there is nothing to frame, and the app draws the sheet instead.
+    public static string? ViewerFor(string company)
+    {
+        if (!Books.TryGetValue(company, out var book) || string.IsNullOrWhiteSpace(book.Url)) return null;
+
+        var url = book.Url.Trim();
+        return url.Contains("embed", StringComparison.OrdinalIgnoreCase)
+            ? url
+            : $"https://view.officeapps.live.com/op/embed.aspx?src={Uri.EscapeDataString(url)}";
+    }
 
     public static bool IsEdited(string company) => Books.TryGetValue(company, out var book) && book.Edited;
 
@@ -54,15 +73,16 @@ public static partial class Accounting
     /// has not been priced yet.
     public static async Task LoadAll(HttpClient http, IEnumerable<string> companies)
     {
-        var made = await http.GetFromJsonAsync<string[]>("sheets/index.json") ?? [];
+        var made = await http.GetFromJsonAsync<Listed[]>("sheets/index.json") ?? [];
 
         var reads = companies.Distinct()
-            .Where(company => made.Contains(FileFor(company)))
-            .Select(async company =>
+            .Select(company => (company, listed: made.FirstOrDefault(l => l.File == FileFor(company))))
+            .Where(pair => pair.listed is not null)
+            .Select(async pair =>
             {
-                var file = await http.GetByteArrayAsync($"sheets/{FileFor(company)}");
+                var file = await http.GetByteArrayAsync($"sheets/{pair.listed!.File}");
                 using var stream = new MemoryStream(file);
-                return (company, book: Read(stream, file.Length));
+                return (pair.company, book: Read(stream, file.Length) with { Url = pair.listed.Url });
             });
 
         foreach (var (company, book) in await Task.WhenAll(reads))

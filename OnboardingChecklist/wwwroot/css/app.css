@@ -1066,7 +1066,21 @@ body {
 .t-empty-b { margin: 6px 0 16px; font-size: 14px; color: var(--ink-2); }
 
 /* ---- detail ---- */
-.d { padding: 22px 22px 40px; animation: v3In 180ms var(--ease) both; }
+/* A column, so the attachment tab can hand its whole remaining height to the
+   sheet: Office's own frame, or the grid the app draws. */
+.d { display: flex; flex-direction: column; min-height: 100%; padding: 22px 22px 40px; animation: v3In 180ms var(--ease) both; }
+
+/* The sheet fills the pane, so there is nothing to scroll past it — and the
+   gutter the pane keeps for a scrollbar would be a strip of empty paper down
+   the side of the grid. */
+.split-detail:has(.d-panel-file) { overflow-y: hidden; scrollbar-gutter: auto; }
+
+.d-panel-file { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 -22px -40px; }
+.d-panel-file .sheet-for { padding: 0 22px 16px; margin-bottom: 0; }
+.d-panel-file .rcp-none { padding: 0 22px; }
+
+/* Excel for the web, to the pane's edges. */
+.xl-office { flex: 1; min-height: 0; width: 100%; border: 0; background: var(--surface); }
 
 .d-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .d-ref { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
@@ -1182,8 +1196,8 @@ body {
    numbers down the side, every cell ruled, and the file's name on a sheet tab
    under it. The grid scrolls sideways in a narrow pane rather than squeezing
    the description out of shape. */
-.xl { margin-top: 20px; }
-.xl-grid { overflow-x: auto; border: 1px solid var(--line-2); background: var(--surface); }
+.xl { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.xl-grid { flex: 1; min-height: 0; overflow: auto; border-top: 1px solid var(--line-2); background: var(--surface); }
 .xl-t { border-collapse: collapse; min-width: 100%; font-size: 12px; white-space: nowrap; }
 .xl-t th,
 .xl-t td {
@@ -1215,12 +1229,12 @@ body {
 .xl-sum > * { border-top: 1px solid var(--line-2); font-weight: 600; }
 
 .xl-foot {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 0 6px 0 0;
-  border: 1px solid var(--line-2);
-  border-top: 0;
+  border-top: 1px solid var(--line-2);
   background: var(--sunk);
 }
 .xl-file {

@@ -1,8 +1,20 @@
 [
-  "priser-bright-harbour-logistics.xlsx",
-  "priser-featherstonehaugh-villanueva-international-systems.xlsx",
-  "priser-ferrous-manufacturing-group.xlsx",
-  "priser-halden-co.xlsx",
-  "priser-kestrel-analytics.xlsx",
-  "priser-vela-robotics.xlsx"
+  {
+    "file": "priser-bright-harbour-logistics.xlsx"
+  },
+  {
+    "file": "priser-featherstonehaugh-villanueva-international-systems.xlsx"
+  },
+  {
+    "file": "priser-ferrous-manufacturing-group.xlsx"
+  },
+  {
+    "file": "priser-halden-co.xlsx"
+  },
+  {
+    "file": "priser-kestrel-analytics.xlsx"
+  },
+  {
+    "file": "priser-vela-robotics.xlsx"
+  }
 ]

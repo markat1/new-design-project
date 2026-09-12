@@ -118,7 +118,7 @@
     }
     else
     {
-        <div class="d-panel" role="tabpanel" id="d-panel-file" aria-labelledby="d-tab-file">
+        <div class="d-panel d-panel-file" role="tabpanel" id="d-panel-file" aria-labelledby="d-tab-file">
             @if (Current is { } rec)
             {
                 <div class="sheet-for">
@@ -139,7 +139,16 @@
                     }
                 </div>
 
-                @if (rec.Lines.Length == 0)
+                @if (Accounting.ViewerFor(rec.Company) is { } viewer)
+                {
+                    @* Excel itself, framed. Office for the web renders the workbook
+                       where it lies — which is why this needs a link Microsoft can
+                       reach: SharePoint, or a public address. Without one the app
+                       draws the sheet below instead. *@
+                    <iframe class="xl-office" src="@viewer" title="Prisliste for @rec.Company"
+                            referrerpolicy="no-referrer"></iframe>
+                }
+                else if (rec.Lines.Length == 0)
                 {
                     <p class="rcp-none">Ingen prisliste i regnskabssystemet for @rec.Company.</p>
                 }

@@ -11,6 +11,17 @@ the unit price and does the arithmetic itself.
 Needs openpyxl. Run it from the repository root; it writes into
 OnboardingChecklist/wwwroot/sheets/ and rewrites index.json, which is the list
 the app asks for first — a customer missing from it has no sheet.
+
+An entry can also carry a "url", and then the attachment tab frames Office for
+the web on that address instead of drawing the sheet itself:
+
+    { "file": "priser-vela-robotics.xlsx",
+      "url": "https://firma.sharepoint.com/:x:/g/…&action=embedview" }
+
+A SharePoint or OneDrive embed link is used as it is, and stays behind the
+tenant's sign-in. Any other address is handed to view.officeapps.live.com,
+which means Microsoft's servers fetch the file themselves — fine for sample
+prices on a public host, not for a customer's. Existing urls survive a rerun.
 """
 
 import glob
@@ -86,7 +97,15 @@ for company, lines in SHEETS.items():
     path = write(company, lines)
     print(f"{os.path.getsize(path):>6} B  {path}")
 
+# Keep whatever links are already in the index; only the file list is rebuilt.
+links = {}
+if os.path.exists(f"{OUT}/index.json"):
+    for entry in json.load(open(f"{OUT}/index.json")):
+        if isinstance(entry, dict) and entry.get("url"):
+            links[entry["file"]] = entry["url"]
+
 made = sorted(os.path.basename(p) for p in glob.glob(f"{OUT}/*.xlsx"))
+listed = [{"file": f, **({"url": links[f]} if f in links else {})} for f in made]
 with open(f"{OUT}/index.json", "w") as index:
-    json.dump(made, index, indent=2, ensure_ascii=False)
-print(f"{len(made)} in index.json")
+    json.dump(listed, index, indent=2, ensure_ascii=False)
+print(f"{len(made)} in index.json, {len(links)} with a viewer link")
