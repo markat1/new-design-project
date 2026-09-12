@@ -41,7 +41,7 @@ public record Recipient(string Name, string Email, string Company, QuoteLine[] L
 
 /// One send-out: a single mail to a marketing group, where every customer gets
 /// their own price sheet attached.
-public record Mail(string Ref, string Subject, string Note, MailStatus Status, string Sent, Recipient[] Recipients)
+public record Mail(string Ref, string Subject, string Note, MailStatus Status, string Sent, Recipient[] Recipients, string List = "")
 {
     public string Label => Status == MailStatus.Draft ? "Kladde" : "Sendt";
 
@@ -82,7 +82,7 @@ public record Mail(string Ref, string Subject, string Note, MailStatus Status, s
                 R("Anna Sørensen", "anna@velarobotics.com", "Vela Robotics", RecipientStatus.Accepted),
                 R("Bo Halden", "bo@halden.dk", "Halden & Co.", RecipientStatus.Sent),
                 R("Klaus Richter", "einkauf@ferrous-mfg.de", "Ferrous Manufacturing Group", RecipientStatus.Viewed),
-            ]),
+            ], "Rammeaftale 2027"),
 
         new("M-2417", "Fornyelse 2027",
             "Samme vilkår som sidste år, onboarding er med denne gang.",
@@ -90,15 +90,15 @@ public record Mail(string Ref, string Subject, string Note, MailStatus Status, s
             [
                 R("Cecilie Nord", "finance@kestrel.io", "Kestrel Analytics", RecipientStatus.Accepted),
                 R("Jonas Vik", "jonas@kestrel.io", "Kestrel Analytics", RecipientStatus.Viewed),
-            ]),
+            ], "Rammeaftale 2027"),
 
         new("M-2416", "Fragtpriser, revideret",
             "Fragtpriserne er justeret efter den nye rute. Håndteringen er uændret.",
             MailStatus.Sent, "2026-08-11",
             [
                 R("Mia Brandt", "ops@brightharbour.co", "Bright Harbour Logistics", RecipientStatus.Declined),
-            ]),
+            ], "Fragtkunder"),
 
-        new("M-2415", "(intet emne endnu)", "", MailStatus.Draft, "—", []),
+        new("M-2415", "(intet emne endnu)", "", MailStatus.Draft, "—", [], "Norden"),
     ];
 }

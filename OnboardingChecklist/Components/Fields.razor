@@ -1,4 +1,5 @@
 @inject MailDraft S
+@inject MailStore Store
 @inject IJSRuntime JS
 
 @* One step's fields. Which step is the only thing that changes; validation and
@@ -41,15 +42,15 @@
                         @{ var hits = MailDraft.Search(listFind).ToArray(); }
                         @if (listFind.Trim().Length == 0)
                         {
-                            <span class="t-menu-head">Senest brugt</span>
-                            @foreach (var g in S.Recent)
+                            <span class="t-menu-head">Mest brugt</span>
+                            @foreach (var g in MostUsed)
                             {
-                                @ListRow(g)
+                                @ListRow(g, Sends(g))
                             }
                             <span class="t-menu-head">Alle lister · @MarketingGroup.Lists.Length</span>
                             @foreach (var g in MarketingGroup.Lists.OrderBy(l => l.Name, StringComparer.CurrentCulture))
                             {
-                                @ListRow(g)
+                                @ListRow(g, null)
                             }
                         }
                         else if (hits.Length == 0)
@@ -61,7 +62,7 @@
                             <span class="t-menu-head">@hits.Length @(hits.Length == 1 ? "liste" : "lister")</span>
                             @foreach (var g in hits)
                             {
-                                @ListRow(g)
+                                @ListRow(g, null)
                             }
                         }
                     </div>
@@ -180,13 +181,29 @@
     private ElementReference listMenu;
     private bool focusFind;
 
-    private RenderFragment ListRow(Group group) =>
+    /// The lists this workspace actually sends to, most first. Use, not order:
+    /// the one you sent to yesterday is not the one you send to every week.
+    /// Ties go to whoever was used last.
+    private IEnumerable<Group> MostUsed =>
+        MarketingGroup.Lists
+            .Select(list => (list, sends: Sends(list), last: Store.All.Where(m => m.List == list.Name).Select(m => m.Sent).DefaultIfEmpty("").Max()))
+            .Where(x => x.sends > 0)
+            .OrderByDescending(x => x.sends)
+            .ThenByDescending(x => x.last, StringComparer.Ordinal)
+            .Take(3)
+            .Select(x => x.list);
+
+    private int Sends(Group group) => Store.All.Count(m => m.List == group.Name);
+
+    private RenderFragment ListRow(Group group, int? sends) =>
         @<button type="button" class="t-menu-item grp-row" aria-pressed="@(S.List.Name == group.Name ? "true" : "false")"
                  @onclick="() => Pick(group)">
             <span class="t-menu-ico">@if (S.List.Name == group.Name) { @Icons.TickSm }</span>
             <span class="grp-row-txt">
                 <span class="grp-row-name">@group.Name</span>
-                <span class="grp-row-s">@group.People.Length personer · @group.Customers kunder</span>
+                <span class="grp-row-s">
+                    @group.People.Length personer · @group.Customers kunder@(sends is > 0 ? $" · brugt {sends} {(sends == 1 ? "gang" : "gange")}" : "")
+                </span>
             </span>
             <span class="grp-row-sum num">@group.Total.ToString("N0")</span>
         </button>;
