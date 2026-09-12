@@ -80,10 +80,11 @@
                                                 @order.Desc
                                             </button>
 
-                                            @if (col.Filter)
+                                            @if (col.Filter is { } heading)
                                             {
                                                 var shown = Shown(col.Key).ToArray();
                                                 <div class="t-menu-filter">
+                                                    <span class="t-menu-head">@heading</span>
                                                     @* The field shortens this list and nothing else — the
                                                        table answers to the boxes, as in a spreadsheet. *@
                                                     <div class="t-find">
@@ -199,15 +200,16 @@
 </div>
 
 @code {
-    /// A filtering column lists its own values, and they head nothing: the
-    /// references, the subjects and the companies say what they are.
-    private record Col(string Key, string Label, bool Num = false, bool Filter = false);
+    /// A column with Filter set offers one, and the string heads its list, the
+    /// way "Sorteringsrækkefølge" heads the orders. "Gik til" on Modtagere:
+    /// the column counts customers while the list names them.
+    private record Col(string Key, string Label, bool Num = false, string? Filter = null);
 
     private static readonly Col[] Columns =
     [
-        new("ref", "Reference", Filter: true),
-        new("subject", "Emne", Filter: true),
-        new("recipients", "Modtagere", true, true),
+        new("ref", "Reference", Filter: "Vis"),
+        new("subject", "Emne", Filter: "Vis"),
+        new("recipients", "Modtagere", true, "Gik til"),
         new("total", "I alt", true),
         new("sent", "Sendt", true),
     ];
