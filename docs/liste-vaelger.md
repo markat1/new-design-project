@@ -15,7 +15,8 @@ Afgjort ud fra fem retninger, bygget side om side på de rigtige 103 lister (pr�
 - **De tre er på skærmen, ikke bag et klik.** Hver dag rammer valget en af dem, og så skal det ikke koste en åbning af noget.
 - **Tallet står på kortet** — `244,200 · brugt 2 gange`. Det er dét, der giver listen pladsen; uden det ligner rækkefølgen et tilfælde.
 - **De valgte lister er altid blandt de tre kort.** Vælger du en fra den lange hale, skubber den et kort ud og bliver selv det første. Ellers ville det, du lige valgte, forsvinde i samme øjeblik.
-- **Én liste er reglen, to er undtagelsen, tre er ingenting.** Forbi to kan ingen holde i hovedet, hvem der er ved at få en mail. Og aldrig nul: en udsendelse uden liste har ingen at gå til, så den sidste liste kan ikke klikkes fra.
+- **Én liste er reglen, to er undtagelsen, tre er ingenting.** Forbi to kan ingen holde i hovedet, hvem der er ved at få en mail.
+- **Nul er tilladt, mens man vælger.** Første forsøg nægtede at slippe den sidste liste, og så var det ikke det andet valg, der føltes låst — det var det første: at bytte én liste ud med en anden blev *tilføj og fjern igen*, med et øjeblik i midten hvor udsendelsen gik til begge. En kontrol, der ikke vil give slip på sin egen standardværdi, er en kontrol, man skal slås med. Kravet om mindst én hører hjemme ved afsendelsen, ikke i klikket.
 - **De hundrede andre er undtagelsen**, og feltet under kortene er vejen til dem. Ikke en knap foran et felt: det klik, en knap ville koste, er alligevel det klik, du var på vej til at lave i feltet.
 
 ## Sådan opfører den sig
@@ -49,6 +50,7 @@ Afgjort ud fra fem retninger, bygget side om side på de rigtige 103 lister (pr�
 - Arket har ikke sin egen "Mest brugt"-sektion. **Kortene er den sektion.**
 - **Står en person på begge lister, får hun én mail.** Personlisten viser hende én gang, kolonnen *Liste* siger "Begge", og fjerner man fluebenet, ryger hun af begge på én gang. Linjen under kortene tæller dem: *"3 personer står på begge lister og får én mail."*
 - **Kolonnen *Liste* findes kun, når der er to lister.** Med én er svaret det samme i hver eneste række.
+- **Ingen liste valgt er en tilstand, ikke en fejl.** Personlisten bliver til en rolig kasse, der siger hvad der kommer til at stå der, og linjen over kortene bliver til spørgsmålet. Fejlen kommer først, når man prøver at gå videre: *"Vælg den liste, udsendelsen skal gå til."*
 
 ## Markup
 

@@ -1506,6 +1506,24 @@ body {
 .grp-card[aria-disabled] .grp-card-name,
 .grp-card[aria-disabled] .grp-card-sum { color: var(--ink-3); }
 
+/* No list chosen yet. Not an error state — nothing has gone wrong, the
+   question is open — so it is ruled quietly and holds roughly the room the
+   people will take, rather than snapping the panel shorter. */
+.pick-none-yet {
+  display: flex;
+  align-items: center;
+  min-height: 96px;
+  margin: 14px 0 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--sunk);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-3);
+  max-width: 52ch;
+}
+
 /* What the interface is allowed to do, said where it stops being obvious. */
 .grp-rule {
   display: flex;

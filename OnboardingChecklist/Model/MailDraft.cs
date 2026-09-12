@@ -7,16 +7,16 @@ public class MailDraft
     public string Subject { get; set; } = "";
     public string Note { get; set; } = "";
 
-    /// A send-out goes to one list, or to two. Never none — a send with no list
-    /// has nobody to go to — and never three: past two, nobody can hold in their
-    /// head who is about to get a mail.
+    /// A send-out goes to one list, or to two. Never three: past two, nobody can
+    /// hold in their head who is about to get a mail. None is allowed while you
+    /// are still choosing — a control that refuses to let go of its own default
+    /// is a control you have to fight — and the send itself is what insists on
+    /// at least one.
     public const int MaxLists = 2;
 
     private readonly List<Group> lists = [MarketingGroup.Lists[0]];
 
     public IReadOnlyList<Group> Lists => lists;
-
-    public Group List => lists[0];
 
     public bool Chosen(Group list) => lists.Any(l => l.Name == list.Name);
 
@@ -56,23 +56,14 @@ public class MailDraft
         NotifyChanged();
     }
 
-    /// Click a list that is already on and it comes off; click another and it
-    /// joins — up to two. The last one cannot come off: that would leave the
-    /// send-out with nobody on it, and the step has no way back from there.
+    /// Click a list that is already on and it comes off — including the last
+    /// one. Swapping one list for another is otherwise add-then-remove, with a
+    /// moment in the middle where the send-out goes to both.
     public void Toggle(Group list)
     {
-        if (Chosen(list))
-        {
-            if (lists.Count > 1) lists.RemoveAll(l => l.Name == list.Name);
-        }
-        else if (RoomForMore)
-        {
-            lists.Add(list);
-        }
-        else
-        {
-            return;
-        }
+        if (Chosen(list)) lists.RemoveAll(l => l.Name == list.Name);
+        else if (RoomForMore) lists.Add(list);
+        else return;
 
         Forget();
         Errors.Remove("recipients");
@@ -164,7 +155,9 @@ public class MailDraft
 
         if (key == "recipients" && Picked.Count == 0)
         {
-            Errors["recipients"] = "Vælg mindst én modtager.";
+            Errors["recipients"] = lists.Count == 0
+                ? "Vælg den liste, udsendelsen skal gå til."
+                : "Vælg mindst én modtager.";
             return false;
         }
 

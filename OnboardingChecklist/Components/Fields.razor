@@ -39,9 +39,13 @@
                will not take is a puzzle; two ticked cards and this line is an
                instruction. *@
             <p class="grp-rule">
-                @if (S.RoomForMore)
+                @if (S.Lists.Count == 0)
                 {
-                    <text>Du kan vælge én liste mere.</text>
+                    <text>Vælg den liste, udsendelsen skal gå til — op til @MailDraft.MaxLists.</text>
+                }
+                else if (S.RoomForMore)
+                {
+                    <text>Du kan vælge én liste mere, eller klikke den valgte fra igen.</text>
                 }
                 else
                 {
@@ -116,6 +120,17 @@
             }
         </div>
 
+        @if (S.Lists.Count == 0)
+        {
+            @* Not an error — nothing has gone wrong, the question is simply
+               still open. It says what belongs here and how to fill it. *@
+            <p class="pick-none-yet">
+                Ingen liste valgt endnu. Vælg en ovenfor, så står modtagerne her
+                med den prisliste, hver af dem får.
+            </p>
+        }
+        else
+        {
         <p class="pick-count">
             <span>@S.Picked.Count af @S.People.Length personer med</span>
             <span class="pick-count-s">Klik en række for at se prislisten</span>
@@ -174,6 +189,8 @@
                 }
             </tbody>
         </table>
+
+        }
 
         @if (S.Errors.TryGetValue("recipients", out var rcpErr))
         {
@@ -263,6 +280,7 @@
         S.Lists.Where(l => !MostUsed.Any(m => m.Name == l.Name))
             .Concat(MostUsed)
             .Take(3);
+
 
     /// A card or row that cannot take a click: the second list is chosen, and
     /// this is not one of them. Told, not hidden — the rule line says why.
@@ -377,7 +395,7 @@
         focusWanted = $"grp-card-{(index + step + count) % count}";
     }
 
-    private bool AllPicked => S.People.All(p => S.Picked.Contains(p.Email));
+    private bool AllPicked => S.People.Length > 0 && S.People.All(p => S.Picked.Contains(p.Email));
 
     /// Which of the chosen lists this person came in on. "Begge" rather than
     /// both names: the names are on the cards two rows up.
