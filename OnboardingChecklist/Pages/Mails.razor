@@ -80,14 +80,10 @@
                                                 @order.Desc
                                             </button>
 
-                                            @if (col.Filter is { } heading)
+                                            @if (col.Filter)
                                             {
                                                 var shown = Shown(col.Key).ToArray();
                                                 <div class="t-menu-filter">
-                                                    @if (heading.Length > 0)
-                                                    {
-                                                        <span class="t-menu-head">@heading</span>
-                                                    }
                                                     @* The field shortens this list and nothing else — the
                                                        table answers to the boxes, as in a spreadsheet. *@
                                                     <div class="t-find">
@@ -203,17 +199,15 @@
 </div>
 
 @code {
-    /// A column with Filter set offers one, and the string heads its list —
-    /// empty where the values say plainly enough what they are. "Gik til" on
-    /// Modtagere earns its line: a send reaches many customers, so the value
-    /// sits inside the row rather than in the cell.
-    private record Col(string Key, string Label, bool Num = false, string? Filter = null);
+    /// A filtering column lists its own values, and they head nothing: the
+    /// references, the subjects and the companies say what they are.
+    private record Col(string Key, string Label, bool Num = false, bool Filter = false);
 
     private static readonly Col[] Columns =
     [
-        new("ref", "Reference", Filter: ""),
-        new("subject", "Emne", Filter: ""),
-        new("recipients", "Modtagere", true, "Gik til"),
+        new("ref", "Reference", Filter: true),
+        new("subject", "Emne", Filter: true),
+        new("recipients", "Modtagere", true, true),
         new("total", "I alt", true),
         new("sent", "Sendt", true),
     ];
