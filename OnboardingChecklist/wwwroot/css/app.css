@@ -1436,12 +1436,6 @@ body {
 /* ============================================================
    RECIPIENT PICKER — the marketing group
    ============================================================ */
-.pick { list-style: none; margin: 0 0 4px; padding: 0; }
-
-/* The list rows carry the same shape as the people below them, so the step
-   reads as one choice followed by its consequence. */
-.pick-lists { margin-bottom: 14px; }
-
 .pick-count {
   display: flex;
   align-items: baseline;
@@ -1456,36 +1450,98 @@ body {
 }
 .pick-count-s { font-size: 12px; font-weight: 400; color: var(--ink-3); }
 
-/* The list picker: one field that says which list, and a panel that searches
-   a hundred of them. Same language as the table's column menus. */
+/* The list picker: the three lists this workspace lives in, and a sheet that
+   searches the hundred others. Same language as the table's column menus. */
 .grp { position: relative; margin-bottom: 14px; }
 
-.grp-pick {
+/* The three that answer most days, with the numbers that earn them the
+   place. One control, not three: Tab reaches the group, arrows move inside. */
+.grp-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .grp-cards { grid-template-columns: 1fr; } }
+
+.grp-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
-  min-height: 56px;
-  padding: 8px 11px;
+  gap: 2px;
+  min-height: 92px;
+  padding: 13px 14px;
   border: 1px solid var(--line-2);
-  border-radius: 10px;
+  border-radius: 11px;
   background: var(--surface);
   font: inherit;
   text-align: left;
   cursor: pointer;
   transition: border-color 130ms ease, background-color 130ms ease;
 }
-.grp-pick:hover { background: var(--sunk); }
-.grp-pick[aria-expanded="true"] { border-color: var(--accent); }
-.grp-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.grp-chev { display: inline-flex; color: var(--ink-3); }
-.grp-pick[aria-expanded="true"] .grp-chev svg { transform: rotate(180deg); }
+.grp-card:hover { background: var(--sunk); }
+.grp-card[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.grp-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.grp-card-n { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; }
+/* Reserved, so the name doesn't step sideways when the choice moves. */
+.grp-card-tick { display: flex; flex: none; width: 12px; color: var(--accent); }
+.grp-card-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grp-card-s { font-size: 12px; color: var(--ink-3); }
+.grp-card-sum { margin-top: auto; font-size: 13px; font-variant-numeric: tabular-nums; }
+.grp-card-u { font-size: 11px; color: var(--ink-3); }
+
+/* The hundred others are the exception, and read as one: dashed until you
+   reach for it. */
+.grp-all {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px dashed var(--line-2);
+  border-radius: 9px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: border-color 130ms ease, background-color 130ms ease, color 130ms ease;
+}
+.grp-all:hover { border-style: solid; background: var(--sunk); color: var(--ink-1); }
+.grp-all:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.grp-all[aria-expanded="true"] { border-style: solid; color: var(--ink-1); }
+@media (pointer: coarse) { .grp-all { min-height: 44px; } }
 
 .grp-menu { top: calc(100% + 6px); left: 0; width: 100%; padding: 6px 0 0; z-index: 7; }
 .grp-scroll { max-height: 330px; overflow-y: auto; padding-bottom: 6px; }
 
 .grp-row { min-height: 44px; }
+/* Where the arrow keys are standing — not what is chosen, which is the tick.
+   Marked on the leading edge, never with weight, which would reflow the row. */
+.grp-row[data-cursor] { background: var(--hover); box-shadow: inset 2px 0 0 var(--accent); }
+
+/* The keys that make a hundred rows walkable. No keyboard, no hints. */
+.grp-keys {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: 8px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--sunk);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.grp-keys kbd {
+  display: inline-block;
+  min-width: 17px;
+  margin-right: 4px;
+  padding: 1px 4px;
+  border: 1px solid var(--line-2);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 11px;
+  line-height: 14px;
+  text-align: center;
+  color: var(--ink-2);
+}
+@media (pointer: coarse) { .grp-keys { display: none; } }
 .grp-row-txt { display: grid; min-width: 0; }
 .grp-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .grp-row-s { font-size: 12px; color: var(--ink-3); }
@@ -1518,33 +1574,6 @@ body {
 .pick-t tbody tr:not([data-on]) td { color: var(--ink-3); }
 @media (pointer: coarse) { .pick-t td { padding-block: 13px; } }
 
-.pick-row input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.pick-txt { min-width: 0; }
-.pick-name {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pick-co {
-  display: block;
-  margin-top: 1px;
-  font-size: 12.5px;
-  color: var(--ink-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pick-sum { font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pick-none { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
 
 /* ============================================================

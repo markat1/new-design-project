@@ -8,18 +8,36 @@
 
     @if (TaskKey == "recipients")
     {
-        @* At three lists a row each was right; at a hundred the choice is a field
-           you search. Recently used first, because that answers it most days. *@
+        @* Three lists answer this on most days, so they are on screen with the
+           numbers that earn them the place — choosing one is a click, not a
+           search. The other hundred are the exception, and sit behind one
+           button. *@
         <div class="grp">
-            <button type="button" class="grp-pick" id="grp-pick"
+            <div class="grp-cards" role="radiogroup" aria-label="Mest brugte marketinglister">
+                @foreach (var (g, i) in Cards.Select((g, i) => (g, i)))
+                {
+                    var group = g;
+                    var on = S.List.Name == group.Name;
+
+                    <button type="button" class="grp-card" role="radio" id="grp-card-@i"
+                            aria-checked="@(on ? "true" : "false")" tabindex="@(on ? 0 : -1)"
+                            @onclick="() => Pick(group)" @onkeydown="e => CardKey(e, i)">
+                        <span class="grp-card-n">
+                            <span class="grp-card-tick" aria-hidden="true">@if (on) { @Icons.TickSm }</span>
+                            <span class="grp-card-name">@group.Name</span>
+                        </span>
+                        <span class="grp-card-s">@group.People.Length personer · @group.Customers kunder</span>
+                        <span class="grp-card-sum num">
+                            @group.Total.ToString("N0")<span class="grp-card-u">@Used(group)</span>
+                        </span>
+                    </button>
+                }
+            </div>
+
+            <button type="button" class="grp-all" id="grp-all"
                     aria-haspopup="dialog" aria-expanded="@(listOpen ? "true" : "false")"
                     @onclick="ToggleLists" @onkeydown="TriggerKey">
-                <span class="pick-txt">
-                    <span class="pick-name">@S.List.Name</span>
-                    <span class="pick-co">@S.List.People.Length personer · @S.List.Customers kunder</span>
-                </span>
-                <span class="pick-sum num">@S.List.Total.ToString("N0")</span>
-                <span class="grp-chev" aria-hidden="true">@Icons.Chevron</span>
+                @Icons.Search Alle @MarketingGroup.Lists.Length lister
             </button>
 
             @if (listOpen)
@@ -35,50 +53,44 @@
                         <span class="t-find-ico">@Icons.Search</span>
                         <input class="t-find-input" type="search" placeholder="Søg i lister, personer og kunder"
                                autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true"
-                               value="@listFind" @oninput="e => listFind = e.Value?.ToString() ?? string.Empty" />
+                               value="@listFind" @oninput="e => FindChanged(e.Value?.ToString() ?? string.Empty)" />
                         @if (listFind.Length > 0)
                         {
                             <button type="button" class="t-find-x" aria-label="Ryd søgning"
-                                    @onclick="() => listFind = string.Empty">@Icons.X</button>
+                                    @onclick="() => FindChanged(string.Empty)">@Icons.X</button>
                         }
                     </div>
 
-                    <div class="grp-scroll">
-                        @{ var hits = MailDraft.Search(listFind).ToArray(); }
-                        @if (listFind.Trim().Length == 0)
-                        {
-                            <span class="t-menu-head">Mest brugt</span>
-                            @foreach (var g in MostUsed)
-                            {
-                                @ListRow(g, Sends(g))
-                            }
-                            <span class="t-menu-head">Alle lister · @MarketingGroup.Lists.Length</span>
-                            @foreach (var g in MarketingGroup.Lists.OrderBy(l => l.Name, StringComparer.CurrentCulture))
-                            {
-                                @ListRow(g, null)
-                            }
-                        }
-                        else if (hits.Length == 0)
+                    <div class="grp-scroll" role="listbox" aria-label="Marketinglister">
+                        @{ var rows = Rows(); }
+                        @if (rows.Length == 0)
                         {
                             <p class="t-menu-none">Ingen lister med "@listFind.Trim()"</p>
                         }
                         else
                         {
-                            <span class="t-menu-head">@hits.Length @(hits.Length == 1 ? "liste" : "lister")</span>
-                            @foreach (var g in hits)
+                            <span class="t-menu-head">
+                                @(listFind.Trim().Length == 0
+                                    ? $"Alle lister · {rows.Length}"
+                                    : $"{rows.Length} {(rows.Length == 1 ? "liste" : "lister")}")
+                            </span>
+                            @foreach (var (g, i) in rows.Select((g, i) => (g, i)))
                             {
-                                @ListRow(g, null)
+                                @ListRow(g, i == cursor)
                             }
                         }
                     </div>
+
+                    @* The keys are here because this list is a hundred long:
+                       reaching row sixty by Tab is not a path anybody takes. *@
+                    <p class="grp-keys">
+                        <span><kbd>↑</kbd><kbd>↓</kbd> flyt</span>
+                        <span><kbd>↵</kbd> vælg</span>
+                        <span><kbd>esc</kbd> luk</span>
+                    </p>
                 </div>
             }
         </div>
-
-        @if (listOpen)
-        {
-            <div class="t-backdrop" @onclick="CloseLists"></div>
-        }
 
         <p class="pick-count">
             <span>@S.Picked.Count af @S.List.People.Length personer med</span>
@@ -185,7 +197,9 @@
     private string listFind = "";
     private ElementReference listMenu;
     private bool focusFind;
-    private bool focusBack;
+    private string? focusWanted;
+    private int cursor;
+    private bool showCursor;
 
     /// The lists this workspace actually sends to, most first. Use, not order:
     /// the one you sent to yesterday is not the one you send to every week.
@@ -201,15 +215,33 @@
 
     private int Sends(Group group) => Store.All.Count(m => m.List == group.Name);
 
-    private RenderFragment ListRow(Group group, int? sends) =>
-        @<button type="button" class="t-menu-item grp-row" aria-pressed="@(S.List.Name == group.Name ? "true" : "false")"
+    private string Used(Group group) =>
+        Sends(group) is var n && n > 0 ? $" · brugt {n} {(n == 1 ? "gang" : "gange")}" : "";
+
+    /// The three on screen. The chosen list is always one of them, even when it
+    /// came from the long tail — otherwise picking it would make it vanish.
+    private IEnumerable<Group> Cards =>
+        MostUsed.Any(g => g.Name == S.List.Name)
+            ? MostUsed
+            : new[] { S.List }.Concat(MostUsed).Take(3);
+
+    /// What the sheet is showing: the search's hits, or every list by name.
+    private Group[] Rows() =>
+        listFind.Trim().Length > 0
+            ? MailDraft.Search(listFind).ToArray()
+            : MarketingGroup.Lists.OrderBy(l => l.Name, StringComparer.CurrentCulture).ToArray();
+
+    private RenderFragment ListRow(Group group, bool at) =>
+        @<button type="button" class="t-menu-item grp-row" role="option" id="@(at ? "grp-row-at" : null)"
+                 data-cursor="@(at ? "" : null)"
+                 aria-selected="@(S.List.Name == group.Name ? "true" : "false")"
                  @onclick="() => Pick(group)">
             <span class="t-menu-ico">@if (S.List.Name == group.Name) { @Icons.TickSm }</span>
             <span class="grp-row-txt">
                 <span class="grp-row-name">@group.Name</span>
-                <span class="grp-row-s">
-                    @group.People.Length personer · @group.Customers kunder@(sends is > 0 ? $" · brugt {sends} {(sends == 1 ? "gang" : "gange")}" : "")
-                </span>
+                @* Parenthesised: after a word, a bare @ reads as an email address
+                   to Razor and lands in the page as text. *@
+                <span class="grp-row-s">@group.People.Length personer · @group.Customers kunder@(Used(group))</span>
             </span>
             <span class="grp-row-sum num">@group.Total.ToString("N0")</span>
         </button>;
@@ -218,6 +250,7 @@
     {
         listOpen = !listOpen;
         focusFind = listOpen;
+        cursor = 0;
         if (!listOpen) listFind = "";
     }
 
@@ -227,7 +260,15 @@
 
         listOpen = false;
         listFind = "";
-        focusBack = true;
+        focusWanted = "grp-all";
+    }
+
+    /// Typing changes what the list holds, so the keyboard's place goes back to
+    /// the top rather than pointing at whatever now happens to sit at row nine.
+    private void FindChanged(string word)
+    {
+        listFind = word;
+        cursor = 0;
     }
 
     private async Task Pick(Group group)
@@ -245,17 +286,43 @@
         if (e.Key == "Escape") CloseLists();
     }
 
-    /// Escape closes it; Enter takes the first list the search found, which is
-    /// the one the eye is already on.
+    /// Escape closes it; the arrows walk the list and Enter takes the row they
+    /// are standing on — a hundred rows is too many to reach by Tab.
     private async Task ListKey(KeyboardEventArgs e)
     {
         if (e.Key == "Escape") { CloseLists(); return; }
 
-        if (e.Key == "Enter" && listFind.Trim().Length > 0
-            && MailDraft.Search(listFind).FirstOrDefault() is { } first)
+        var rows = Rows();
+        if (rows.Length == 0) return;
+
+        switch (e.Key)
         {
-            await Pick(first);
+            case "ArrowDown": cursor = Math.Min(cursor + 1, rows.Length - 1); showCursor = true; break;
+            case "ArrowUp": cursor = Math.Max(cursor - 1, 0); showCursor = true; break;
+            case "Home": cursor = 0; showCursor = true; break;
+            case "End": cursor = rows.Length - 1; showCursor = true; break;
+            case "Enter": await Pick(rows[cursor]); break;
         }
+    }
+
+    /// The three cards are one control, as a radio group is: Tab reaches the
+    /// group, the arrows move inside it.
+    private async Task CardKey(KeyboardEventArgs e, int index)
+    {
+        var cards = Cards.ToArray();
+
+        var step = e.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => 1,
+            "ArrowLeft" or "ArrowUp" => -1,
+            _ => 0,
+        };
+
+        if (step == 0) return;
+
+        var next = (index + step + cards.Length) % cards.Length;
+        focusWanted = $"grp-card-{next}";
+        await Pick(cards[next]);
     }
 
     private bool AllPicked => S.List.People.All(p => S.Picked.Contains(p.Email));
@@ -295,10 +362,16 @@
 
     protected override async Task OnAfterRenderAsync(bool first)
     {
-        if (focusBack)
+        if (focusWanted is { } id)
         {
-            focusBack = false;
-            await JS.InvokeVoidAsync("app.focusId", "grp-pick");
+            focusWanted = null;
+            await JS.InvokeVoidAsync("app.focusId", id);
+        }
+
+        if (showCursor)
+        {
+            showCursor = false;
+            await JS.InvokeVoidAsync("app.showRow", "grp-row-at");
         }
 
         if (focusFind)

@@ -30,6 +30,12 @@ window.app = {
     requestAnimationFrame(() => document.getElementById(id)?.focus({ preventScroll: true }));
   },
 
+  // The arrow keys walk a hundred-row list, and the row they are standing on
+  // has to stay in sight — 'nearest' scrolls the list, never the page.
+  showRow(id) {
+    document.getElementById(id)?.scrollIntoView({ block: 'nearest' });
+  },
+
   // The tab underline travels from the tab you left to the one you opened. It
   // is measured here because only the browser knows how wide a label is; the
   // move itself is a CSS transition on transform, so nothing renders per frame.
