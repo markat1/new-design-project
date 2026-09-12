@@ -329,18 +329,24 @@
     private bool asc;
     private string? picked;
 
-    /// A quote sent from the other page arrives with its row already chosen, so
-    /// the reader sees what they just sent instead of hunting for it.
+    /// The list opens on something. What you just sent, if you came straight
+    /// from sending it; otherwise the newest send-out, because an empty detail
+    /// pane is half a screen asking a question it already knows the answer to.
     protected override void OnInitialized()
     {
         Store.Changed += StateHasChanged;
 
-        if (App.SelectOnArrival is { } reference)
-        {
-            picked = reference;
-            App.SelectOnArrival = null;
-        }
+        picked = App.SelectOnArrival ?? Newest?.Ref;
+        App.SelectOnArrival = null;
     }
+
+    /// Newest means most recently sent. A draft has no date to be newest by —
+    /// it is what you are still writing, not what went out last.
+    private Mail? Newest =>
+        Store.All.Where(m => m.Status == MailStatus.Sent)
+                 .OrderByDescending(m => m.Sent, StringComparer.Ordinal)
+                 .FirstOrDefault()
+        ?? Store.All.FirstOrDefault();
 
     public void Dispose() => Store.Changed -= StateHasChanged;
 
@@ -411,10 +417,11 @@
 
 
     /// A selection the filters have hidden would leave the detail pane showing
-    /// a send the list no longer offers.
+    /// a send the list no longer offers. It moves to the top of what is left
+    /// rather than to nothing — the same reason the list opens on a row.
     private void KeepSelectionVisible()
     {
-        if (picked is not null && !Rows.Any(r => r.Ref == picked)) picked = null;
+        if (picked is not null && !Rows.Any(r => r.Ref == picked)) picked = Rows.FirstOrDefault()?.Ref;
     }
 
     private void RowKey(KeyboardEventArgs e, string reference)
