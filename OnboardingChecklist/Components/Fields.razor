@@ -40,21 +40,34 @@
                 var on = S.Picked.Contains(person.Email);
                 var total = Accounting.SheetFor(person.Company).Sum(l => l.Total);
                 <li @key="person.Email">
-                    <label class="pick-row" data-on="@(on ? "" : null)">
-                        <input type="checkbox" checked="@on" @onchange="() => Toggle(person.Email)" />
-                        <span class="pick-txt">
-                            <span class="pick-name" title="@person.Name">@person.Name</span>
-                            <span class="pick-co" title="@person.Company">@person.Company</span>
-                        </span>
-                        @if (person.HasSheet)
-                        {
-                            <span class="pick-sum num">@total.ToString("N0")</span>
-                        }
-                        else
-                        {
-                            <span class="pick-none">Ingen prisliste</span>
-                        }
-                    </label>
+                    @* Two jobs, two targets: the box decides whether they are on
+                       the send, the row shows what they would get. Double click
+                       toggles as well, for the hand that expects it — but never
+                       as the only way, since a keyboard and a finger have none. *@
+                    <div class="pick-row" data-on="@(on ? "" : null)" data-shown="@(S.Show?.Email == person.Email ? "" : null)"
+                         @ondblclick="() => Toggle(person.Email)">
+                        <label class="pick-check">
+                            <input type="checkbox" checked="@on" @onchange="() => Toggle(person.Email)" />
+                            <span class="sr-only">Med i udsendelsen: @person.Name</span>
+                        </label>
+
+                        <button type="button" class="pick-open" disabled="@(!on || !person.HasSheet)"
+                                title="@(on && person.HasSheet ? "Vis prislisten" : null)"
+                                @onclick="() => S.ShowSheet(person.Email)">
+                            <span class="pick-txt">
+                                <span class="pick-name" title="@person.Name">@person.Name</span>
+                                <span class="pick-co" title="@person.Company">@person.Company</span>
+                            </span>
+                            @if (person.HasSheet)
+                            {
+                                <span class="pick-sum num">@total.ToString("N0")</span>
+                            }
+                            else
+                            {
+                                <span class="pick-none">Ingen prisliste</span>
+                            }
+                        </button>
+                    </div>
                 </li>
             }
         </ul>

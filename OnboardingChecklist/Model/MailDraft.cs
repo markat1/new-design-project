@@ -19,6 +19,18 @@ public class MailDraft
     public HashSet<string> Picked =>
         picks.TryGetValue(List.Name, out var set) ? set : picks[List.Name] = [.. List.People.Select(p => p.Email)];
 
+    /// The person the preview has been asked to show, with a nonce so asking
+    /// for the same one twice still counts as asking.
+    public (string Email, int Nonce)? Show { get; private set; }
+
+    private int asks;
+
+    public void ShowSheet(string email)
+    {
+        Show = (email, ++asks);
+        NotifyChanged();
+    }
+
     public void Choose(Group list)
     {
         List = list;
@@ -98,6 +110,9 @@ public class MailDraft
     {
         if (!Picked.Remove(email)) Picked.Add(email);
         Errors.Remove("recipients");
+
+        // Somebody taken off the send has no sheet in the preview to show.
+        if (Show?.Email == email && !Picked.Contains(email)) Show = null;
     }
 
     public void MarkVisited(string key)
@@ -143,6 +158,7 @@ public class MailDraft
         Note = "";
         picks.Clear();
         List = MarketingGroup.Lists[0];
+        Show = null;
         TouchedNote = false;
         Errors.Clear();
         StepKey = "recipients";

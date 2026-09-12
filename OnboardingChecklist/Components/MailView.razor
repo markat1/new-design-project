@@ -353,6 +353,24 @@
     /// the sheets it now holds.
     [Parameter] public EventCallback SheetEdited { get; set; }
 
+    /// A recipient the other pane has asked to show, and the ask's number so
+    /// that asking twice for the same one still opens it.
+    [Parameter] public (string Email, int Nonce)? Focus { get; set; }
+
+    private int seen;
+
+    protected override void OnParametersSet()
+    {
+        if (Focus is { } ask && ask.Nonce != seen)
+        {
+            seen = ask.Nonce;
+            shown = ask.Email;
+            sheetTab = 0;
+            editing = null;
+            tab = 2;
+        }
+    }
+
     private int tab;
     private string? shown;
     private int sheetTab;
