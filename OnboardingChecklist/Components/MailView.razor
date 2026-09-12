@@ -578,7 +578,7 @@
         value.Trim().Length > 0 ? value : fallback;
 
     private ElementReference tabs;
-    private int marked = -1;
+    private string? marked;
     private ElementReference grid;
     private DotNetObjectReference<MailView>? self;
 
@@ -608,11 +608,13 @@
 
     protected override async Task OnAfterRenderAsync(bool first)
     {
-        // Only when the underline has somewhere to go: this reads layout, and
-        // a sheet being typed into re-renders on every keystroke.
-        if (marked != tab)
+        // The open tab, and the counts that change how wide the tabs are. Not
+        // every render: this reads layout, and a sheet being typed into
+        // re-renders on every keystroke.
+        var stamp = $"{tab}:{M.Recipients.Length}:{M.Companies}";
+        if (marked != stamp)
         {
-            marked = tab;
+            marked = stamp;
             await JS.InvokeVoidAsync("app.tabs.mark", tabs);
         }
 

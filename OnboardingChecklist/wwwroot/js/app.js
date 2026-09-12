@@ -24,11 +24,25 @@ window.app = {
   // move itself is a CSS transition on transform, so nothing renders per frame.
   tabs: {
     mark(bar) {
-      const open = bar?.querySelector('[aria-selected="true"]');
-      if (!open) return;
+      if (!bar) return;
 
-      bar.style.setProperty('--tab-x', open.offsetLeft + 'px');
-      bar.style.setProperty('--tab-w', open.offsetWidth);
+      const place = () => {
+        const open = bar.querySelector('[aria-selected="true"]');
+        if (!open) return;
+
+        bar.style.setProperty('--tab-x', open.offsetLeft + 'px');
+        bar.style.setProperty('--tab-w', open.offsetWidth);
+      };
+
+      // A tab changes width when its count appears or grows, and the line has
+      // to follow — measuring only on a tab switch left it pointing at a width
+      // the tab no longer had.
+      if (!bar.dataset.watched) {
+        bar.dataset.watched = '1';
+        new ResizeObserver(place).observe(bar);
+      }
+
+      place();
     },
   },
 
