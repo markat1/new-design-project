@@ -40,6 +40,10 @@ public record Recipient(string Name, string Email, string Company, QuoteLine[] L
         string.Concat(Name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                           .Take(2).Select(w => char.ToUpperInvariant(w[0])));
 
+    /// The address, not the name: two people can share a name, and a person
+    /// who changes theirs should keep their colour.
+    public int Tone => Avatar.ToneOf(Email);
+
 }
 
 /// One send-out: a single mail to one or two marketing lists, where every

@@ -137,7 +137,7 @@
                             @* Opens the sheet in its own tab rather than under the row,
                                where four columns had to share a strip. *@
                             <button type="button" class="rcp-head" @onclick="() => Show(rec.Email)">
-                                <span class="rcp-av" aria-hidden="true">@rec.Initials</span>
+                                <span class="rcp-av" data-tone="@rec.Tone" aria-hidden="true">@rec.Initials</span>
                                 <span class="rcp-txt">
                                     <span class="rcp-name" title="@rec.Name">@rec.Name</span>
                                     <span class="rcp-co" title="@rec.Company">@rec.Company</span>
@@ -163,7 +163,7 @@
             @if (Current is { } rec)
             {
                 <div class="sheet-for">
-                    <span class="rcp-av" aria-hidden="true">@rec.Initials</span>
+                    <span class="rcp-av" data-tone="@rec.Tone" aria-hidden="true">@rec.Initials</span>
                     <span class="rcp-txt">
                         <span class="rcp-name" title="@rec.Name">@rec.Name</span>
                         <span class="rcp-co" title="@rec.Company">@rec.Company</span>

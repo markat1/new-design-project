@@ -1782,6 +1782,27 @@ body {
   font-weight: 600;
 }
 
+/* Ten colours, dealt by the address so one person is one colour everywhere —
+   Outlook's trick, and the reason the circle is worth looking at at all.
+   
+   Every circle sits at exactly the same chroma (0.035) so they read as one
+   family: at this lightness a hue's ceiling runs from 0.038 (blue) to 0.199
+   (lime), and giving each the same FRACTION of its own ceiling — the usual
+   rule — made the greens five times the blues. The initials do use a
+   fraction, capped, because small text needs the saturation to read as
+   coloured at all. Every pair lands between 5.4:1 and 6.0:1 on its own
+   circle; the lightnesses are fixed, so that holds for any hue added later. */
+.rcp-av[data-tone="0"] { background: oklch(0.935 0.035 259); color: oklch(0.470 0.150 259); }
+.rcp-av[data-tone="1"] { background: oklch(0.935 0.035 292); color: oklch(0.470 0.150 292); }
+.rcp-av[data-tone="2"] { background: oklch(0.935 0.035 325); color: oklch(0.470 0.150 325); }
+.rcp-av[data-tone="3"] { background: oklch(0.935 0.035 8);   color: oklch(0.470 0.150 8); }
+.rcp-av[data-tone="4"] { background: oklch(0.935 0.035 44);  color: oklch(0.470 0.127 44); }
+.rcp-av[data-tone="5"] { background: oklch(0.935 0.035 78);  color: oklch(0.470 0.082 78); }
+.rcp-av[data-tone="6"] { background: oklch(0.935 0.035 128); color: oklch(0.470 0.101 128); }
+.rcp-av[data-tone="7"] { background: oklch(0.935 0.035 163); color: oklch(0.470 0.086 163); }
+.rcp-av[data-tone="8"] { background: oklch(0.935 0.035 196); color: oklch(0.470 0.067 196); }
+.rcp-av[data-tone="9"] { background: oklch(0.935 0.035 228); color: oklch(0.470 0.079 228); }
+
 .rcp-txt { min-width: 0; }
 .rcp-name {
   display: block;
