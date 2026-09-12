@@ -2,7 +2,15 @@
    MATERIALS — restrained default (no project to borrow from)
    ============================================================ */
 :root {
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Segoe UI Variable first, and not for the name: classic Segoe UI has no
+     500 weight at all — Light 300, Semilight 350, Regular 400, Semibold 600,
+     Bold 700 — so the 25 rules in here asking for 500 were quietly rendering
+     as 400 on Windows, and every label that should have read as medium read
+     as body. The variable face has a real 500, and it is drawn with optical
+     sizes, which is what makes small UI text crisp rather than merely small.
+     Windows 10 falls back to Segoe UI, everything else to its own system face. */
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
+          BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
 
   /* The neutrals are warm — one hue, 68°, from the near-black to the page.
      Office's own greys carry that bias, and it is most of why a Windows tool
@@ -71,6 +79,11 @@ body {
   font-family: var(--font);
   color: var(--ink-1);
   background: var(--canvas);
+  /* macOS only, where it thins the strokes. Windows ignores both and keeps
+     its own subpixel rendering, which is why nothing here may sit on a
+     half pixel: the whole type scale below pairs a whole-pixel size with a
+     whole-pixel line-height, or the baselines land between the pixels and
+     the text goes soft. */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -115,7 +128,7 @@ body {
   border-top: 1px solid #fecaca;
   color: var(--danger);
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 18px;
 }
 
 #blazor-error-ui a {
@@ -227,7 +240,7 @@ body {
   min-height: 44px;
   font: inherit;
   font-size: 16px;
-  line-height: 1.4;
+  line-height: 22px;
   color: var(--ink-1);
   background: var(--surface);
   border: 1px solid var(--line-2);
@@ -244,13 +257,13 @@ body {
 .f-input[aria-invalid="true"] { border-color: var(--danger); }
 .f-input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px var(--danger-soft); }
 
-.f-help { font-size: 12.5px; line-height: 1.5; color: var(--ink-3); margin: 6px 0 0; }
+.f-help { font-size: 12px; line-height: 16px; color: var(--ink-3); margin: 6px 0 0; }
 .f-err {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12.5px;
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 16px;
   color: var(--danger);
   margin: 6px 0 0;
 }
@@ -280,7 +293,7 @@ body {
   margin: 1px 0 0;
   accent-color: var(--accent);
 }
-.f-radio span { font-size: 14.5px; line-height: 1.4; color: var(--ink-1); }
+.f-radio span { font-size: 14px; line-height: 20px; color: var(--ink-1); }
 .f-radio:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .f-radio:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -298,7 +311,7 @@ body {
 .f-chip-mail {
   flex: 1;
   min-width: 0;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--ink-2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -326,7 +339,7 @@ body {
   border-radius: 10px;
   text-align: center;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 20px;
   color: var(--ink-3);
 }
 
@@ -361,7 +374,7 @@ body {
 .f-switch input:checked + .f-track .f-knob { transform: translateX(15px); }
 .f-switch:has(input:focus-visible) .f-track { outline: 2px solid var(--accent); outline-offset: 2px; }
 .f-sw-title { display: block; font-size: 14px; font-weight: 500; color: var(--ink-1); }
-.f-sw-desc { display: block; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); margin-top: 3px; }
+.f-sw-desc { display: block; font-size: 12px; line-height: 16px; color: var(--ink-3); margin-top: 3px; }
 
 @media (forced-colors: active) {
   .f-input:focus, .t-find-input:focus, .grp-find-input:focus,
@@ -381,7 +394,7 @@ body {
 }
 @keyframes pop { from { opacity: 0; transform: scale(0.82); } }
 .v1-done h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.012em; }
-.v1-done p { margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.v1-done p { margin: 8px 0 0; font-size: 14px; line-height: 22px; color: var(--ink-2); }
 
 .recap {
   margin: 22px 0 0;
@@ -427,7 +440,7 @@ body {
 }
 
 .v3-h1 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
-.v3-lede { margin: 8px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); max-width: 56ch; }
+.v3-lede { margin: 8px 0 0; font-size: 15px; line-height: 22px; color: var(--ink-2); max-width: 56ch; }
 
 .v3-meter-bar { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
 .v3-meter-bar i {
@@ -474,7 +487,7 @@ body {
   padding: 2px 6px;
   border-radius: 5px;
   background: var(--press);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.02em;
   color: var(--ink-3);
@@ -499,7 +512,7 @@ body {
    all an entrance needs. */
 @keyframes v3In { from { opacity: 0; transform: translateY(7px); } }
 .v3-panel-h { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
-.v3-panel-s { margin: 7px 0 20px; font-size: 14px; line-height: 1.55; color: var(--ink-2); max-width: 54ch; }
+.v3-panel-s { margin: 7px 0 20px; font-size: 14px; line-height: 22px; color: var(--ink-2); max-width: 54ch; }
 .v3-panel-body { flex: 1; }
 .v3-panel-f {
   display: flex;
@@ -541,7 +554,7 @@ body {
   align-items: center;
   gap: 5px;
   margin-left: auto;
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--ok);
   animation: pop 300ms var(--ease) backwards;
 }
@@ -557,7 +570,7 @@ body {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px -16px rgba(0, 0, 0, 0.16);
 }
 .v3-done h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.015em; }
-.v3-done p { margin: 9px 0 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+.v3-done p { margin: 9px 0 0; font-size: 14px; line-height: 22px; color: var(--ink-2); }
 
 /* ============================================================
    APP SHELL — side menu + one page at a time
@@ -807,7 +820,11 @@ body {
 }
 
 /* ---- list ---- */
-.t { width: 100%; min-width: 660px; table-layout: fixed; border-collapse: collapse; font-size: 14px; }
+/* separate, not collapse: a collapsed border belongs to the table and is split
+   between the two cells that share it, so every row lands on a half pixel and
+   every line of text in it is drawn between the pixels. These cells only ever
+   draw a bottom rule, so there is nothing to collapse in the first place. */
+.t { width: 100%; min-width: 660px; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 14px; }
 .t th:nth-child(1) { width: 118px; }
 .t th:nth-child(3) { width: 116px; }
 .t th:nth-child(4) { width: 116px; }
@@ -963,7 +980,7 @@ body {
   font: inherit;
   /* 13px to sit with the rows around it; 16px on touch, or iOS zooms. */
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 18px;
   color: var(--ink-1);
 }
 @media (pointer: coarse) { .t-find-input { min-height: 44px; font-size: 16px; } }
@@ -1183,12 +1200,13 @@ body {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   text-align: center;
+  line-height: 16px;
 }
 .d-tab[aria-selected="true"] .d-tab-n { background: var(--accent-soft); color: var(--accent); }
 
 .d-panel { animation: v3In 160ms var(--ease) backwards; }
 
-.d-subject { margin: 0 0 18px; font-size: 17px; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; }
+.d-subject { margin: 0 0 18px; font-size: 17px; font-weight: 600; line-height: 24px; letter-spacing: -0.01em; }
 
 .d-meta { margin: 0 0 22px; display: grid; gap: 11px; }
 .d-meta div { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 10px; align-items: baseline; }
@@ -1204,7 +1222,7 @@ body {
   padding-top: 18px;
   border-top: 1px solid var(--line);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 20px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -1470,9 +1488,9 @@ body {
   color: var(--ink-3);
 }
 .d-empty-h { margin: 6px 0 0; font-size: 14px; font-weight: 500; color: var(--ink-1); }
-.d-empty-b { margin: 0; font-size: 13px; color: var(--ink-2); max-width: 34ch; line-height: 1.5; }
+.d-empty-b { margin: 0; font-size: 13px; color: var(--ink-2); max-width: 34ch; line-height: 20px; }
 
-.f-textarea { min-height: 96px; resize: vertical; line-height: 1.5; padding: 10px 11px; }
+.f-textarea { min-height: 96px; resize: vertical; line-height: 24px; padding: 10px 11px; }
 
 /* ============================================================
    RECIPIENT PICKER — the marketing group
@@ -1503,7 +1521,9 @@ body {
 .grp-card {
   display: grid;
   gap: 2px;
-  min-height: 92px;
+  /* 13 + 20 + 2 + 16 + 2 + 20 + 13 = 86, on purpose: a min-height taller than
+     the content leaves the grid a remainder to split, and half of an odd
+     remainder is a half pixel under the text. */
   padding: 13px 14px;
   border: 1px solid var(--line-2);
   border-radius: 11px;
@@ -1532,7 +1552,7 @@ body {
   margin-bottom: 14px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--ink-3);
 }
 .d-as-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1555,7 +1575,7 @@ body {
   border-bottom: 2px solid transparent;
   background: transparent;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   /* Never bolder when chosen: the strip would resize under the pointer. */
   font-weight: 500;
   color: var(--ink-3);
@@ -1572,7 +1592,7 @@ body {
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--hover);
-  font-size: 11.5px;
+  font-size: 11px;
   line-height: 16px;
   text-align: center;
   color: var(--ink-3);
@@ -1593,7 +1613,7 @@ body {
 .send-sum {
   margin: 0 0 4px;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 22px;
   color: var(--ink-2);
 }
 .send-sum b { font-weight: 600; color: var(--ink-1); font-variant-numeric: tabular-nums; }
@@ -1613,7 +1633,7 @@ body {
   border-radius: 10px;
   background: var(--sunk);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 20px;
   color: var(--ink-3);
   max-width: 52ch;
 }
@@ -1625,16 +1645,17 @@ body {
   gap: 4px 8px;
   margin: 8px 0 0;
   font-size: 12px;
+  line-height: 16px;
   color: var(--ink-3);
 }
 .grp-rule-b { color: var(--ink-2); }
 
-.grp-card-n { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; }
+.grp-card-n { display: flex; align-items: center; gap: 6px; font-size: 14px; line-height: 20px; font-weight: 500; }
 /* Reserved, so the name doesn't step sideways when the choice moves. */
 .grp-card-tick { display: flex; flex: none; width: 12px; color: var(--accent); }
 .grp-card-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.grp-card-s { font-size: 12px; color: var(--ink-3); }
-.grp-card-sum { margin-top: auto; font-size: 13px; font-variant-numeric: tabular-nums; }
+.grp-card-s { font-size: 12px; line-height: 16px; color: var(--ink-3); }
+.grp-card-sum { margin-top: auto; font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; }
 .grp-card-u { font-size: 11px; color: var(--ink-3); }
 
 /* The hundred others are reached by the field itself, not by a button in
@@ -1661,7 +1682,7 @@ body {
   font: inherit;
   /* 13px next to the cards; 16px on touch, or iOS zooms the page on focus. */
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 18px;
   color: var(--ink-1);
   transition: border-color 130ms ease;
 }
@@ -1717,7 +1738,7 @@ body {
 
 /* The people, as a table: columns run down, and the header carries the one
    control a row of cards had nowhere to put — all of them at once. */
-.pick-t { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 14px; }
+.pick-t { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 14px; }
 .pick-t th {
   padding: 0 10px 8px;
   border-bottom: 1px solid var(--line);
@@ -1745,7 +1766,7 @@ body {
 .pick-t tbody tr:not([data-on]) td { color: var(--ink-3); }
 @media (pointer: coarse) { .pick-t td { padding-block: 13px; } }
 
-.pick-none { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.pick-none { font-size: 12px; line-height: 16px; color: var(--ink-3); white-space: nowrap; }
 
 /* ============================================================
    RECIPIENTS IN THE DETAIL PANE
