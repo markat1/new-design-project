@@ -612,6 +612,9 @@ body {
 .side-step {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
+  /* The mark belongs to the row, not to its first line: centred against both
+     lines it reads as one item, where top-aligned it read as a bullet. */
+  align-items: center;
   gap: 6px;
   width: 100%;
   padding: 7px 8px;
@@ -623,6 +626,9 @@ body {
   cursor: pointer;
   transition: background-color 130ms ease;
 }
+/* A pixel up from the geometric middle: the first line is the heavier of the
+   two, and the second line's descenders hang below the ink the eye measures. */
+.side-step .v3-dot { margin-top: -1px; }
 .side-step:hover { background: #f6f6f7; }
 .side-step:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 .side-step[data-active] { background: var(--accent-soft); }
