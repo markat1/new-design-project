@@ -14,19 +14,31 @@
 
         <div class="split-list split-form">
 
-            @* Sits on the card rather than in the header's empty corner, where it
-               lined up with nothing. Outside the panel, so it doesn't re-animate
-               on every step change with the keyed panel. *@
-            <div class="v3-progress">
-                <div class="v3-progress-top">
-                    <span class="v3-progress-n">@S.DoneCount af @Content.Tasks.Length udfyldt</span>
-                    <span class="v3-progress-pct">@Pct%</span>
-                </div>
-                <div class="v3-meter-bar" role="progressbar" aria-label="Fremdrift"
-                     aria-valuemin="0" aria-valuemax="@Content.Tasks.Length" aria-valuenow="@S.DoneCount">
-                    <i style="transform:scaleX(@Fraction)"></i>
-                </div>
-            </div>
+            @* The steps across the top, one segment each: which are done, which is
+               open, and a click away from any of them. A bar with a count said
+               how much, never which — and a new draft starts with all three done,
+               so it nearly always said 100%. One blue for done: colour here means
+               state, and a colour per step would mean nothing. *@
+            <nav class="steps-bar" aria-label="Trin i udsendelsen">
+                @foreach (var t in Content.Tasks)
+                {
+                    var task = t;
+                    var done = S.IsDone(task.Key);
+                    <button type="button" class="steps-bar-b" @key="task.Key"
+                            data-done="@(done ? "" : null)"
+                            aria-current="@(S.StepKey == task.Key ? "step" : null)"
+                            @onclick="() => S.Open(task.Key)">
+                        <span class="steps-bar-bar" aria-hidden="true"></span>
+                        <span class="steps-bar-l">
+                            @if (done)
+                            {
+                                @Icons.TickSm
+                            }
+                            @task.Label<span class="sr-only">, @(done ? "udfyldt" : "ikke udfyldt")</span>
+                        </span>
+                    </button>
+                }
+            </nav>
 
             @* Only the step content scrolls. The footer is a sibling band, exactly as
                .t-foot is on the list page — a sticky footer inside the scroller
@@ -98,8 +110,6 @@
     private string? justSaved;
 
     private TaskDef Task => Content.Task(S.StepKey);
-    private int Pct => (int)Math.Round(S.DoneCount / (double)Content.Tasks.Length * 100);
-    private double Fraction => S.DoneCount / (double)Content.Tasks.Length;
 
     // Linear neighbours. The sidebar still allows any order; these walk the list.
     private int Index => Content.IndexOf(S.StepKey);

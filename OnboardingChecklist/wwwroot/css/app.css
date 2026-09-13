@@ -173,7 +173,6 @@ body {
 
   /* Purely decorative movement: no substitute needed. */
   .side-step[data-nudge] { animation: none !important; }
-  .v3-meter-bar i { transition: none !important; }
 }
 
 /* ---------- shared controls (used by Stepper + Checklist) ---------- */
@@ -452,37 +451,9 @@ body {
 /* ============================================================
    VARIANT 3 — CHECKLIST (master–detail)
    ============================================================ */
-.v3-progress { max-width: 620px; margin-bottom: 14px; }
-.v3-progress-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.v3-progress-n { font-size: 13px; font-weight: 500; color: var(--ink-1); font-variant-numeric: tabular-nums; }
-/* Right-aligned, so 0% -> 25% -> 100% grows leftwards and shifts on every step
-   change. tabular-nums keeps digits even width; this reserves room for four. */
-.v3-progress-pct {
-  min-width: 4ch;
-  text-align: right;
-  font-size: 12px;
-  color: var(--ink-3);
-  font-variant-numeric: tabular-nums;
-}
-
 .v3-h1 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
 .v3-lede { margin: 8px 0 0; font-size: 15px; line-height: 22px; color: var(--ink-2); max-width: 56ch; }
 
-.v3-meter-bar { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
-.v3-meter-bar i {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  transform-origin: left center;
-  /* A short bar travelling a short distance; 480ms read as lag. */
-  transition: transform 260ms var(--ease);
-}
 
 @keyframes nudge {
   0%, 100% { transform: translateX(0); }
@@ -830,12 +801,56 @@ body {
   min-height: 0;
   background: var(--surface);
 }
-.split-form .v3-progress {
+/* The steps across the top: one column per step, bar and name one target at
+   least 40 tall. Done is the blue bar and a tick; the open step's name is
+   blue; a bar still to do darkens under the pointer. */
+.split-form .steps-bar {
   flex: none;
-  max-width: none;
-  margin: 0;
-  padding: 12px 24px 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px 24px 8px;
   border-bottom: 1px solid var(--line);
+}
+.steps-bar-b {
+  min-width: 0;
+  min-height: 40px;
+  padding: 6px 0 8px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.steps-bar-bar {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background-color 130ms ease;
+}
+.steps-bar-b[data-done] .steps-bar-bar { background: var(--accent); }
+.steps-bar-l {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 130ms ease;
+}
+.steps-bar-l svg { flex: none; color: var(--accent); }
+.steps-bar-b[aria-current] .steps-bar-l { color: var(--accent); }
+.steps-bar-b:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+@media (hover: hover) and (pointer: fine) {
+  .steps-bar-b:not([data-done]):hover .steps-bar-bar { background: var(--line-2); }
+  .steps-bar-b:hover .steps-bar-l { color: var(--ink-1); }
+  .steps-bar-b[aria-current]:hover .steps-bar-l { color: var(--accent); }
 }
 /* One scroller, one fixed band above, one below — the same three parts the
    list page has. The footer used to live inside the scroller held down by

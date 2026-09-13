@@ -49,6 +49,25 @@ Tilstanden står også som skjult tekst i knappen, *"Modtagere, udfyldt"*. Skive
 | **Tal** (1, 2, 3 i en ring) | Tal og farve skulle læses sammen. Blå og grå ring var svære at skelne. |
 | **Ingen markør** | Et trin med en fejl, men med tekst under sig ("Dansk · Svensk · Engelsk"), så udfyldt ud. |
 
+## Båndet over trinnet: klikbare segmenter
+
+Over trinnet står de tre trin som segmenter: en tynd bjælke og navnet under, blå med flueben når trinnet er udfyldt, blå tekst på det åbne trin. Hele kolonnen er en knap, der åbner trinnet.
+
+Før stod der *"3 af 3 udfyldt"*, en procent og én bjælke. Den sagde hvor meget, aldrig hvilke, og en ny kladde starter med alle tre trin udfyldt, så den stod næsten altid på 100 %.
+
+**Én farve.** Farve betyder tilstand i appen: blå er udfyldt og valgt, rød er en fejl, grøn er en besked om, at noget gik godt. En farve pr. trin ville ikke betyde noget, og en rød eller grøn bjælke ville læses som fejl eller kvittering.
+
+| Retning | Hvorfor ikke |
+| --- | --- |
+| **Tæller og bjælke** (som den var) | Sagde ikke hvilke trin, og stod næsten altid på 100 %. |
+| **Segmenter uden klik** | Samme billede, men man kunne ikke gøre noget med det. |
+| **Trinlinje** ("✓ Modtagere › 2 Skabelon › Afsendelse") | Knapper med pile imellem lignede en brødkrumme mere end et forløb. |
+| **Status** ("Klar til at sende" / hvad der mangler) | Siger det vigtigste, men viser ikke trinnene. En mangel før man har trykket Send kan læses som en fejl for tidligt. |
+| **Intet bånd** | Uden sidemenuen i syne, fx på en smal skærm, var der intet overblik. |
+| **Blokke** (navnet i feltet) | Tungere, og felter der ligner knapper. |
+| **Med svar** (trinnets svar under bjælken) | Højest, og gentog sidemenuens tekst. |
+| **Pile** (som Microsoft Dynamics) | Den fyldte blå pil konkurrerede med "Gem og fortsæt". |
+
 ## Knappen står øverst
 
 Den blå "Ny udsendelse" står øverst i menuen, med Udsendelser mellem sig og kladden.

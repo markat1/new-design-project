@@ -195,12 +195,16 @@ Hvert mønster er valgt mellem flere byggede alternativer. Foreslå ikke et af d
 - De to ruder følger hinanden begge veje. Et valg i formularen flytter visningen, og en bladring i visningen flytter formularen. De starter i takt.
 - **Fanen i forhåndsvisningen tilhører læseren.** Et klik i formularen ændrer *hvem* der vises, aldrig *hvilken fane*. Kun en fane, der selv er en vælger (Modtagere), må skifte fane ved et klik — og så tilbage til den fane, man kom fra. At lade trinnet bestemme fanen blev prøvet og forkastet: den, der tjekkede prislister, blev revet over på mailen.
 - Afsendelse er trinnet selv, ikke en ekstra knap i sidemenuen.
+- **Båndet over trinnet er klikbare segmenter**, ét pr. trin: en 4px bjælke og navnet under, hele kolonnen er en knap (mindst 40px høj). Udfyldt = blå bjælke og flueben, det åbne trin = blå tekst. Én farve: farve betyder tilstand, ikke hvilket trin. En tæller med procent ("3 af 3 udfyldt") blev forkastet, fordi den aldrig sagde hvilke trin.
 
 **Sidemenu med en kladde (oprettelse + trin):**
 - Navngiv tingen efter det, brugeren laver ("Ny udsendelse"), ikke efter det, den bliver til ("Nye mails"). I Outlook betyder "nye mails" ulæste.
 - Den primære knap står øverst, adskilt fra de rækker, der klikkes på hele tiden. Står den lige over dem, bliver den ramt ved et uheld.
-- Kladden står under listen, den ender i, med emne og størrelse ("Kladde · 8 mails · 7 kunder"). Den vises kun, når brugeren selv har startet den.
-- Kladden og dens trin deler én flade, når den er åben. Uden en fælles flade læses fire rækker med samme kant og afstand som fire ligeværdige ting.
+- Kladden står under listen, den ender i, med emne og størrelse ("Jeres priser for 2027 · Kladde · 8 mails · 7 kunder"). Uden emne hedder den bare "Kladde" — ingen pladsholdertekst som "(intet emne endnu)", før brugeren har udfyldt noget.
+- Kladden i listen og kladden i menuen er den samme. Tegner listen kladdens række fra udkastet, skal de komponenter, der læser listen mange gange (fx kort med "brugt N gange"), have en billig egenskab uden kladden. Se fælden i §10.
+- Trinnene står på en lys flade (`--canvas` med hårstreg over og under) under kladden. Kladden selv står på menuens hvide over fladen — står den på fladen, ligner den et fjerde trin.
+- Trinnene bliver stående, også når listen er åben, så et trin er ét klik væk. På listen er intet trin markeret.
+- Et udfyldt trin har et blåt flueben uden skive. Et trin, der ikke er udfyldt, har ingen markør; teksten under det siger det. Tilstanden står også som skjult tekst til skærmlæsere ("Modtagere, udfyldt").
 - Kun én række er blå. Forælderen til det valgte trin får mørk tekst, ikke farve.
 - Der er kun én kladde. Der spørges kun, når noget går tabt. Spørgsmålet er det, knappen bad om ("Start en ny udsendelse?"), knapperne hedder det, de gør, og fokus starter på den sikre. Brug native `<dialog>` med `showModal()`.
 
