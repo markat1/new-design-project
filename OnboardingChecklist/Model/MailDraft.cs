@@ -301,11 +301,14 @@ public class MailDraft
         && !letters.Keys.Any(Edited)
         && ViaCrm && !SaveLocally && !CopyToMe;
 
-    /// The draft as the side menu names it: its headline, or the fact that it
-    /// has none yet.
-    public string Title => Subject.Trim().Length > 0 ? Subject.Trim() : "(intet emne endnu)";
+    /// The draft's headline once it has one. Until then it is simply "Kladde":
+    /// nothing is written about what is missing before anybody has filled it in.
+    public bool HasTitle => Subject.Trim().Length > 0;
 
-    public string Size => Picked.Count == 0 ? "ingen modtagere endnu"
+    public string Title => HasTitle ? Subject.Trim() : "Kladde";
+
+    /// How big it is, once anybody is on it.
+    public string? Size => Picked.Count == 0 ? null
         : $"{Picked.Count} {(Picked.Count == 1 ? "mail" : "mails")} · {Companies} {(Companies == 1 ? "kunde" : "kunder")}";
 
     /// A draft saved in the list, taken up where it was left: its lists, the

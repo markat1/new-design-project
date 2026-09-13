@@ -493,11 +493,10 @@ body {
 /* A step's state: the tick itself, in the blue, drawn at the weight of the
    13px label beside it — no disc. Three filled discs were the heaviest thing
    in the pane, and a new draft starts with all three steps done, so they said
-   the same thing three times. Not done is a small open ring: a shape, not
-   only an absence. The 18px box keeps the labels on their 50px line. */
+   the same thing three times. Not done is nothing: the text under the step
+   says so. The 18px box stays empty, so the labels keep their 50px line. */
 .side-step-mark { width: 18px; height: 18px; display: grid; place-items: center; color: var(--accent); }
 .side-step-mark svg { display: block; width: 14px; height: 14px; }
-.side-step-todo { width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-3); }
 .v3-pill {
   flex: none;
   padding: 2px 6px;
@@ -708,7 +707,6 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.side-draft-t[data-empty] { color: var(--ink-3); }
 .side-draft-s {
   display: block;
   font-size: 12px;

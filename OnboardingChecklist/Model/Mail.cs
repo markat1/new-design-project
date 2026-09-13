@@ -140,6 +140,6 @@ public record Mail(string Ref, string Subject, string Note, MailStatus Status, s
                     "Hi {navn}\n\nFreight is adjusted for the new route; handling is unchanged. The sheet attached is {firma}'s own.\n\nKind regards"),
             ]),
 
-        new("M-2415", "(intet emne endnu)", "", MailStatus.Draft, "—", [], ["Norden"], []),
+        new("M-2415", "", "", MailStatus.Draft, "—", [], ["Norden"], []),
     ];
 }

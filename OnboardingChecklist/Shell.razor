@@ -46,9 +46,13 @@
                             @onclick="() => Go(AppPage.Quote)">
                         @Icons.Pencil
                         <span class="side-draft-txt">
-                            <span class="side-draft-t" title="@S.Title"
-                                  data-empty="@(S.Subject.Trim().Length == 0 ? "" : null)">@S.Title</span>
-                            <span class="side-draft-s">Kladde · @S.Size</span>
+                            <span class="side-draft-t" title="@S.Title">@S.Title</span>
+                            @* Named "Kladde" until it has a subject, so the word is not
+                               said twice; no line at all until there is something to say. *@
+                            @if (S.HasTitle || S.Size is not null)
+                            {
+                                <span class="side-draft-s">@(S.HasTitle ? (S.Size is null ? "Kladde" : $"Kladde · {S.Size}") : S.Size)</span>
+                            }
                         </span>
                     </button>
 

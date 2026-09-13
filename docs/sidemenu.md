@@ -13,7 +13,7 @@ Filerne: `Shell.razor` (menuen), `Components/StepRail.razor` (trinnene), `Compon
 │░  Kladde · 8 mails · 7 kunder
 │░✓ Modtagere             ░│  ← … og dens trin på én flade
 │░✓ Skabelon              ░│
-│░○ Afsendelse            ░│
+│░  Afsendelse            ░│
 └──────────────────────────┘
 ```
 
@@ -27,7 +27,7 @@ Menuen sagde *Mails* og *Ny mail*, mens resten af appen allerede sagde *"4 udsen
 
 ## Kladden hører til listen
 
-- **Kladden står lige under Udsendelser**, med emne og størrelse: *"Jeres priser for 2027 · Kladde · 8 mails · 7 kunder"*. Et tomt emne står som *"(intet emne endnu)"* i den dæmpede farve.
+- **Kladden står lige under Udsendelser**, med emne og størrelse: *"Jeres priser for 2027 · Kladde · 8 mails · 7 kunder"*. Uden emne hedder den bare *Kladde*, og der står ingen pladsholdertekst som "(intet emne endnu)", før der er noget at vise.
 - **Kladden og trinnene deler én flade** (`--canvas` med en hårstreg over og under). Uden fladen stod kladden og de tre trin med samme venstrekant og samme afstand, og øjet læste fire ligeværdige ting.
 - **Trinnene bliver stående, også på Udsendelser.** Første udgave foldede dem sammen, når man gik til listen, og så skulle man først åbne kladden for at nå et trin. Et klik på et trin fra listen åbner kladden på det trin.
 - **Kun én række er blå.** På kladden er det trinnet: kladden er, hvor du er, ikke hvad der er valgt, så den får mørk tekst og ingen farve. På listen er det Udsendelser, og intet trin er markeret. To blå rækker betød to markeringer.
@@ -37,7 +37,7 @@ Menuen sagde *Mails* og *Ny mail*, mens resten af appen allerede sagde *"4 udsen
 
 ## Trinnene har flueben, ikke skiver
 
-Et udfyldt trin har et blåt flueben uden skive. Et trin, der ikke er udfyldt, har en lille åben ring.
+Et udfyldt trin har et blåt flueben uden skive. Et trin, der ikke er udfyldt, har ingen markør. Teksten under trinnet siger det, og en lille åben ring var bare støj.
 
 Skiverne var massive blå former i en menu af tynde streger, lige under kladdens blyant: to ikonsprog oven på hinanden. De sagde heller ikke meget: en ny kladde starter med alle tre trin udfyldt (første liste, færdige skabeloner, CRM), så der stod næsten altid tre ens blå skiver, tungere end det valgte trin.
 
@@ -88,7 +88,7 @@ bliver »Jeres priser for 2027« til 8 mails slettet.
 | **I listen** (kladden som række i tabellen) | Menuen viste ikke kladden, mens man stod på listen. |
 | **Knappen i bunden** | Ca. 580px fra kladden, og den hørte ikke sammen med noget. |
 | **Skjult** (ingen knap, mens der er en kladde) | Man kan ikke starte forfra uden først at sende, og en knap, der forsvinder, undrer. |
-| **Flere kladder** | Et uheldigt klik laver en kladde mere, og menuen fyldes med "(intet emne endnu)". |
+| **Flere kladder** | Et uheldigt klik laver en kladde mere, og menuen fyldes med tomme kladder. |
 | **Spørg** (menu under knappen) | Lå hen over Udsendelser og kladden. Dialogen kan ikke overses. |
 | **Fortryd** (slet med det samme, "Fortryd" bagefter) | Man opdager først bagefter, at kladden er væk. |
 

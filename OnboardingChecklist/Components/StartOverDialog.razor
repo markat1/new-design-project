@@ -11,8 +11,15 @@
 <dialog class="dlg" @ref="el" aria-labelledby="dlg-new-h" aria-describedby="dlg-new-b">
     <h2 class="dlg-h" id="dlg-new-h">Start en ny udsendelse?</h2>
     <p class="dlg-b" id="dlg-new-b">
-        Der er kun plads til én kladde ad gangen. Starter du en ny, bliver
-        <b>»@S.Title«</b>@(S.Picked.Count == 0 ? "" : $" til {S.Picked.Count} {(S.Picked.Count == 1 ? "mail" : "mails")}") slettet.
+        Der er kun plads til én kladde ad gangen.
+        @if (S.HasTitle)
+        {
+            <text>Starter du en ny, bliver <b>»@S.Title«</b>@(Count) slettet.</text>
+        }
+        else
+        {
+            <text>Starter du en ny, bliver kladden@(Count) slettet.</text>
+        }
     </p>
     <div class="dlg-acts">
         <button type="button" class="btn btn-danger" @onclick="Discard">@Icons.Trash Slet kladden og start ny</button>
@@ -23,6 +30,9 @@
 
 @code {
     private ElementReference el;
+
+    private string Count => S.Picked.Count == 0 ? ""
+        : $" til {S.Picked.Count} {(S.Picked.Count == 1 ? "mail" : "mails")}";
 
     public async Task OpenAsync() => await JS.InvokeVoidAsync("app.dialog.open", el);
 
