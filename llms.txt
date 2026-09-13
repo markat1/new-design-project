@@ -204,7 +204,7 @@ Hvert mønster er valgt mellem flere byggede alternativer. Foreslå ikke et af d
 - Kladden i listen og kladden i menuen er den samme. Tegner listen kladdens række fra udkastet, skal de komponenter, der læser listen mange gange (fx kort med "brugt N gange"), have en billig egenskab uden kladden. Se fælden i §10.
 - Trinnene står på en lys flade (`--canvas` med hårstreg over og under) under kladden. Kladden selv står på menuens hvide over fladen — står den på fladen, ligner den et fjerde trin.
 - Trinnene bliver stående, også når listen er åben, så et trin er ét klik væk. På listen er intet trin markeret.
-- Et udfyldt trin har et blåt flueben uden skive. Et trin, der ikke er udfyldt, har ingen markør; teksten under det siger det. Tilstanden står også som skjult tekst til skærmlæsere ("Modtagere, udfyldt").
+- Trinnene i menuen har ingen markør: båndet over trinnet viser, hvad der er udfyldt, og vis aldrig den samme tilstand to steder ved siden af hinanden. Teksten under hvert trin bærer tilstanden i menuen, også en mangel ("Emnelinje mangler"). Tilstanden står som skjult tekst til skærmlæsere ("Modtagere, udfyldt").
 - Kun én række er blå. Forælderen til det valgte trin får mørk tekst, ikke farve.
 - Der er kun én kladde. Der spørges kun, når noget går tabt. Spørgsmålet er det, knappen bad om ("Start en ny udsendelse?"), knapperne hedder det, de gør, og fokus starter på den sikre. Brug native `<dialog>` med `showModal()`.
 

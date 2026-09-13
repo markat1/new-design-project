@@ -11,8 +11,8 @@ Filerne: `Shell.razor` (menuen), `Components/StepRail.razor` (trinnene), `Compon
 │ ✉ Udsendelser         4  │  ← listen
 │ ✎ Jeres priser for 2027  │  ← kladden, på det hvide …
 │   Kladde · 8 mails · 7 kunder
-│░✓ Modtagere             ░│  ← … over sine trin på en flade
-│░✓ Skabelon              ░│
+│░  Modtagere             ░│  ← … over sine trin på en flade
+│░  Skabelon              ░│
 │░  Afsendelse            ░│
 └──────────────────────────┘
 ```
@@ -35,19 +35,19 @@ Menuen sagde *Mails* og *Ny mail*, mens resten af appen allerede sagde *"4 udsen
 - **Kladden i listen og kladden i menuen er den samme.** Listens række tegnes fra udkastet (`MailStore.All` → `MailDraft.AsDraft`), så den viser det, du lige har skrevet. "Ny udsendelse" erstatter rækken, og ved afsendelse bliver den en sendt udsendelse med samme nummer.
 - **Et udkast, ingen har startet, er ikke en kladde.** Appen har altid et udkast i hukommelsen, og viste menuen det, stod der en kladde, ingen havde lavet.
 
-## Trinnene har flueben, ikke skiver
+## Trinnene i menuen har ingen markør
 
-Et udfyldt trin har et blåt flueben uden skive. Et trin, der ikke er udfyldt, har ingen markør. Teksten under trinnet siger det, og en lille åben ring var bare støj.
+Båndet over trinnet viser, hvilke trin der er udfyldt. Menuen gentager det ikke: et flueben dér sagde det samme en gang til, lige ved siden af. Teksten under hvert trin siger stadig, hvad det rummer, eller at det er tomt, så menuen kan læses for sig selv på Udsendelser, hvor båndet ikke er.
 
-Skiverne var massive blå former i en menu af tynde streger, lige under kladdens blyant: to ikonsprog oven på hinanden. De sagde heller ikke meget: en ny kladde starter med alle tre trin udfyldt (første liste, færdige skabeloner, CRM), så der stod næsten altid tre ens blå skiver, tungere end det valgte trin.
+Et trin med en mangel har en tekst, der siger det: under Skabelon står *"Emnelinje mangler"*, ikke sprogene. Uden den ville et ufærdigt trin se udfyldt ud.
 
-Tilstanden står også som skjult tekst i knappen, *"Modtagere, udfyldt"*. Skiven sagde det kun med farve.
+Tilstanden står stadig som skjult tekst i knappen, *"Modtagere, udfyldt"*, til skærmlæsere.
 
 | Retning | Hvorfor ikke |
 | --- | --- |
-| **Skiven** (som den var) | Tungest, og den eneste massive form i menuen. |
+| **Skiven** (massiv blå med hvidt flueben) | Tungest, og den eneste massive form i menuen. En ny kladde starter med alle tre trin udfyldt, så der stod næsten altid tre ens skiver. |
+| **Flueben** (uden skive, en tid) | Fint alene, men gentog båndet over trinnet, da det kom. |
 | **Tal** (1, 2, 3 i en ring) | Tal og farve skulle læses sammen. Blå og grå ring var svære at skelne. |
-| **Ingen markør** | Et trin med en fejl, men med tekst under sig ("Dansk · Svensk · Engelsk"), så udfyldt ud. |
 
 ## Båndet over trinnet: klikbare segmenter
 

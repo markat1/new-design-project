@@ -184,7 +184,10 @@ public class MailDraft
         "recipients" => Picked.Count == 0 ? null
             : Companies == 1 ? $"{Picked.Count} hos 1 kunde"
             : $"{Picked.Count} hos {Companies} kunder",
+        // A letter without a subject is not a language list: the summary is
+        // the only thing in the side menu that says a step is not finished.
         "template" => Langs.Length == 0 ? null
+            : !IsDone("template") ? "Emnelinje mangler"
             : Langs.Length == 1 ? $"{Templates.Name(Langs[0])}"
             : string.Join(" · ", Langs.Select(Templates.Name)),
         "send" => Picked.Count == 0 ? null : string.Join(" · ", Destinations),

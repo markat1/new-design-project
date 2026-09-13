@@ -16,16 +16,11 @@
                 aria-current="@(Here && S.StepKey == task.Key ? "step" : null)"
                 data-nudge="@(S.Nudge == task.Key ? "" : null)"
                 @onclick="() => Open(task.Key)">
-            <span class="side-step-mark" data-done="@(done ? "" : null)">
-                @if (done)
-                {
-                    @Icons.TickSm
-                }
-            </span>
             <span class="side-step-txt">
                 <span class="side-step-t">
                     <span class="side-step-label">@task.Label</span>
-                    @* The mark is drawn, so its meaning is said: "Modtagere, udfyldt".
+                    @* No mark here — the band over the step owns done — but a screen
+                       reader on the list page still hears it: "Modtagere, udfyldt".
                        An empty step already says "Ikke udfyldt endnu" below. *@
                     @if (done || sum is not null)
                     {

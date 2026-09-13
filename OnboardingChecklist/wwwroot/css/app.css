@@ -461,13 +461,6 @@ body {
   55% { transform: translateX(3px); }
   80% { transform: translateX(-1px); }
 }
-/* A step's state: the tick itself, in the blue, drawn at the weight of the
-   13px label beside it — no disc. Three filled discs were the heaviest thing
-   in the pane, and a new draft starts with all three steps done, so they said
-   the same thing three times. Not done is nothing: the text under the step
-   says so. The 18px box stays empty, so the labels keep their 50px line. */
-.side-step-mark { width: 18px; height: 18px; display: grid; place-items: center; color: var(--accent); }
-.side-step-mark svg { display: block; width: 14px; height: 14px; }
 .v3-pill {
   flex: none;
   padding: 2px 6px;
@@ -719,18 +712,14 @@ body {
 .side-steps { margin: 6px 0 0; }
 
 
+/* No marker column: the band over the step shows which steps are done, and a
+   tick here too said it twice, side by side. The text under each step still
+   says what it holds or that it is empty. The label keeps the 50px line it
+   shares with the draft's title and the nav's labels. */
 .side-step {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
-  /* The mark belongs to the row, not to its first line: centred against both
-     lines it reads as one item, where top-aligned it read as a bullet. */
-  align-items: center;
-  /* The marker is a filled circle where the nav's is a drawn outline, and a
-     solid shape crowds the word beside it sooner. Six was tight; ten is the
-     same optical distance the icon above keeps at thirteen. */
-  gap: 10px;
+  display: block;
   width: 100%;
-  padding: 7px 22px;
+  padding: 7px 22px 7px 50px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -739,9 +728,6 @@ body {
   cursor: pointer;
   transition: background-color 130ms ease;
 }
-/* A pixel up from the geometric middle: the first line is the heavier of the
-   two, and the second line's descenders hang below the ink the eye measures. */
-.side-step .side-step-mark { margin-top: -1px; }
 .side-step:hover { background: #f6f6f7; }
 .side-step:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 .side-step[data-active] { background: var(--accent-soft); }
