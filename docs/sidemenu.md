@@ -9,9 +9,9 @@ Filerne: `Shell.razor` (menuen), `Components/StepRail.razor` (trinnene), `Compon
 │ [+ Ny udsendelse       ] │  ← knappen, øverst
 │                          │
 │ ✉ Udsendelser         4  │  ← listen
-│░✎ Jeres priser for 2027 ░│  ← kladden …
-│░  Kladde · 8 mails · 7 kunder
-│░✓ Modtagere             ░│  ← … og dens trin på én flade
+│ ✎ Jeres priser for 2027  │  ← kladden, på det hvide …
+│   Kladde · 8 mails · 7 kunder
+│░✓ Modtagere             ░│  ← … over sine trin på en flade
 │░✓ Skabelon              ░│
 │░  Afsendelse            ░│
 └──────────────────────────┘
@@ -28,7 +28,7 @@ Menuen sagde *Mails* og *Ny mail*, mens resten af appen allerede sagde *"4 udsen
 ## Kladden hører til listen
 
 - **Kladden står lige under Udsendelser**, med emne og størrelse: *"Jeres priser for 2027 · Kladde · 8 mails · 7 kunder"*. Uden emne hedder den bare *Kladde*, og der står ingen pladsholdertekst som "(intet emne endnu)", før der er noget at vise.
-- **Kladden og trinnene deler én flade** (`--canvas` med en hårstreg over og under). Uden fladen stod kladden og de tre trin med samme venstrekant og samme afstand, og øjet læste fire ligeværdige ting.
+- **Trinnene står på en flade under kladden** (`--canvas` med en hårstreg over og under), og kladden står over den på menuens hvide. Uden fladen stod kladden og de tre trin med samme venstrekant og samme afstand, og øjet læste fire ligeværdige ting. Stod kladden *på* fladen, lignede den stadig et fjerde trin. Over fladen er den dens overskrift.
 - **Trinnene bliver stående, også på Udsendelser.** Første udgave foldede dem sammen, når man gik til listen, og så skulle man først åbne kladden for at nå et trin. Et klik på et trin fra listen åbner kladden på det trin.
 - **Kun én række er blå.** På kladden er det trinnet: kladden er, hvor du er, ikke hvad der er valgt, så den får mørk tekst og ingen farve. På listen er det Udsendelser, og intet trin er markeret. To blå rækker betød to markeringer.
 - **Kladden står der, når der findes en**: en du har startet, eller en der allerede lå i listen. Første udgave viste kun den, man selv havde startet, så en gemt kladde (M-2415) stod i listen, men ikke i menuen.

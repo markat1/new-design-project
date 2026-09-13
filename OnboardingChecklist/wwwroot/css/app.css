@@ -666,14 +666,16 @@ body {
 
 /* The draft, right under the list it will end up in. */
 .side-draft { margin-top: 4px; }
-/* It and its steps share the canvas the page beside it stands on. The
+/* The draft stays on the pane's white and heads the ground its steps stand
+   on: the canvas the page beside it stands on, closed by a hairline above
+   and below. On one ground together, the draft read as a fourth step. The
    hairlines are box-shadows, so they take no layout. */
-.side-draft {
+.side-draft .side-steps {
+  margin-top: 0;
   padding-bottom: 6px;
   background: var(--canvas);
   box-shadow: inset 0 1px var(--line), inset 0 -1px var(--line);
 }
-.side-draft .side-steps { margin-top: 0; }
 
 .side-draft-head {
   display: grid;
