@@ -319,9 +319,16 @@ public class MailDraft
         lists.Clear();
         lists.AddRange(MarketingGroup.Lists.Where(l => saved.Lists.Contains(l.Name)).Take(MaxLists));
 
-        foreach (var list in lists)
+        // A saved draft with nobody on it has not taken anybody off: it was
+        // saved before its people were written down. Restored as "0 of 5", the
+        // chosen list sent to nobody and the template step had no language.
+        // Everybody on a list is on the send-out until somebody is taken off.
+        if (saved.Recipients.Length > 0)
         {
-            picks[list.Name] = [.. list.People.Select(p => p.Email).Where(e => saved.Recipients.Any(r => r.Email == e))];
+            foreach (var list in lists)
+            {
+                picks[list.Name] = [.. list.People.Select(p => p.Email).Where(e => saved.Recipients.Any(r => r.Email == e))];
+            }
         }
 
         foreach (var letter in saved.Letters) letters[letter.Lang] = letter;

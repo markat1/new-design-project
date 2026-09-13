@@ -96,6 +96,8 @@ bliver »Jeres priser for 2027« til 8 mails slettet.
 
 **Sticky sidemenu og bagtæppe.** `.side` er `position: sticky` og laver sin egen stablingskontekst. En menu inde i den ligger *under* et bagtæppe uden for den, uanset z-index, og kan ikke klikkes. Native `<dialog>` lægger sig i browserens øverste lag og har ikke problemet.
 
+**En gemt kladde uden modtagere har ikke fravalgt nogen.** M-2415 har listen Norden, men ingen modtagere skrevet ned. Indlæst som "0 af 5 personer med" gik den valgte liste til ingen, og Skabelon havde intet sprog. `MailDraft.Load` genskaber kun valgene, når kladden har modtagere; ellers er hele listen med, som den er for alle andre lister.
+
 **Kladdens række er ikke gratis.** `MailStore.All` tegner kladdens række fra udkastet og regner derfor alle modtagere og deres ark ud. Marketinglistekortene læste `All` for hver af de ca. 100 lister, flere gange pr. render, og et klik på et kort frøs appen. Det, der kun skal bruge de sendte eller antallet, læser `Store.Sent` og `Store.Count`.
 
 **Et klik på dialogens egen kant er et klik på `<dialog>`.** Bagtæppet og dialogens padding er det samme mål. Luk kun, når klikket ligger uden for dialogens boks.
