@@ -30,6 +30,28 @@ window.app = {
     requestAnimationFrame(() => document.getElementById(id)?.focus({ preventScroll: true }));
   },
 
+  // A native <dialog>, opened modal: the focus trap, Escape and the top layer
+  // come with showModal(), and closing hands focus back to whatever opened it.
+  // The backdrop and the dialog's own padding are both the <dialog> as a click
+  // target, so only a click outside its box counts as a click on the backdrop.
+  dialog: {
+    open(el) {
+      if (!el) return;
+      if (!el.dataset.wired) {
+        el.dataset.wired = '1';
+        el.addEventListener('click', e => {
+          if (e.target !== el) return;
+          const r = el.getBoundingClientRect();
+          if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) el.close();
+        });
+      }
+      if (!el.open) el.showModal();
+    },
+    close(el) {
+      if (el?.open) el.close();
+    },
+  },
+
   // The arrow keys walk a hundred-row list, and the row they are standing on
   // has to stay in sight — 'nearest' scrolls the list, never the page.
   showRow(id) {

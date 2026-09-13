@@ -238,6 +238,12 @@ body {
 .btn-outline:hover { background: var(--surface); border-color: var(--ink-3); box-shadow: 0 2px 5px -1px oklch(0.24 0.002 68 / 0.12); }
 .btn-outline:active { box-shadow: none; }
 
+/* Only for the one choice that throws work away, and always named for what it
+   throws away. The hover is the same colour mixed darker, not a second red. */
+.btn-danger { background: var(--danger); color: #fff; box-shadow: var(--lift); }
+.btn-danger:hover { background: color-mix(in oklch, var(--danger) 85%, black); box-shadow: var(--lift-hover); }
+.btn-danger:active { box-shadow: var(--lift-down); }
+
 /* not-ready state — muted, but genuinely enabled: activating it walks you to
    the step that's blocking, and its accessible description says what's left */
 /* Not ready is not raised: it stays on the surface until it has something to
@@ -669,8 +675,88 @@ body {
 
 .main { min-width: 0; background: var(--canvas); }
 
-/* Quote steps, nested under their nav item. Borderless on purpose: the sidebar
-   is already a surface, and a card inside it would read as a second column. */
+/* The pane's one button. Its icon sits on the rows' 22px icon column and its
+   label on their 50px label column: 12 + a 1px border + 9 = 22, and 15 of
+   icon + 13 = 50. */
+.side-new { padding: 0 12px; }
+.side-new .btn { width: 100%; justify-content: flex-start; gap: 13px; padding: 0 9px; touch-action: manipulation; }
+
+/* The draft, right under the list it will end up in. */
+.side-draft { margin-top: 4px; }
+/* Open, it and its steps share the canvas the page beside it stands on.
+   The hairlines are box-shadows, so they take no layout. */
+.side-draft[data-open] {
+  padding-bottom: 6px;
+  background: var(--canvas);
+  box-shadow: inset 0 1px var(--line), inset 0 -1px var(--line);
+}
+.side-draft .side-steps { margin-top: 0; }
+
+.side-draft-head {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 13px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 22px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  color: var(--ink-2);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 130ms ease, color 130ms ease;
+}
+.side-draft-head:hover { background: var(--hover); color: var(--ink-1); }
+.side-draft-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+/* Where you are, not what is selected: the step under it carries the blue. */
+.side-draft-head[data-active] { color: var(--ink-1); }
+.side-draft-txt { min-width: 0; }
+.side-draft-t {
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-draft-t[data-empty] { color: var(--ink-3); }
+.side-draft-s {
+  display: block;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A native <dialog> in the top layer, drawn like the app's menus: square, on
+   the menu shadow. The backdrop is the ink at a quarter, not black. */
+.dlg {
+  width: min(400px, calc(100vw - 32px));
+  padding: 20px 24px;
+  border: 0;
+  border-radius: var(--radius-menu);
+  background: var(--surface);
+  box-shadow: var(--shadow-menu);
+  color: var(--ink-1);
+}
+.dlg::backdrop { background: oklch(0.24 0.002 68 / 0.28); }
+.dlg[open] { animation: t-menu-in 160ms var(--ease) backwards; }
+@media (prefers-reduced-motion: reduce) { .dlg[open] { animation: none; } }
+.dlg-h { margin: 0 0 8px; font-size: 18px; line-height: 24px; font-weight: 600; }
+.dlg-b { margin: 0 0 20px; font-size: 14px; line-height: 20px; color: var(--ink-2); }
+.dlg-b b { font-weight: 600; color: var(--ink-1); }
+.dlg-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+/* The draft's steps, on the draft's ground. Borderless on purpose: a card inside
+   the sidebar would read as a second column. */
 /* No rule down the side: the steps are already grouped by the indent and by
    the item they hang under. The line landed in the parent's icon column and
    read as a stray stroke. Their markers sit in that column instead, and their

@@ -5,31 +5,57 @@
 
 @* App shell: a persistent side menu on the left, one page at a time on the right.
    No Router — two pages don't earn URL routing yet, and adding it would mean
-   bringing back the App.razor/Router the project deliberately deleted. *@
+   bringing back the App.razor/Router the project deliberately deleted.
+   The menu's layout is decided in docs/sidemenu.md. *@
 <div class="app">
 
     <nav class="side" aria-label="Sections">
+        @* On top, with the list between it and the draft: the draft and its steps
+           are clicked all day, and a heavy button right above them is easy to
+           hit by mistake. *@
+        <div class="side-new">
+            <button type="button" class="btn btn-primary" id="side-new"
+                    aria-haspopup="@(S.Started && !S.Untouched ? "dialog" : null)"
+                    @onclick="StartNew">
+                @Icons.Plus Ny udsendelse
+            </button>
+        </div>
+
         <div class="side-nav">
             <button type="button" class="side-nav-item"
                     data-active="@(App.Page == AppPage.Sent ? "" : null)"
                     aria-current="@(App.Page == AppPage.Sent ? "page" : null)"
                     @onclick="() => Go(AppPage.Sent)">
                 @Icons.Inbox
-                <span>Mails</span>
+                <span>Udsendelser</span>
                 <span class="side-nav-count">@Store.All.Count</span>
             </button>
 
-            <button type="button" class="side-nav-item"
-                    data-active="@(App.Page == AppPage.Quote ? "" : null)"
-                    aria-current="@(App.Page == AppPage.Quote ? "page" : null)"
-                    @onclick="() => Go(AppPage.Quote)">
-                @Icons.Plus
-                <span>Ny mail</span>
-            </button>
-
-            @if (App.Page == AppPage.Quote)
+            @if (S.Started)
             {
-                <StepRail />
+                var open = App.Page == AppPage.Quote;
+
+                @* The draft and its steps on one ground while it is open: without
+                   it, the draft and three steps shared an edge and a spacing and
+                   read as four equal rows. *@
+                <div class="side-draft" data-open="@(open ? "" : null)">
+                    <button type="button" class="side-draft-head"
+                            data-active="@(open ? "" : null)"
+                            aria-current="@(open ? "page" : null)"
+                            @onclick="() => Go(AppPage.Quote)">
+                        @Icons.Pencil
+                        <span class="side-draft-txt">
+                            <span class="side-draft-t" title="@S.Title"
+                                  data-empty="@(S.Subject.Trim().Length == 0 ? "" : null)">@S.Title</span>
+                            <span class="side-draft-s">Kladde · @S.Size</span>
+                        </span>
+                    </button>
+
+                    @if (open)
+                    {
+                        <StepRail />
+                    }
+                </div>
             }
         </div>
     </nav>
@@ -47,11 +73,29 @@
 
 </div>
 
+<StartOverDialog @ref="startOver" />
+
 @code {
+    private StartOverDialog? startOver;
+
     private void Go(AppPage page) => App.Page = page;
 
-    // The steps nested under New quote appear and disappear as the draft's own
-    // state changes, and the count changes when a quote is sent.
+    /// One draft at a time. Only work gets a question; a draft nobody has
+    /// changed is simply started again.
+    private async Task StartNew()
+    {
+        if (S.Started && !S.Untouched && startOver is not null)
+        {
+            await startOver.OpenAsync();
+            return;
+        }
+
+        App.Page = AppPage.Quote;
+        S.StartOver();
+    }
+
+    // The draft's name and size change as it is written, and the count changes
+    // when a send-out is sent.
     protected override void OnInitialized()
     {
         S.Changed += StateHasChanged;

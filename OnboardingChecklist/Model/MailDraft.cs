@@ -285,8 +285,41 @@ public class MailDraft
             DateTime.Now.ToString("yyyy-MM-dd"), Recipients,
             [.. lists.Select(l => l.Name)], [.. Langs.Select(LetterFor)]);
 
+    // ---- the one draft ----
+    // There is only ever one. The object always exists, but a draft nobody has
+    // started is not a draft: the side menu shows it only once "Ny udsendelse"
+    // has been pressed, and sending it puts it away again.
+    public bool Started { get; private set; }
+
+    /// Nothing changed since it was started, so starting over loses nothing
+    /// and is not worth a question. The first list, everybody on it, the
+    /// templates as written and the default destinations are what a new draft
+    /// is; anything else is somebody's work.
+    public bool Untouched =>
+        lists.Count == 1 && lists[0].Name == MarketingGroup.Lists[0].Name
+        && PicksFor(lists[0]).SetEquals(lists[0].People.Select(p => p.Email))
+        && !letters.Keys.Any(Edited)
+        && ViaCrm && !SaveLocally && !CopyToMe;
+
+    /// The draft as the side menu names it: its headline, or the fact that it
+    /// has none yet.
+    public string Title => Subject.Trim().Length > 0 ? Subject.Trim() : "(intet emne endnu)";
+
+    public string Size => Picked.Count == 0 ? "ingen modtagere endnu"
+        : $"{Picked.Count} {(Picked.Count == 1 ? "mail" : "mails")} · {Companies} {(Companies == 1 ? "kunde" : "kunder")}";
+
+    /// A new send-out in place of the old one, open on its first step.
+    public void StartOver()
+    {
+        Reset();
+        Started = true;
+        FocusNext = true;
+        NotifyChanged();
+    }
+
     public void Reset()
     {
+        Started = false;
         letters.Clear();
         ViaCrm = true;
         SaveLocally = false;

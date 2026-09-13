@@ -1,8 +1,8 @@
 @implements IDisposable
 @inject MailDraft S
 
-@* The quote flow's steps, rendered inside the app side menu rather than as a
-   second navigation column beside it. Lives next to the app nav it belongs to. *@
+@* The draft's steps, rendered inside the app side menu under the draft they
+   belong to, rather than as a second navigation column beside it. *@
 <div class="side-steps" role="group" aria-label="Trin i udsendelsen">
     @foreach (var t in Content.Tasks)
     {

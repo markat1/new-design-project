@@ -196,6 +196,14 @@ Hvert mønster er valgt mellem flere byggede alternativer. Foreslå ikke et af d
 - **Fanen i forhåndsvisningen tilhører læseren.** Et klik i formularen ændrer *hvem* der vises, aldrig *hvilken fane*. Kun en fane, der selv er en vælger (Modtagere), må skifte fane ved et klik — og så tilbage til den fane, man kom fra. At lade trinnet bestemme fanen blev prøvet og forkastet: den, der tjekkede prislister, blev revet over på mailen.
 - Afsendelse er trinnet selv, ikke en ekstra knap i sidemenuen.
 
+**Sidemenu med en kladde (oprettelse + trin):**
+- Navngiv tingen efter det, brugeren laver ("Ny udsendelse"), ikke efter det, den bliver til ("Nye mails"). I Outlook betyder "nye mails" ulæste.
+- Den primære knap står øverst, adskilt fra de rækker, der klikkes på hele tiden. Står den lige over dem, bliver den ramt ved et uheld.
+- Kladden står under listen, den ender i, med emne og størrelse ("Kladde · 8 mails · 7 kunder"). Den vises kun, når brugeren selv har startet den.
+- Kladden og dens trin deler én flade, når den er åben. Uden en fælles flade læses fire rækker med samme kant og afstand som fire ligeværdige ting.
+- Kun én række er blå. Forælderen til det valgte trin får mørk tekst, ikke farve.
+- Der er kun én kladde. Der spørges kun, når noget går tabt. Spørgsmålet er det, knappen bad om ("Start en ny udsendelse?"), knapperne hedder det, de gør, og fokus starter på den sikre. Brug native `<dialog>` med `showModal()`.
+
 **Avatarer:** farven vælges af mailadressen, så den samme person har den samme farve overalt. Brug en stabil hash (FNV-1a) modulo 10. Cirklen er en lys tone, initialerne den mørke tone af samme kulør. Alle cirkler har samme chroma (0.035) ved L 0.935, og initialerne har L 0.470.
 
 ## 10. Fælder
@@ -227,4 +235,5 @@ Hvis du har adgang til originalprojektet, står detaljerne her:
 - [Tabellens kolonnemenu](docs/kolonne-dropdown.md): sortering og filter i ét panel
 - [Marketinglisten](docs/liste-vaelger.md): tre kort og et søgefelt, 1–2 lister
 - [Skabelonen og afsendelsen](docs/skabelonen.md): sprogkort, forhåndsvisning, de tre trin
+- [Sidemenuen](docs/sidemenu.md): knappen øverst, én kladde, dialogen før sletning
 - [Excel-arket](docs/excel-arket.md): rigtige .xlsx-filer med Open XML SDK
