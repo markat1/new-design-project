@@ -351,7 +351,7 @@
     /// counting it would put a list on the cards for something nobody did. Its
     /// "—" for a date would also sort above every real one.
     private IEnumerable<Mail> Sent(Group group) =>
-        Store.All.Where(m => m.Status == MailStatus.Sent && m.Lists.Contains(group.Name));
+        Store.Sent.Where(m => m.Lists.Contains(group.Name));
 
     private int Sends(Group group) => Sent(group).Count();
 

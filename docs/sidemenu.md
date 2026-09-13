@@ -96,4 +96,6 @@ bliver »Jeres priser for 2027« til 8 mails slettet.
 
 **Sticky sidemenu og bagtæppe.** `.side` er `position: sticky` og laver sin egen stablingskontekst. En menu inde i den ligger *under* et bagtæppe uden for den, uanset z-index, og kan ikke klikkes. Native `<dialog>` lægger sig i browserens øverste lag og har ikke problemet.
 
+**Kladdens række er ikke gratis.** `MailStore.All` tegner kladdens række fra udkastet og regner derfor alle modtagere og deres ark ud. Marketinglistekortene læste `All` for hver af de ca. 100 lister, flere gange pr. render, og et klik på et kort frøs appen. Det, der kun skal bruge de sendte eller antallet, læser `Store.Sent` og `Store.Count`.
+
 **Et klik på dialogens egen kant er et klik på `<dialog>`.** Bagtæppet og dialogens padding er det samme mål. Luk kun, når klikket ligger uden for dialogens boks.

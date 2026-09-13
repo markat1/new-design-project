@@ -163,7 +163,7 @@
                 {
                     <div class="t-empty">
                         <p class="t-empty-h">Ingen udsendelser matcher filtrene</p>
-                        <p class="t-empty-b">Ryd dem for at se alle @Store.All.Count igen.</p>
+                        <p class="t-empty-b">Ryd dem for at se alle @Store.Count igen.</p>
                         <button type="button" class="btn btn-outline" @onclick="ClearFilters">Ryd filtre</button>
                     </div>
                 }
@@ -172,7 +172,7 @@
             @if (Rows.Length > 0)
             {
                 <p class="t-foot">
-                    @Rows.Length af @Store.All.Count udsendelser
+                    @Rows.Length af @Store.Count udsendelser
                     @if (AnyFilter)
                     {
                         <span class="t-foot-sep">·</span>

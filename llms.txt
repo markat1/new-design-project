@@ -220,6 +220,7 @@ Hvert mønster er valgt mellem flere byggede alternativer. Foreslå ikke et af d
 | En række er 2px højere end regnestykket | En checkbox på grundlinjen trækker linjeboksen | `display: block` på checkboxen |
 | En stil virker ikke, selvom selektoren er rigtig | En tungere regel senere i filen vinder (`.x td` slår `.y`) | Gør selektoren tungere, fx `.x td.y` |
 | Et kort eller panel ser ens ud, men står skævt på halve pixels | `min-height` højere end indholdet giver en ulige rest at dele | Faste linjehøjder, så højden er deterministisk |
+| Appen fryser ved et klik, men konsollen er ren og intet kører i ring | En egenskab, der så billig ud (`Store.All`), begyndte at regne noget tungt ud, og en komponent læser den hundrede gange pr. render | Giv de hyppige læsere en billig egenskab (`Store.Sent`, `Store.Count`), og mål klikket i ms bagefter |
 
 ## 11. Arbejdsmetode
 

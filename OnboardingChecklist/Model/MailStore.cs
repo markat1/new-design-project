@@ -25,6 +25,14 @@ public class MailStore
     public IReadOnlyList<Mail> All =>
         [.. mails.Select(m => m.Status == MailStatus.Draft ? draft.AsDraft(m.Ref) : m)];
 
+    /// Drawing the draft's row composes every recipient and their sheet, so
+    /// whatever only needs the sent send-outs, or how many rows there are, reads
+    /// these instead. The marketing-list cards ask once per list, a hundred
+    /// times a render: through All, a click on a card froze the app.
+    public IEnumerable<Mail> Sent => mails.Where(m => m.Status == MailStatus.Sent);
+
+    public int Count => mails.Count;
+
     /// The draft's number, kept from the moment it was started until it is sent.
     public string? DraftRef => mails.FirstOrDefault(m => m.Status == MailStatus.Draft)?.Ref;
 
