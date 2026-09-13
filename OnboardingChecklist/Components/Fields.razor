@@ -256,31 +256,60 @@
             <p class="tpl-reach">Den @(Templates.Name(Lang).ToLowerInvariant())e skabelon gælder @Reach(Lang).</p>
 
             <div class="lang-panel" id="lang-panel" role="group" aria-labelledby="tpl-@Lang">
+                @{
+                    var letter = S.LetterFor(Lang);
+                    var subjectTypo = left.Contains("subject") ? LetterText.UnknownFields(letter.Subject).FirstOrDefault() : null;
+                    var bodyTypo = left.Contains("body") ? LetterText.UnknownFields(letter.Body).FirstOrDefault() : null;
+                    S.Errors.TryGetValue("template", out var tplErr);
+                }
                 <div class="f-group">
                     <label class="f-label" for="f-subject">Emne</label>
-                    <input class="f-input" id="f-subject" type="text"
-                           value="@S.LetterFor(Lang).Subject"
+                    <input class="f-input" id="f-subject" type="text" data-ed-field
+                           value="@letter.Subject"
                            @oninput="e => Write(subject: e.Value?.ToString() ?? string.Empty)"
-                           aria-invalid="@Invalid("template")"
-                           aria-describedby="@(S.Errors.ContainsKey("template") ? "f-subject-err" : null)" />
+                           @onblur="@(() => left.Add("subject"))"
+                           aria-invalid="@(tplErr is not null || subjectTypo is not null ? "true" : null)"
+                           aria-describedby="@Ids(tplErr is null ? null : "f-subject-err", subjectTypo is null ? null : "f-subject-typo")" />
                     @* By the field it is about, not under the text below it. *@
-                    @if (S.Errors.TryGetValue("template", out var tplErr))
+                    @if (tplErr is not null)
                     {
                         <p class="f-err" id="f-subject-err">@Icons.Warn @tplErr</p>
+                    }
+                    @if (subjectTypo is not null)
+                    {
+                        <p class="f-err" id="f-subject-typo">@Icons.Warn @Typo(subjectTypo)</p>
                     }
                 </div>
 
                 <div class="f-group">
                     <label class="f-label" for="f-body">Tekst</label>
-                    <textarea class="f-input f-textarea" id="f-body" rows="9"
-                              value="@S.LetterFor(Lang).Body"
-                              @oninput="e => Write(body: e.Value?.ToString() ?? string.Empty)"></textarea>
+                    @* The toolbar belongs to the field: one box, one focus ring. Its
+                       buttons are wired in app.js (app.editor), which edits through
+                       the browser so Ctrl+Z undoes them, and the input event that
+                       follows lands in Write like typing does. Keys stop here: Enter
+                       on a toolbar button or in the text is not "next step". *@
+                    <div class="ed" @onkeydown:stopPropagation="true">
+                        <div class="ed-bar" role="toolbar" aria-label="Formatering og felter" aria-controls="f-body">
+                            <button type="button" class="ed-b" data-wrap="**" aria-label="Fed (Ctrl+B)" title="Fed (Ctrl+B)">@Icons.Bold</button>
+                            <button type="button" class="ed-b" data-wrap="_" aria-label="Kursiv (Ctrl+I)" title="Kursiv (Ctrl+I)">@Icons.Italic</button>
+                            <button type="button" class="ed-b" data-list aria-label="Punktliste" title="Punktliste">@Icons.List</button>
+                            <span class="ed-sep" aria-hidden="true"></span>
+                            <span class="ed-lbl" aria-hidden="true">Indsæt</span>
+                            <button type="button" class="ed-b" data-insert="{navn}" aria-label="Indsæt modtagerens navn">@Icons.PlusSm<span>Navn</span></button>
+                            <button type="button" class="ed-b" data-insert="{firma}" aria-label="Indsæt modtagerens firma">@Icons.PlusSm<span>Firma</span></button>
+                        </div>
+                        <textarea class="f-input f-textarea" id="f-body" rows="9" data-ed-field
+                                  value="@letter.Body"
+                                  @oninput="e => Write(body: e.Value?.ToString() ?? string.Empty)"
+                                  @onblur="@(() => left.Add("body"))"
+                                  aria-invalid="@(bodyTypo is not null ? "true" : null)"
+                                  aria-describedby="@(bodyTypo is null ? null : "f-body-typo")"></textarea>
+                    </div>
+                    @if (bodyTypo is not null)
+                    {
+                        <p class="f-err" id="f-body-typo">@Icons.Warn @Typo(bodyTypo)</p>
+                    }
                 </div>
-
-                <p class="f-help">
-                    <code>{navn}</code> og <code>{firma}</code> sættes ind pr. modtager.
-                    Prislisten hænger ved uanset sproget.
-                </p>
             </div>
         }
     }
@@ -622,6 +651,17 @@
             }
         }
     }
+
+    /// The fields the writer has left at least once. A field spelt wrong is
+    /// only pointed out after that — not at the "{" of a field still being
+    /// typed — and from then on as it is fixed.
+    private readonly HashSet<string> left = [];
+
+    private static RenderFragment Typo(string field) =>
+        @<span><code>@field</code> er ikke et felt. Brug <code>{navn}</code> eller <code>{firma}</code>.</span>;
+
+    private static string? Ids(params string?[] ids) =>
+        ids.Any(id => id is not null) ? string.Join(' ', ids.Where(id => id is not null)) : null;
 
     private async Task Write(string? subject = null, string? body = null)
     {

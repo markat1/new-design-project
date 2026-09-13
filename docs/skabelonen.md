@@ -76,6 +76,35 @@ public static string Fill(string text, string name, string company) =>
 
 Ét sæt på tværs af alle tre sprog, så en tekst kan kopieres fra dansk til svensk uden at skrive pladsholderne om. At der står `{navn}` i et engelsk brev, ser kun du.
 
+## Værktøjslinjen: formatering og felter
+
+Tekstfeltet har en værktøjslinje, der hører til feltet — én boks, én fokusring:
+
+```
+┌───────────────────────────────────────────────┐
+│ B  I  ≡  │ Indsæt  + Navn  + Firma            │
+├───────────────────────────────────────────────┤
+│ Hej {navn}                                    │
+│ …                                             │
+└───────────────────────────────────────────────┘
+```
+
+- **Fed, kursiv og punktliste** skrives som `**fed**`, `_kursiv_` og linjer, der starter med `- `. Forhåndsvisningen og den sendte udsendelse viser dem formateret (`Model/LetterText.cs`). Ctrl+B og Ctrl+I virker i feltet.
+- **+ Navn og + Firma** sætter feltet ind, hvor markøren står — i Emne, hvis det var dér, man sidst stod. Så staves felterne aldrig forkert.
+- **Et felt stavet forkert bliver sagt**, ved feltet: *"{frima} er ikke et felt. Brug {navn} eller {firma}."* Først når man har forladt feltet, ikke ved det første `{` — derefter live, så den forsvinder, så snart den er rettet.
+- **Hjælpeteksten under feltet er væk.** Knapperne siger selv, hvilke felter der findes.
+
+**Mailen skal sendes som HTML**, når teksten har formatering. Appen viser den rigtigt; CRM-integrationen skal kunne tage imod den.
+
+Knapperne er koblet i `wwwroot/js/app.js` (`app.editor`), ikke i Blazor. Alle ændringer går gennem `document.execCommand('insertText')`, så Ctrl+Z fortryder dem som skrivning, og browserens `input`-event lander i `@oninput` som almindelige tastetryk.
+
+| Retning | Hvorfor ikke |
+| --- | --- |
+| **Tæller** ("21 / 60" under emnet) | 60 er et skøn — mobilen skærer tidligere — og et tal under teksten siger intet om en mail uden grænse. |
+| **Indbakke** (en række som i modtagerens indbakke) | Viste konsekvensen, men fyldte, og kun for én modtager. |
+| **Indsæt alene** | Blev en del af værktøjslinjen i stedet for sin egen. |
+| **Fed direkte i feltet** (contenteditable) | Forkastet før: en linje, der slutter med et låst element, slugte tekst uden en lyd. |
+
 ## Vinduet viser kladden, som én person får den
 
 Det høje vindue viser ikke et gennemsnit af udsendelsen. Det viser **ét brev med et navn på**:
@@ -157,5 +186,9 @@ Retter nogen skabelonen næste måned, ændrer det ikke, hvad der står i en uds
 **Et `@` lige efter et ord** læser Razor som en mailadresse. `kunder@(Used(group))`, ikke `kunder@Used(group)`.
 
 **"Den dansk skabelon".** Fejlteksten byggede adjektivet af sprognavnet uden bøjning. Efter *den* skal det hedde *danske*, *svenske*, *engelske* — et `e` bag på navnet.
+
+**Enter i editoren er ikke "næste trin".** Formularen sender Enter videre som *Gem og fortsæt*. Uden `@onkeydown:stopPropagation` på editorens boks sendte Enter på en knap i værktøjslinjen dig til næste trin.
+
+**`value =` og `setRangeText` fjerner Ctrl+Z.** Browseren fortryder kun ændringer, den selv har lavet. `execCommand('insertText')` er forældet på papiret, men er den eneste vej, hvor en knap kan ændre et tekstfelt og stadig kunne fortrydes.
 
 **Klikbare ansigter på et klikbart kort.** Første udgave lod navnet være kortets knap og ansigterne være knapper ovenpå. Det virkede, men kortet betød to ting afhængigt af, hvor man ramte. Nu er hele kortet én `<button>`, og ansigterne er `aria-hidden`.

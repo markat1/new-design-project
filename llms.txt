@@ -208,6 +208,12 @@ Hvert mønster er valgt mellem flere byggede alternativer. Foreslå ikke et af d
 - Kun én række er blå. Forælderen til det valgte trin får mørk tekst, ikke farve.
 - Der er kun én kladde. Der spørges kun, når noget går tabt. Spørgsmålet er det, knappen bad om ("Start en ny udsendelse?"), knapperne hedder det, de gør, og fokus starter på den sikre. Brug native `<dialog>` med `showModal()`.
 
+**Tekstfelt med formatering og felter (fx `{navn}`):**
+- Værktøjslinjen sidder i samme boks som tekstfeltet: én kant, én fokusring. Fed/kursiv/liste + "Indsæt: + Navn + Firma".
+- Formatering gemmes som lette markører (`**fed**`, `_kursiv_`, `- `) og tegnes ved visning, efter HTML-escaping. Aldrig contenteditable.
+- Knapper indsætter ved markøren i det felt, man sidst stod i. Et felt stavet forkert siges ved feltet, først efter blur, derefter live.
+- Ingen hjælpetekst, der gentager, hvad knapperne viser.
+
 **Avatarer:** farven vælges af mailadressen, så den samme person har den samme farve overalt. Brug en stabil hash (FNV-1a) modulo 10. Cirklen er en lys tone, initialerne den mørke tone af samme kulør. Alle cirkler har samme chroma (0.035) ved L 0.935, og initialerne har L 0.470.
 
 ## 10. Fælder
@@ -224,6 +230,8 @@ Hvert mønster er valgt mellem flere byggede alternativer. Foreslå ikke et af d
 | En række er 2px højere end regnestykket | En checkbox på grundlinjen trækker linjeboksen | `display: block` på checkboxen |
 | En stil virker ikke, selvom selektoren er rigtig | En tungere regel senere i filen vinder (`.x td` slår `.y`) | Gør selektoren tungere, fx `.x td.y` |
 | Et kort eller panel ser ens ud, men står skævt på halve pixels | `min-height` højere end indholdet giver en ulige rest at dele | Faste linjehøjder, så højden er deterministisk |
+| Ctrl+Z fortryder ikke en knap i en værktøjslinje | Knappen skrev `el.value = …` eller `setRangeText`, som browseren ikke registrerer som redigering | `document.execCommand('insertText', false, tekst)` efter `setSelectionRange` |
+| Enter på en knap i en værktøjslinje sender formularen videre | En forælder lytter på Enter som "næste trin" | Stop tastens vandring på editorens boks (`@onkeydown:stopPropagation`) |
 | Appen fryser ved et klik, men konsollen er ren og intet kører i ring | En egenskab, der så billig ud (`Store.All`), begyndte at regne noget tungt ud, og en komponent læser den hundrede gange pr. render | Giv de hyppige læsere en billig egenskab (`Store.Sent`, `Store.Count`), og mål klikket i ms bagefter |
 
 ## 11. Arbejdsmetode

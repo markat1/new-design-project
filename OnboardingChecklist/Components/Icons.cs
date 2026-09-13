@@ -60,6 +60,20 @@ public static class Icons
     public static readonly MarkupString Plus = new(
         """<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>""");
 
+    // The letter's toolbar. Drawn at 14px on a 16px grid, the weight of the
+    // 13px labels beside them.
+    public static readonly MarkupString Bold = new(
+        """<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5h4.2a2.8 2.8 0 0 1 0 5.6H4.5zM4.5 8.1h5a2.7 2.7 0 0 1 0 5.4h-5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>""");
+
+    public static readonly MarkupString Italic = new(
+        """<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 2.5 6 13.5M6.5 2.5h6M3.5 13.5h6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>""");
+
+    public static readonly MarkupString List = new(
+        """<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="4" r="1.1" fill="currentColor"/><circle cx="3" cy="8" r="1.1" fill="currentColor"/><circle cx="3" cy="12" r="1.1" fill="currentColor"/><path d="M6.5 4h7M6.5 8h7M6.5 12h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>""");
+
+    public static readonly MarkupString PlusSm = new(
+        """<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>""");
+
     /// The draft in the side menu: something being written, not yet sent.
     public static readonly MarkupString Pencil = new(
         """<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>""");

@@ -30,6 +30,72 @@ window.app = {
     requestAnimationFrame(() => document.getElementById(id)?.focus({ preventScroll: true }));
   },
 
+  // The letter's toolbar. Wired once for the whole document, so a re-render of
+  // the form needs nothing from Blazor. Every change goes through
+  // execCommand('insertText'): the browser records it for Ctrl+Z, and fires
+  // the input event Blazor's @oninput is already listening for.
+  editor: (() => {
+    let lastField = 'f-body';
+
+    function edit(field, change) {
+      if (!field) return;
+      const [from, to, text, selFrom, selTo] = change(field.value, field.selectionStart, field.selectionEnd);
+      field.focus();
+      field.setSelectionRange(from, to);
+      if (!document.execCommand('insertText', false, text)) {
+        field.setRangeText(text, from, to, 'end');
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      field.setSelectionRange(selFrom, selTo);
+    }
+
+    const wrap = (field, mark) => edit(field, (v, a, z) => {
+      const picked = v.slice(a, z) || (mark === '**' ? 'fed tekst' : 'kursiv');
+      return [a, z, mark + picked + mark, a + mark.length, a + mark.length + picked.length];
+    });
+
+    // Every line the selection touches, on or off together.
+    const list = field => edit(field, (v, a, z) => {
+      const start = v.lastIndexOf('\n', a - 1) + 1;
+      const end = v.indexOf('\n', z);
+      const stop = end === -1 ? v.length : end;
+      const lines = v.slice(start, stop).split('\n');
+      const off = lines.every(l => l.startsWith('- '));
+      const block = lines.map(l => off ? l.slice(2) : '- ' + l).join('\n');
+      return [start, stop, block, start, start + block.length];
+    });
+
+    const insert = (field, token) => edit(field, (v, a, z) => [a, z, token, a + token.length, a + token.length]);
+
+    document.addEventListener('focusin', e => {
+      if (e.target.matches?.('[data-ed-field]')) lastField = e.target.id;
+    });
+
+    // A toolbar click must not take the caret out of the text it acts on.
+    document.addEventListener('mousedown', e => {
+      if (e.target.closest?.('.ed-b')) e.preventDefault();
+    });
+
+    document.addEventListener('click', e => {
+      const b = e.target.closest?.('.ed-b');
+      if (!b) return;
+      const body = document.getElementById('f-body');
+      if (b.dataset.wrap) wrap(body, b.dataset.wrap);
+      else if (b.hasAttribute('data-list')) list(body);
+      else if (b.dataset.insert) insert(document.getElementById(lastField) || body, b.dataset.insert);
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.target.id !== 'f-body' || !(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key !== 'b' && key !== 'i') return;
+      e.preventDefault();
+      wrap(e.target, key === 'b' ? '**' : '_');
+    });
+
+    return {};
+  })(),
+
   // A native <dialog>, opened modal: the focus trap, Escape and the top layer
   // come with showModal(), and closing hands focus back to whatever opened it.
   // The backdrop and the dialog's own padding are both the <dialog> as a click

@@ -110,7 +110,14 @@
             </dl>
 
             <div class="d-body" data-empty="@(Blank(Text) ? "" : null)">
-                @(Blank(Text) ? (Preview ? "Ingen tekst endnu — skabelonen skrives i trin 2." : "Sendt uden tekst.") : Text)
+                @if (Blank(Text))
+                {
+                    @(Preview ? "Ingen tekst endnu — skabelonen skrives i trin 2." : "Sendt uden tekst.")
+                }
+                else
+                {
+                    @LetterText.Render(Text)
+                }
             </div>
         </div>
     }
