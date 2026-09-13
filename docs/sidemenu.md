@@ -2,7 +2,7 @@
 
 Afgjort ud fra seks runder prototyper (13. september 2026), alle bygget på et aftryk af appens egen ramme.
 
-Filerne: `Shell.razor` (menuen), `Components/StepRail.razor` (trinnene), `Components/StartOverDialog.razor` (spørgsmålet), `Model/MailDraft.cs` (`Started`, `Untouched`, `StartOver`) og `wwwroot/js/app.js` (`app.dialog`).
+Filerne: `Shell.razor` (menuen), `Components/StepRail.razor` (trinnene), `Components/StartOverDialog.razor` (spørgsmålet), `Model/MailDraft.cs` (`Started`, `Untouched`, `Load`, `AsDraft`, `StartOver`), `Model/MailStore.cs` (`StartDraft`, `Send`) og `wwwroot/js/app.js` (`app.dialog`).
 
 ```
 ┌──────────────────────────┐
@@ -31,7 +31,9 @@ Menuen sagde *Mails* og *Ny mail*, mens resten af appen allerede sagde *"4 udsen
 - **Kladden og trinnene deler én flade** (`--canvas` med en hårstreg over og under). Uden fladen stod kladden og de tre trin med samme venstrekant og samme afstand, og øjet læste fire ligeværdige ting.
 - **Trinnene bliver stående, også på Udsendelser.** Første udgave foldede dem sammen, når man gik til listen, og så skulle man først åbne kladden for at nå et trin. Et klik på et trin fra listen åbner kladden på det trin.
 - **Kun én række er blå.** På kladden er det trinnet: kladden er, hvor du er, ikke hvad der er valgt, så den får mørk tekst og ingen farve. På listen er det Udsendelser, og intet trin er markeret. To blå rækker betød to markeringer.
-- **Kladden står der kun, når du selv har startet den.** Appen har altid et udkast i hukommelsen, og viste menuen det, stod der en kladde, ingen havde lavet.
+- **Kladden står der, når der findes en**: en du har startet, eller en der allerede lå i listen. Første udgave viste kun den, man selv havde startet, så en gemt kladde (M-2415) stod i listen, men ikke i menuen.
+- **Kladden i listen og kladden i menuen er den samme.** Listens række tegnes fra udkastet (`MailStore.All` → `MailDraft.AsDraft`), så den viser det, du lige har skrevet. "Ny udsendelse" erstatter rækken, og ved afsendelse bliver den en sendt udsendelse med samme nummer.
+- **Et udkast, ingen har startet, er ikke en kladde.** Appen har altid et udkast i hukommelsen, og viste menuen det, stod der en kladde, ingen havde lavet.
 
 ## Trinnene har flueben, ikke skiver
 

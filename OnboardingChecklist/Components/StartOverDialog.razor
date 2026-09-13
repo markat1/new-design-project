@@ -1,5 +1,6 @@
 @implements IDisposable
 @inject MailDraft S
+@inject MailStore Store
 @inject AppState App
 @inject IJSRuntime JS
 
@@ -29,7 +30,7 @@
     {
         await JS.InvokeVoidAsync("app.dialog.close", el);
         App.Page = AppPage.Quote;
-        S.StartOver();
+        Store.StartDraft();
     }
 
     /// "Fortsæt kladden" goes to the draft, wherever it was pressed from.

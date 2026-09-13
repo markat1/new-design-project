@@ -5,8 +5,37 @@ namespace OnboardingChecklist.Model;
 public class MailStore
 {
     private readonly List<Mail> mails = [.. Mail.Seed];
+    private readonly MailDraft draft;
 
-    public IReadOnlyList<Mail> All => mails;
+    /// There is only ever one draft, and a draft saved in the list is it: it is
+    /// taken up at start, so the side menu shows it from the first render.
+    public MailStore(MailDraft draft)
+    {
+        this.draft = draft;
+
+        if (mails.FirstOrDefault(m => m.Status == MailStatus.Draft) is { } saved)
+        {
+            mails.RemoveAll(m => m.Status == MailStatus.Draft && m != saved);
+            draft.Load(saved);
+        }
+    }
+
+    /// The draft's row is drawn from the draft itself, so the list shows what
+    /// was just written rather than what was there when it was saved.
+    public IReadOnlyList<Mail> All =>
+        [.. mails.Select(m => m.Status == MailStatus.Draft ? draft.AsDraft(m.Ref) : m)];
+
+    /// The draft's number, kept from the moment it was started until it is sent.
+    public string? DraftRef => mails.FirstOrDefault(m => m.Status == MailStatus.Draft)?.Ref;
+
+    /// A new send-out in place of the draft, if there was one: one draft, one row.
+    public void StartDraft()
+    {
+        mails.RemoveAll(m => m.Status == MailStatus.Draft);
+        mails.Insert(0, new Mail(NextRef(), "", "", MailStatus.Draft, "—", [], [], []));
+        draft.StartOver();
+        Changed?.Invoke();
+    }
 
     public event Action? Changed;
 
@@ -17,10 +46,13 @@ public class MailStore
         Changed?.Invoke();
     }
 
-    /// Turns the draft into a sent mail and empties the draft for the next one.
+    /// Turns the draft into a sent mail under the number it already had, and
+    /// empties the draft for the next one.
     public Mail Send(MailDraft draft)
     {
-        var mail = draft.ToMail(NextRef(), DateTime.Now.ToString("yyyy-MM-dd"));
+        var reference = DraftRef ?? NextRef();
+        mails.RemoveAll(m => m.Status == MailStatus.Draft);
+        var mail = draft.ToMail(reference, DateTime.Now.ToString("yyyy-MM-dd"));
         Add(mail);
         draft.Reset();
         return mail;

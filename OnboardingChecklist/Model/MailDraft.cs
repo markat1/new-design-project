@@ -308,7 +308,32 @@ public class MailDraft
     public string Size => Picked.Count == 0 ? "ingen modtagere endnu"
         : $"{Picked.Count} {(Picked.Count == 1 ? "mail" : "mails")} · {Companies} {(Companies == 1 ? "kunde" : "kunder")}";
 
-    /// A new send-out in place of the old one, open on its first step.
+    /// A draft saved in the list, taken up where it was left: its lists, the
+    /// people on them it was going to, and its letters.
+    public void Load(Mail saved)
+    {
+        Reset();
+        lists.Clear();
+        lists.AddRange(MarketingGroup.Lists.Where(l => saved.Lists.Contains(l.Name)).Take(MaxLists));
+
+        foreach (var list in lists)
+        {
+            picks[list.Name] = [.. list.People.Select(p => p.Email).Where(e => saved.Recipients.Any(r => r.Email == e))];
+        }
+
+        foreach (var letter in saved.Letters) letters[letter.Lang] = letter;
+
+        Started = true;
+    }
+
+    /// The draft as its row in the list: unsent, undated, and named the way the
+    /// side menu names it.
+    public Mail AsDraft(string reference) =>
+        new(reference, Title, Note, MailStatus.Draft, "—", Recipients,
+            [.. lists.Select(l => l.Name)], [.. Langs.Select(LetterFor)]);
+
+    /// A new send-out in place of the old one, open on its first step. Called
+    /// by the store, which swaps the draft's row at the same time.
     public void StartOver()
     {
         Reset();
