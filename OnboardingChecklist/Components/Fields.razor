@@ -226,26 +226,29 @@
                     var people = S.Recipients.Where(r => r.Lang == lang).ToArray();
                     var bad = S.Errors.ContainsKey("template") && subject.Trim().Length == 0;
 
-                    <div class="tpl-card" data-on="@(on ? "" : null)" data-bad="@(bad ? "" : null)">
-                        <button type="button" class="tpl-card-main" id="tpl-@lang"
-                                aria-pressed="@(on ? "true" : "false")" @onclick="() => ShowLang(lang)">
+                    @* One card, one click, one meaning: anywhere on it shows its letter.
+                       The faces are information, not targets — a card that did something
+                       else when you hit 24 pixels of it was a trap. The ring still says
+                       who the preview is showing, so paging the pane moves it. *@
+                    <button type="button" class="tpl-card" id="tpl-@lang"
+                            data-on="@(on ? "" : null)" data-bad="@(bad ? "" : null)"
+                            aria-pressed="@(on ? "true" : "false")" @onclick="() => ShowLang(lang)">
+                        <span class="tpl-card-n">
                             <span class="tpl-card-tick" aria-hidden="true">@if (on) { @Icons.TickSm }</span>
                             @Templates.Name(lang)
-                        </button>
+                        </span>
                         <span class="tpl-card-s" title="@subject">@(subject.Trim().Length > 0 ? subject : "Ingen emnelinje")</span>
                         <span class="tpl-card-ppl">
-                            @foreach (var r in people)
-                            {
-                                var person = r;
-                                <button type="button" class="tpl-av" aria-pressed="@(person.Email == Shown?.Email ? "true" : "false")"
-                                        aria-label="Vis brevet som @person.Name" title="@person.Name · @person.Company"
-                                        @onclick="() => ShowPerson(person)">
-                                    <span class="rcp-av" data-tone="@person.Tone" aria-hidden="true">@person.Initials</span>
-                                </button>
-                            }
-                            <span class="tpl-card-n">@people.Length @(people.Length == 1 ? "modtager" : "modtagere")</span>
+                            <span class="tpl-faces" aria-hidden="true">
+                                @foreach (var r in people)
+                                {
+                                    <span class="rcp-av" data-tone="@r.Tone" data-shown="@(r.Email == Shown?.Email ? "" : null)"
+                                          title="@r.Name">@r.Initials</span>
+                                }
+                            </span>
+                            <span class="tpl-card-count">@people.Length @(people.Length == 1 ? "modtager" : "modtagere")</span>
                         </span>
-                    </div>
+                    </button>
                 }
             </div>
 
@@ -588,14 +591,6 @@
             S.ShowPerson(who.Email);
         }
 
-        await Changed.InvokeAsync();
-    }
-
-    /// A face on a card: the preview shows the letter as that person gets it.
-    private async Task ShowPerson(Recipient person)
-    {
-        langShown = person.Lang;
-        S.ShowPerson(person.Email);
         await Changed.InvokeAsync();
     }
 

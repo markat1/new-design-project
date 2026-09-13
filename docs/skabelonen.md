@@ -48,10 +48,10 @@ Tekst  [Hej {navn} …                  ]
 
 - **Et kort pr. sprog, i samme form som listekortene i trin 1.** Ét sprog, du allerede har lært, frem for et nyt.
 - **Alle emnelinjer er synlige på én gang.** Et tomt emne på svensk ses uden at åbne svensk, og kortet får rød kant, når valideringen stopper dig.
-- **Modtagerne står på kortet, som deres egne initialer.** Klik et ansigt, og forhåndsvisningen viser brevet som den person; kortet følger med. Den viste person har en blå ring.
+- **Modtagerne står på kortet, som deres egne initialer.** De er information, ikke knapper. Den, forhåndsvisningen viser, har en blå ring, og ringen flytter sig, når du bladrer i ruden.
 - **Linjen under kortene siger, hvem en rettelse rammer**, i ord: *"Den svenske skabelon gælder Cecilie Nord og Jonas Vik."*
 - **Trinnet starter på det sprog, forhåndsvisningen faktisk viser.** Fanerne startede på dansk, mens ruden viste en englænder — to ruder, der sagde hver sit.
-- **Hele kortet er ét klikmål**, og initialerne ligger oven på det som selvstændige knapper.
+- **Ét kort, ét klik, én betydning.** Klik hvor som helst på kortet, og skabelonen vises. Første udgave gjorde noget andet, når man ramte et ansigt — et kort, der skifter mening efter 24 pixels, er en fælde.
 
 ### Forkastet
 
@@ -90,7 +90,6 @@ Här är era priser för 2027. Arket är bifogat och gäller endast Kestrel Anal
 Og de to ruder følges ad **begge veje**:
 
 - **Klik et sprogkort** → vinduet stiller sig på en, der taler det sprog. Et brev uden en læser på den anden side af ruden er bare tekst.
-- **Klik et ansigt på kortet** → vinduet viser brevet som præcis den person.
 - **Klik en person i vinduet** → kortet flytter sig til det brev, personen rent faktisk får. Klik en svensker, og du redigerer den svenske skabelon.
 - **Bladreren `‹ ›`** går gennem alle modtagere, og sproget skifter med dem.
 
@@ -149,4 +148,4 @@ Retter nogen skabelonen næste måned, ændrer det ikke, hvad der står i en uds
 
 **"Den dansk skabelon".** Fejlteksten byggede adjektivet af sprognavnet uden bøjning. Efter *den* skal det hedde *danske*, *svenske*, *engelske* — et `e` bag på navnet.
 
-**Klikbare ansigter på et klikbart kort.** En knap kan ikke ligge i en knap. Kortets navn er knappen og strækkes over hele kortet med `::after`; ansigterne ligger over den med `z-index` som selvstændige knapper.
+**Klikbare ansigter på et klikbart kort.** Første udgave lod navnet være kortets knap og ansigterne være knapper ovenpå. Det virkede, men kortet betød to ting afhængigt af, hvor man ramte. Nu er hele kortet én `<button>`, og ansigterne er `aria-hidden`.
