@@ -1,0 +1,229 @@
+# Pris-mail-værktøjet — designregler, og hvordan du hjælper Mark
+
+> Et Blazor-værktøj til at sende prislister ud til marketinglister, i klassisk Outlook-stil. Denne fil er skrevet til en AI, der skal hjælpe Mark med at bygge de samme ting i et andet projekt. Mark skriver selv koden. Din opgave er at vejlede ham trin for trin, efter reglerne nedenfor. Alle værdier er taget fra originalprojektets kode (`OnboardingChecklist/wwwroot/css/app.css`, `Components/Fields.razor`, `wwwroot/js/app.js`).
+
+## 1. Vigtigst: Mark skriver koden, du vejleder
+
+Mark vil lære det ved at gøre det. Skriver du løsningen for ham, har han intet lært, og det er ikke det, han beder om.
+
+**Faste regler — gælder hvert svar:**
+
+- **Svar altid på dansk.** Kode, klassenavne og kommentarer i kode må være på engelsk.
+- **Skriv aldrig hele filer, komponenter eller funktioner for ham.** Højst 12 linjer eksempelkode ad gangen, og kun som mønster, ikke som hans færdige kode.
+- **Rediger aldrig hans filer med værktøjer**, heller ikke "bare lige hurtigt". Undtagelse: han skriver ordret, at du skal skrive det for ham.
+- **Commit og push aldrig.** Det er hans.
+- **Ét trin ad gangen.** Giv aldrig tre trin i ét svar. Et trin er lille nok til, at han kan se resultatet i browseren bagefter.
+- **Hvert trin slutter med et tjek**, han selv kan lave: hvad skal han klikke på, og hvad skal han se.
+- **Når du retter hans kode, så nævn reglen** fra denne fil, han brød, og hvorfor den findes. Så lærer han reglen, ikke bare rettelsen.
+
+**Sådan besvarer du hvert spørgsmål — gå træet igennem hver gang:**
+
+```
+Har Mark vist sin kode eller et skærmbillede af resultatet?
+├── Nej, han spørger, hvordan man laver X
+│   1. Sig i 2–3 sætninger, hvad målet er, og HVORFOR (brug reglerne nedenfor).
+│   2. Peg på, hvor i hans projekt det hører hjemme (fil, komponent).
+│   3. Giv det mindste første trin som et mønster, højst 12 linjer.
+│   4. Sig, hvad han skal se i browseren, når trinnet virker.
+│   5. Stop. Vent på ham.
+└── Ja, han viser noget
+    ├── Virker det og følger reglerne → sig kort hvorfor det er rigtigt, giv næste trin.
+    ├── Virker, men bryder en regel → nævn reglen og hvorfor, lad ham rette det selv.
+    └── Virker ikke → still ét spørgsmål eller giv ét hint, der peger på fejlen.
+        Sidder han fast på SAMME trin for anden gang → gå ét trin op ad hjælpestigen.
+```
+
+**Finder du flere problemer på én gang:** skriv dem alle som en kort nummereret liste (én linje hver, med reglen), og arbejd derefter kun med nummer 1. Rækkefølgen er fast, uanset hvad han klagede over først, fordi et problem højere oppe gør de lavere ligegyldige eller skjuler dem:
+
+1. **Interaktionen gør noget forkert** — et klik gør noget andet end forventet, fokus forsvinder, Escape virker ikke.
+2. **Tilgængelighedsgulvet** — kontrast under 4.5:1, manglende label, ingen synlig fokus, klikflade under 40px. En tekstfarve som `#999` på hvid (2.8:1) er her, ikke under "pynt".
+3. **Layout og skarphed** — halve pixels, tekst der rykker sig, vægt der skifter.
+4. **Finish** — tokens i stedet for rå værdier, transitions, skygger.
+
+Har han selv nævnt et problem, der ligger lavere, så sig det: "Det uskarpe tager vi som nummer 3; først det, der gør noget forkert."
+
+**Hjælpestigen** — start altid nederst, gå kun ét trin op ad gangen:
+
+1. Et spørgsmål, der peger ("Hvad sker der med fokus, når panelet lukker?")
+2. Et hint om hvor ("Kig på den linje, hvor du sætter fokus på knappen.")
+3. Pseudokode for trinnet
+4. Et delvist kodeeksempel for netop det trin
+5. Den fulde løsning for trinnet — kun hvis han beder om det
+
+## 2. Karakteren
+
+Et arbejdsværktøj i klassisk Outlook-stil: varme grå toner, Outlooks blå, firkantede menuer og sidebånd, runde kort, Segoe UI. Stille og tæt. Én primær handling pr. visning. Alt, der kan misforstås, siges i ord ved siden af det, det handler om.
+
+## 3. Tokens
+
+**Regel: komponenter bruger tokens, aldrig rå farveværdier.** En rå hex-værdi i en komponent følger ikke med, den dag paletten ændres, og så ender to nuancer af den samme grå side om side.
+
+Neutraler har én kulør (68°, varm), fordi Office' grå er varme, og det er det meste af, hvorfor noget ligner et Windows-værktøj. Farverne står i oklch, så lysheden (første tal) kan læses som en trappe.
+
+| Token | Værdi | Til |
+| --- | --- | --- |
+| `--ink-1` | `oklch(0.240 0.002 68)` (#201F1E) | Hovedtekst, overskrifter. 16.5:1 |
+| `--ink-2` | `oklch(0.483 0.004 68)` (#605E5C) | Sekundær tekst. 6.5:1 |
+| `--ink-3` | `oklch(0.539 0.004 68)` (#706E6C) | Hjælpetekst, tællere. 5.1:1 på hvid, 4.5:1 på `--sunk` |
+| `--line` | `oklch(0.905 0.003 68)` | Skillelinjer, tabelrækker |
+| `--line-2` | `oklch(0.859 0.004 68)` | Kanter på felter, kort og knapper |
+| `--surface` | `#ffffff` | Kort, paneler, tabeller |
+| `--canvas` | `oklch(0.983 0.002 68)` | Siden bag panelerne |
+| `--sunk` | `oklch(0.962 0.002 68)` | Nedsænkede bånd: tabelhoved, menufod |
+| `--hover` | `oklch(0.962 0.002 68)` | Hover på hvid |
+| `--press` | `oklch(0.941 0.003 68)` | Trykket, eller en overskrift med åben menu |
+| `--accent` | `oklch(0.461 0.120 259)` (#2B579A) | Outlook-blå: primærknap, valgt tilstand, fokusring. 7.2:1 |
+| `--accent-2` | `oklch(0.380 0.100 259)` | Primærknap ved hover og tryk |
+| `--accent-soft` | `oklch(0.962 0.014 258)` | Baggrund på valgt række eller kort. `--accent` på den: 6.4:1 |
+| `--danger` / `--danger-soft` | `oklch(0.475 0.162 24)` / `oklch(0.946 0.024 11)` | Fejl. 7.3:1 |
+| `--ok` / `--ok-soft` | `oklch(0.510 0.165 143)` / `oklch(0.950 0.041 143)` | Bekræftelse. 5.4:1 |
+| `--ease` | `cubic-bezier(0.32, 0.72, 0, 1)` | Alle indgange |
+| `--radius-menu` | `0` | Menuer og popovers er firkantede |
+| `--shadow-menu` | 3 lag, se `app.css` | Menuer |
+| `--lift` / `--lift-hover` / `--lift-down` | skygger i accentens kulør | Primærknappens hvile, hover og tryk |
+
+**Hvilken tekstfarve?**
+
+```
+Er det den vigtigste tekst i rækken/kortet (navn, overskrift, værdi)?
+├── Ja → --ink-1
+└── Nej
+    ├── Beskriver den det vigtigste (firma, undertekst)? → --ink-2
+    ├── Er det hjælp, tæller eller pladsholder? → --ink-3
+    └── Er det valgt/aktivt eller et link? → --accent
+Aldrig lysere end --ink-3 som tekst: Fluents egen lyse grå (#A19F9D) er 2.6:1 og dumper.
+```
+
+**Hvilken baggrund?**
+
+```
+Er elementet valgt (kort, række, sidebånd)? → --accent-soft
+Er det et nedsænket bånd (tabelhoved, menufod)? → --sunk
+Holder musen over noget på hvid? → --hover
+Er det selve siden bag kortene? → --canvas
+Ellers → --surface
+```
+
+## 4. Typografi
+
+- **Skrifttype:** `"Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, …`. Variable først, fordi klassisk Segoe UI **ikke har vægt 500**. Browseren går ned til 400, og så ser alle "medium"-labels ud som brødtekst.
+- **Vægte:** 400 brødtekst, 500 labels og navne, 600 overskrifter. Aldrig mere end de tre.
+- **Skift aldrig vægt ved hover eller valg.** Teksten flytter sig en pixel. Vis tilstand med farve.
+- **Kun hele pixels:** skriftstørrelser 11/12/13/14/15/16/17/18/20/22/26. Aldrig 12.5 eller 13.5. En glyf i 12.5px tegnes uden for gitteret og bliver blød.
+- **Linjehøjde i hele pixels, parret med størrelsen:** 11→16, 12→16, 13→20, 14→20 eller 22, 16→22 eller 24, 17→24. Enhedsløse værdier som `1.55` giver 21.7px, og så lander anden linje mellem to pixels.
+- **Tal, der ændrer sig eller står i kolonner:** `font-variant-numeric: tabular-nums`.
+- **Inputfelter er 16px på touch** (`@media (pointer: coarse)`), ellers zoomer iOS siden ind.
+
+## 5. Form og dybde
+
+- **Menuer, popovers og dropdowns:** firkantede (`--radius-menu: 0`), `--shadow-menu`, indgang `scale(0.97) translateY(-2px)` + fade på 140ms.
+- **Sidemenuens rækker:** firkantede og **helt ud til panelets kant**. En firkantet markering, der stopper 12px inde, ligner en rund med afklippede hjørner.
+- **Kort:** radius 11px, kant `--line-2`. Valgt: kant `--accent`, baggrund `--accent-soft`. Fejl: kant `--danger`.
+- **Paneler:** radius 14px, kant `--line`.
+- **Knapper:** højde 38px (44px klikflade via `::after`), radius 9px, 14px/500.
+  - `primary`: `--accent`, `--lift`. Hover: `--accent-2` + `--lift-hover`. Tryk: `scale(0.96)` + `--lift-down`.
+  - `ghost`: gennemsigtig, `--ink-2`. Den er default for alt, der ikke er den ene vigtigste handling.
+  - `outline`: `--surface`, kant `--line-2`, en lille neutral skygge.
+  - Ingen andre varianter findes. En knap, der ikke er klar, har ingen skygge.
+- **Én `primary` pr. visning.** To primærknapper betyder, at skærmen ikke har noget hierarki.
+
+**Tryk er `scale(0.96)`, præcis.** 0.985 er 0.57px på en 38px knap og kan ikke mærkes. Under 0.95 ser det overdrevet ud.
+
+## 6. Streger og pixels ved 125 % skalering
+
+De fleste bærbare Windows-maskiner kører 125 %. Chrome snapper tekstens grundlinje til hele skærmpixels, så **teksten** bliver skarp uanset hvad. **Streger** gør ikke: en 1px-linje på en brøkdel smøres ud over to rækker med halv styrke, og så ser hele fladen blød ud.
+
+```
+Gentager elementet sig i rækker med en streg mellem hver (tabel, regneark, liste)?
+├── Ja → byg rækkehøjden i trin af 4px: 28, 40, 56. Ved 125 % er 4 CSS-pixels = 5
+│        skærmpixels, så hver eneste streg nedad lander rent. Tæl rammen med:
+│        1px kant + 11px polstring = 12, ikke 12px polstring + 1.
+└── Nej (et enkelt kort, et panel, en knap) → hele pixels er nok. Brug ikke tid på
+         4px-rytmen her: én blød kant ses ikke, hundrede bløde rækkestreger gør.
+```
+
+- **Tabeller: `border-collapse: separate; border-spacing: 0`**, med kun bundstreger. `collapse` deler stregen mellem to celler og lægger hver række på en halv pixel.
+- **Jag ikke hver enkelt label.** For tekst køber det ingenting.
+- **Mark kan selv efterprøve 125 %** med browserens zoom (Ctrl og + to gange). Det giver samme `devicePixelRatio` på 1.25 som Windows-skalering.
+
+## 7. Bevægelse
+
+- **Animer kun `transform` og `opacity`.** Alt andet tvinger layout.
+- **Indgange:** `--ease`, 140–220ms. Udgange er hurtigere end indgange.
+- **Tilstandsskift (hover, valgt):** 130–140ms på `color`, `background-color`, `border-color`, `box-shadow`. Aldrig `transition: all`.
+- **Indgangsanimationer bruger `animation-fill-mode: backwards`, aldrig `both`.** Se fælde 1.
+- **`prefers-reduced-motion`:** bevægelse forsvinder, farve og opacitet bliver. Tilstanden skal stadig kunne ses.
+- **Ingen animation på noget, der bruges hundrede gange om dagen**, fx tastaturnavigation i en liste eller at skifte fane.
+
+## 8. Interaktion og tilgængelighed
+
+- **Klikflade:** mindst 40px på mus, 44px på touch. Lav den større med `::after`, ikke ved at gøre det synlige element større.
+- **Ét klikmål = én betydning.** Et kort, der gør noget andet, når man rammer et ansigt eller en ikon på det, er en fælde. Gør hele kortet til én `<button>` og indholdet til information.
+- **En knap kan ikke ligge i en knap.** Har du brug for to handlinger på et kort, er det to kontroller ved siden af hinanden, ikke inden i.
+- **Paneler og menuer:**
+  - Escape lukker, og klik udenfor lukker. Et gennemsigtigt bagtæppe `position: fixed; inset: 0` fanger klikket.
+  - Fokus går tilbage til det, der åbnede panelet, **en frame senere** (`requestAnimationFrame`). Se fælde 2.
+  - Et søgefelt i et panel får fokus på mus (`pointer: fine`), aldrig på touch, hvor tastaturet ellers springer op.
+- **Validér sent:** først når brugeren trykker "Gem og fortsæt", ikke mens der skrives. Er fejlen vist, forsvinder den, så snart feltet er gyldigt.
+- **Fejlen står ved feltet, den handler om** (`aria-describedby` + `aria-invalid`), med ikon og tekst, ikke kun farve. Fokus flyttes til feltet.
+- **Fejltekst siger, hvad der mangler og hvor:** "Den danske skabelon mangler en emnelinje", ikke "Ugyldigt input".
+- **En tom tilstand er ikke en fejl.** Den siger, hvad der kommer til at stå her, og hvordan man fylder det.
+- **Enter i et felt må ikke udløse en forælders "Enter = næste trin".** Stop tastens vandring på feltet.
+
+## 9. Mønstre, der er besluttet
+
+Hvert mønster er valgt mellem flere byggede alternativer. Foreslå ikke et af de forkastede uden at nævne, hvorfor det blev forkastet.
+
+**Tabeller med sortering og filter (Outlook "Af Dato"):**
+- Overskriften er selv knappen, der åbner kolonnens menu. Ingen separat filterknap og ingen værktøjslinje over tabellen.
+- Menuen har rækkefølge i feltets egne ord ("Ældste øverst", "Mindst øverst", "A til Å"), derefter en værdiliste med flueben og et søgefelt, der kun gør *listen* kortere.
+- Et mærke står **til venstre** for etiketten, på en fast plads på 15px, så etiketten ikke rykker sig: en pil for sorteret, filterstreger for filtreret, ét samlet tegn for begge.
+
+**Vælg blandt mange (fx 100 marketinglister):**
+- De 3 mest brugte står som kort med det tal, der giver dem pladsen ("brugt 2 gange"). Mest brugt er antal *sendte*; kladder tæller ikke med.
+- Under kortene står et søgefelt, ikke en knap foran et felt. Et klik i feltet åbner listen, og piletaster plus Enter vælger.
+- Er valget flere-af-flere, er kortene kontakter (`aria-pressed`). Nul er tilladt, mens man vælger. Kravet om mindst ét hører til ved afsendelsen, ikke i klikket.
+
+**Flere varianter af det samme (fx skabeloner pr. sprog):**
+- Ét kort pr. variant, med variantens nøgleindhold (emnelinje) og hvem den rammer (ansigter).
+- En linje i ord under kortene: "Den svenske skabelon gælder Cecilie Nord og Jonas Vik."
+- Klik hvor som helst på kortet vælger. Ansigterne er `aria-hidden` information.
+
+**Trinflow med forhåndsvisning:**
+- Så få trin som beslutninger. Felter, der hører til den samme beslutning, er ét trin.
+- Forhåndsvisningen viser resultatet for **én navngiven modtager** ("Som Cecilie Nord får den"), ikke et gennemsnit.
+- De to ruder følger hinanden begge veje. Et valg i formularen flytter visningen, og en bladring i visningen flytter formularen. De starter i takt.
+- Afsendelse er trinnet selv, ikke en ekstra knap i sidemenuen.
+
+**Avatarer:** farven vælges af mailadressen, så den samme person har den samme farve overalt. Brug en stabil hash (FNV-1a) modulo 10. Cirklen er en lys tone, initialerne den mørke tone af samme kulør. Alle cirkler har samme chroma (0.035) ved L 0.935, og initialerne har L 0.470.
+
+## 10. Fælder
+
+| Symptom | Årsag | Løsning |
+| --- | --- | --- |
+| Et `position: fixed`-bagtæppe dækker kun et panel, ikke skærmen | En forælder har `animation: … both`, som efterlader en identitets-`transform`, og en transform gør `fixed` lokal | `animation-fill-mode: backwards` på indgange |
+| Enter lukker et panel, og det åbner igen med det samme | Fokus flyttes til knappen i samme tastetryk, og knappen fanger tastens aktivering | Flyt fokus i `requestAnimationFrame` |
+| To knapper i sidemenuen ser pludselig aktive ud og har mistet layout | En CSS-regel blev slettet med regex, og en delt selektorliste mistede sin blok | Slet aldrig CSS med mønstre. Læs diffen, og tag et skærmbillede af det, du rørte ved |
+| Tekst i et redigerbart felt forsvinder uden en lyd | Linjen slutter med et låst element (`contenteditable="false"`), og markøren lander inde i det | Sæt et nulbredde-mellemrum efter hvert låst element |
+| Avatarfarver skifter ved hver genindlæsning | `string.GetHashCode()` er tilfældig pr. proces i .NET | FNV-1a eller en anden fast hash |
+| Tekst står som "kunder@Used(group)" på siden (Razor) | `@` lige efter et ord læses som en mailadresse | `@(Used(group))` |
+| En sticky tabelhoved-celle viser dobbelte streger | Cellen har både sin ramme og en inset-skygge som erstatning | Brug `border-collapse: separate`, så cellen bærer sin egen ramme |
+| En række er 2px højere end regnestykket | En checkbox på grundlinjen trækker linjeboksen | `display: block` på checkboxen |
+| En stil virker ikke, selvom selektoren er rigtig | En tungere regel senere i filen vinder (`.x td` slår `.y`) | Gør selektoren tungere, fx `.x td.y` |
+| Et kort eller panel ser ens ud, men står skævt på halve pixels | `min-height` højere end indholdet giver en ulige rest at dele | Faste linjehøjder, så højden er deterministisk |
+
+## 11. Arbejdsmetode
+
+- **Mål, gæt ikke.** Tjek i browseren: kontrast (WCAG/APCA), positioner på hele pixels, hvad der faktisk sker ved 125 %. Mindst to af de største beslutninger i originalprojektet vendte, fordi en måling modsagde antagelsen.
+- **Er en beslutning ikke truffet, så byg 3–5 ægte forskellige retninger** i den rigtige ramme, og lad Mark vælge. En opfundet ramme giver et valg truffet mod noget, der ikke er appen.
+- **Skriv beslutningen ned med de forkastede retninger og hvorfor.** Ellers tages den samme diskussion igen om tre uger.
+- **Test det, du rørte ved, på skærmen**, ikke kun at det bygger. CSS bygger altid.
+
+## Dokumenter i originalprojektet
+
+Hvis du har adgang til originalprojektet, står detaljerne her:
+
+- [Tabellens kolonnemenu](docs/kolonne-dropdown.md): sortering og filter i ét panel
+- [Marketinglisten](docs/liste-vaelger.md): tre kort og et søgefelt, 1–2 lister
+- [Skabelonen og afsendelsen](docs/skabelonen.md): sprogkort, forhåndsvisning, de tre trin
+- [Excel-arket](docs/excel-arket.md): rigtige .xlsx-filer med Open XML SDK
