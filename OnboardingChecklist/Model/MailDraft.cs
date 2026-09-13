@@ -218,7 +218,8 @@ public class MailDraft
 
         if (key == "template" && Langs.FirstOrDefault(l => LetterFor(l).Subject.Trim().Length == 0) is { } empty)
         {
-            Errors["template"] = $"Den {Templates.Name(empty).ToLowerInvariant()} skabelon mangler en emnelinje.";
+            // "danske", not "dansk": the adjective agrees with "skabelon" after "den".
+            Errors["template"] = $"Den {Templates.Name(empty).ToLowerInvariant()}e skabelon mangler en emnelinje.";
             return false;
         }
 

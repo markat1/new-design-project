@@ -1602,43 +1602,78 @@ body {
 /* ============================================================
    THE TEMPLATE STEP — one letter per language in play
    ============================================================ */
-/* A tab strip, because the languages are views of the same letter rather than
-   three separate answers. They are never more than three. */
-.lang { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
-.lang-tab {
+/* One card per language, in the shape of step 1's list cards. Chosen from two
+   rounds of prototypes; the tabs this replaced said how many a letter reached,
+   and these say who. See docs/skabelonen.md. */
+.tpl-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.tpl-card {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: 11px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 11px;
+  background: var(--surface);
+  transition: border-color 130ms ease, background-color 130ms ease;
+}
+.tpl-card:hover { background: var(--sunk); }
+.tpl-card[data-on] { border-color: var(--accent); background: var(--accent-soft); }
+/* The footer's button found this card's subject empty. Red edge here, the
+   words beside the field below. */
+.tpl-card[data-bad] { border-color: var(--danger); }
+.tpl-card:has(.tpl-card-main:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The whole card is one target: the name's button stretches over it, and the
+   faces sit above that as buttons of their own. */
+.tpl-card-main {
   display: flex;
   align-items: center;
-  gap: 7px;
-  min-height: 40px;
-  padding: 10px 13px;
+  gap: 6px;
+  padding: 0;
   border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
+  background: none;
   font: inherit;
-  font-size: 13px;
-  /* Never bolder when chosen: the strip would resize under the pointer. */
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 500;
-  color: var(--ink-3);
+  color: var(--ink-1);
+  text-align: left;
   cursor: pointer;
-  transition: color 140ms ease, border-color 140ms ease;
 }
-.lang-tab:hover { color: var(--ink-1); }
-.lang-tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
-.lang-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-@media (pointer: coarse) { .lang-tab { min-height: 44px; } }
+.tpl-card-main::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.tpl-card-main:focus-visible { outline: none; }
+.tpl-card-tick { display: flex; flex: none; width: 12px; color: var(--accent); }
+.tpl-card-s { overflow: hidden; font-size: 12px; line-height: 16px; color: var(--ink-3); text-overflow: ellipsis; white-space: nowrap; }
 
-.lang-n {
-  min-width: 20px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--hover);
-  font-size: 11px;
-  line-height: 16px;
-  text-align: center;
-  color: var(--ink-3);
-  font-variant-numeric: tabular-nums;
+.tpl-card-ppl { position: relative; z-index: 1; display: flex; align-items: center; margin-top: 4px; }
+.tpl-av {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
 }
-.lang-tab[aria-selected="true"] .lang-n { background: var(--accent-soft); color: var(--accent); }
+/* Overlap stops short of the letters: any more and the next circle covers the
+   previous one's second initial. */
+.tpl-av + .tpl-av { margin-left: -3px; }
+.tpl-av .rcp-av { width: 24px; height: 24px; font-size: 10px; box-shadow: 0 0 0 2px var(--surface); transition: transform 130ms ease-out; }
+.tpl-card[data-on] .tpl-av .rcp-av { box-shadow: 0 0 0 2px var(--accent-soft); }
+/* The person the preview is showing. Heavier than the chosen card's ring
+   above, which would otherwise win and hide who is shown. */
+.tpl-card .tpl-av[aria-pressed="true"] .rcp-av { box-shadow: 0 0 0 2px var(--accent); }
+@media (hover: hover) and (pointer: fine) { .tpl-av:hover .rcp-av { transform: translateY(-2px); } }
+.tpl-av:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* 44px of height to aim at, grown past the face rather than into its neighbours. */
+.tpl-av::after { content: ""; position: absolute; inset: -9px -2px; }
+.tpl-card-n { margin-left: 8px; font-size: 12px; line-height: 16px; color: var(--ink-3); white-space: nowrap; }
+
+.tpl-reach { margin: 0 0 16px; font-size: 13px; line-height: 20px; color: var(--ink-2); }
+.tpl-reach b { font-weight: 500; color: var(--ink-1); }
 
 .lang-panel .f-help code {
   padding: 1px 4px;
