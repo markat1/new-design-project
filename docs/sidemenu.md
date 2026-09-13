@@ -11,9 +11,9 @@ Filerne: `Shell.razor` (menuen), `Components/StepRail.razor` (trinnene), `Compon
 │ ✉ Udsendelser         4  │  ← listen
 │░✎ Jeres priser for 2027 ░│  ← kladden …
 │░  Kladde · 8 mails · 7 kunder
-│░● Modtagere             ░│  ← … og dens trin på én flade
-│░● Skabelon              ░│
-│░● Afsendelse            ░│
+│░✓ Modtagere             ░│  ← … og dens trin på én flade
+│░✓ Skabelon              ░│
+│░○ Afsendelse            ░│
 └──────────────────────────┘
 ```
 
@@ -28,9 +28,24 @@ Menuen sagde *Mails* og *Ny mail*, mens resten af appen allerede sagde *"4 udsen
 ## Kladden hører til listen
 
 - **Kladden står lige under Udsendelser**, med emne og størrelse: *"Jeres priser for 2027 · Kladde · 8 mails · 7 kunder"*. Et tomt emne står som *"(intet emne endnu)"* i den dæmpede farve.
-- **Kladden og trinnene deler én flade** (`--canvas` med en hårstreg over og under), når kladden er åben. Uden fladen stod kladden og de tre trin med samme venstrekant og samme afstand, og øjet læste fire ligeværdige ting.
-- **Kun trinnet er blåt.** Kladden er, hvor du er, ikke hvad der er valgt, så den får mørk tekst og ingen farve. To blå rækker betød to markeringer.
+- **Kladden og trinnene deler én flade** (`--canvas` med en hårstreg over og under). Uden fladen stod kladden og de tre trin med samme venstrekant og samme afstand, og øjet læste fire ligeværdige ting.
+- **Trinnene bliver stående, også på Udsendelser.** Første udgave foldede dem sammen, når man gik til listen, og så skulle man først åbne kladden for at nå et trin. Et klik på et trin fra listen åbner kladden på det trin.
+- **Kun én række er blå.** På kladden er det trinnet: kladden er, hvor du er, ikke hvad der er valgt, så den får mørk tekst og ingen farve. På listen er det Udsendelser, og intet trin er markeret. To blå rækker betød to markeringer.
 - **Kladden står der kun, når du selv har startet den.** Appen har altid et udkast i hukommelsen, og viste menuen det, stod der en kladde, ingen havde lavet.
+
+## Trinnene har flueben, ikke skiver
+
+Et udfyldt trin har et blåt flueben uden skive. Et trin, der ikke er udfyldt, har en lille åben ring.
+
+Skiverne var massive blå former i en menu af tynde streger, lige under kladdens blyant: to ikonsprog oven på hinanden. De sagde heller ikke meget: en ny kladde starter med alle tre trin udfyldt (første liste, færdige skabeloner, CRM), så der stod næsten altid tre ens blå skiver, tungere end det valgte trin.
+
+Tilstanden står også som skjult tekst i knappen, *"Modtagere, udfyldt"*. Skiven sagde det kun med farve.
+
+| Retning | Hvorfor ikke |
+| --- | --- |
+| **Skiven** (som den var) | Tungest, og den eneste massive form i menuen. |
+| **Tal** (1, 2, 3 i en ring) | Tal og farve skulle læses sammen. Blå og grå ring var svære at skelne. |
+| **Ingen markør** | Et trin med en fejl, men med tekst under sig ("Dansk · Svensk · Engelsk"), så udfyldt ud. |
 
 ## Knappen står øverst
 
@@ -66,7 +81,7 @@ bliver »Jeres priser for 2027« til 8 mails slettet.
 | --- | --- |
 | **Opgave** ("Send prislister" med nummererede trin) | Et verbum i menuen kan læses som en knap, der sender med det samme. |
 | **"I gang"** som eget afsnit | Kladden stod adskilt fra listen, og dens trin lignede søskende til den. |
-| **Overskrift** (kladdens navn som lille overskrift) | Roligst, men på listen, hvor trinnene er skjult, lignede den en etiket, ikke noget man klikker på. |
+| **Overskrift** (kladdens navn som lille overskrift) | Roligst, men uden trinnene under sig lignede den en etiket, ikke noget man klikker på. |
 | **Under listen** (indrykket i tre niveauer) | Menuen er 248px, så "CRM · Gemt lokalt · Kopi til mig" blev skåret af. |
 | **I listen** (kladden som række i tabellen) | Menuen viste ikke kladden, mens man stod på listen. |
 | **Knappen i bunden** | Ca. 580px fra kladden, og den hørte ikke sammen med noget. |

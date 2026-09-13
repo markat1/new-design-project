@@ -35,10 +35,11 @@
             {
                 var open = App.Page == AppPage.Quote;
 
-                @* The draft and its steps on one ground while it is open: without
-                   it, the draft and three steps shared an edge and a spacing and
-                   read as four equal rows. *@
-                <div class="side-draft" data-open="@(open ? "" : null)">
+                @* The draft and its steps on one ground: without it, the draft and
+                   three steps shared an edge and a spacing and read as four equal
+                   rows. The steps stay out on the list page too, so a step is one
+                   click away from anywhere. *@
+                <div class="side-draft">
                     <button type="button" class="side-draft-head"
                             data-active="@(open ? "" : null)"
                             aria-current="@(open ? "page" : null)"
@@ -51,10 +52,7 @@
                         </span>
                     </button>
 
-                    @if (open)
-                    {
-                        <StepRail />
-                    }
+                    <StepRail Here="open" />
                 </div>
             }
         </div>

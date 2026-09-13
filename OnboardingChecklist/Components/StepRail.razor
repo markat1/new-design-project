@@ -1,5 +1,6 @@
 @implements IDisposable
 @inject MailDraft S
+@inject AppState App
 
 @* The draft's steps, rendered inside the app side menu under the draft they
    belong to, rather than as a second navigation column beside it. *@
@@ -11,19 +12,29 @@
         var sum = S.Summary(task.Key);
         <button type="button" class="side-step" @key="task.Key"
                 data-task="@task.Key"
-                data-active="@(S.StepKey == task.Key ? "" : null)"
-                aria-current="@(S.StepKey == task.Key ? "step" : null)"
+                data-active="@(Here && S.StepKey == task.Key ? "" : null)"
+                aria-current="@(Here && S.StepKey == task.Key ? "step" : null)"
                 data-nudge="@(S.Nudge == task.Key ? "" : null)"
-                @onclick="() => S.Open(task.Key)">
-            <span class="v3-dot" data-done="@(done ? "" : null)">
+                @onclick="() => Open(task.Key)">
+            <span class="side-step-mark" data-done="@(done ? "" : null)">
                 @if (done)
                 {
-                    @Icons.CheckSm
+                    @Icons.TickSm
+                }
+                else
+                {
+                    <span class="side-step-todo"></span>
                 }
             </span>
             <span class="side-step-txt">
                 <span class="side-step-t">
                     <span class="side-step-label">@task.Label</span>
+                    @* The mark is drawn, so its meaning is said: "Modtagere, udfyldt".
+                       An empty step already says "Ikke udfyldt endnu" below. *@
+                    @if (done || sum is not null)
+                    {
+                        <span class="sr-only">, @(done ? "udfyldt" : "ikke udfyldt")</span>
+                    }
                     @if (!task.Required)
                     {
                         <span class="v3-pill">Valgfri</span>
@@ -39,6 +50,18 @@
 </div>
 
 @code {
+    /// Whether the draft's page is the one showing. On the list page the steps
+    /// are still out, but none of them is where you are — Udsendelser is, and
+    /// two blue rows would be two selections.
+    [Parameter] public bool Here { get; set; }
+
+    /// From the list page a step opens the draft on that step.
+    private void Open(string key)
+    {
+        App.Page = AppPage.Quote;
+        S.Open(key);
+    }
+
     protected override void OnInitialized() => S.Changed += StateHasChanged;
     public void Dispose() => S.Changed -= StateHasChanged;
 }

@@ -490,30 +490,14 @@ body {
   55% { transform: translateX(3px); }
   80% { transform: translateX(-1px); }
 }
-.v3-dot {
-  width: 18px; height: 18px;
-  margin-top: 1px;
-  display: grid; place-items: center;
-  border: 1.5px solid var(--line-2);
-  border-radius: 50%;
-  background: var(--surface);
-  transition: background-color 180ms ease, border-color 180ms ease;
-}
-.v3-dot[data-done] { background: var(--accent); border-color: var(--accent); }
-.v3-dot svg { display: block; }
-.v3-dot svg path {
-  fill: none;
-  stroke: #fff;
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.v3-dot[data-new] svg path {
-  stroke-dasharray: 14;
-  stroke-dashoffset: 14;
-  animation: draw 300ms var(--ease) 40ms forwards;
-}
-@keyframes draw { to { stroke-dashoffset: 0; } }
+/* A step's state: the tick itself, in the blue, drawn at the weight of the
+   13px label beside it — no disc. Three filled discs were the heaviest thing
+   in the pane, and a new draft starts with all three steps done, so they said
+   the same thing three times. Not done is a small open ring: a shape, not
+   only an absence. The 18px box keeps the labels on their 50px line. */
+.side-step-mark { width: 18px; height: 18px; display: grid; place-items: center; color: var(--accent); }
+.side-step-mark svg { display: block; width: 14px; height: 14px; }
+.side-step-todo { width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-3); }
 .v3-pill {
   flex: none;
   padding: 2px 6px;
@@ -683,9 +667,9 @@ body {
 
 /* The draft, right under the list it will end up in. */
 .side-draft { margin-top: 4px; }
-/* Open, it and its steps share the canvas the page beside it stands on.
-   The hairlines are box-shadows, so they take no layout. */
-.side-draft[data-open] {
+/* It and its steps share the canvas the page beside it stands on. The
+   hairlines are box-shadows, so they take no layout. */
+.side-draft {
   padding-bottom: 6px;
   background: var(--canvas);
   box-shadow: inset 0 1px var(--line), inset 0 -1px var(--line);
@@ -786,7 +770,7 @@ body {
 }
 /* A pixel up from the geometric middle: the first line is the heavier of the
    two, and the second line's descenders hang below the ink the eye measures. */
-.side-step .v3-dot { margin-top: -1px; }
+.side-step .side-step-mark { margin-top: -1px; }
 .side-step:hover { background: #f6f6f7; }
 .side-step:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 .side-step[data-active] { background: var(--accent-soft); }
