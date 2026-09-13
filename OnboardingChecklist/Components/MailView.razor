@@ -13,10 +13,10 @@
         <div class="d-tabs" role="tablist" aria-label="Mail, modtagere og prislister" @ref="tabs" @onkeydown="TabKey">
         <button type="button" class="d-tab" role="tab" id="d-tab-mail"
                 aria-selected="@(tab == 0 ? "true" : "false")" aria-controls="d-panel-mail"
-                tabindex="@(tab == 0 ? 0 : -1)" @onclick="() => tab = 0">Mail</button>
+                tabindex="@(tab == 0 ? 0 : -1)" @onclick="() => Go(0)">Mail</button>
         <button type="button" class="d-tab" role="tab" id="d-tab-rcp"
                 aria-selected="@(tab == 1 ? "true" : "false")" aria-controls="d-panel-rcp"
-                tabindex="@(tab == 1 ? 0 : -1)" @onclick="() => tab = 1">
+                tabindex="@(tab == 1 ? 0 : -1)" @onclick="() => Go(1)">
             Modtagere
             @if (M.Recipients.Length > 0)
             {
@@ -25,7 +25,7 @@
         </button>
             <button type="button" class="d-tab" role="tab" id="d-tab-file"
                     aria-selected="@(tab == 2 ? "true" : "false")" aria-controls="d-panel-file"
-                    tabindex="@(tab == 2 ? 0 : -1)" @onclick="() => tab = 2">
+                    tabindex="@(tab == 2 ? 0 : -1)" @onclick="() => Go(2)">
                 Prislister
                 @if (M.Companies > 0)
                 {
@@ -136,7 +136,8 @@
                         <li class="rcp-item" @key="rec.Email">
                             @* Opens the sheet in its own tab rather than under the row,
                                where four columns had to share a strip. *@
-                            <button type="button" class="rcp-head" @onclick="() => Show(rec.Email)">
+                            <button type="button" class="rcp-head" aria-current="@(rec.Email == Current?.Email ? "true" : null)"
+                                    @onclick="() => Show(rec.Email)">
                                 <span class="rcp-av" data-tone="@rec.Tone" aria-hidden="true">@rec.Initials</span>
                                 <span class="rcp-txt">
                                     <span class="rcp-name" title="@rec.Name">@rec.Name</span>
@@ -379,10 +380,6 @@
     /// that asking twice for the same one still opens it.
     [Parameter] public (string Email, int Nonce)? Focus { get; set; }
 
-    /// While the letter is being written, a click on a person means "show me
-    /// what this one gets", and that is the mail — not their sheet.
-    [Parameter] public bool LetterFirst { get; set; }
-
     /// Who this pane is showing, so the form beside it can follow — pick a
     /// Swede here and the Swedish letter is the one being edited over there.
     [Parameter] public EventCallback<string> Showed { get; set; }
@@ -405,11 +402,23 @@
             shown = ask.Email;
             sheetTab = 0;
             editing = null;
-            tab = LetterFirst ? 0 : 2;
         }
     }
 
+    /// The tab is the reader's. A click anywhere else changes who is shown,
+    /// never what is shown of them: somebody reading sheets keeps reading
+    /// sheets when the form beside them points at a Swede.
     private int tab;
+
+    /// The last tab with a person's content in it. Modtagere is a way to pick
+    /// somebody, not something to read, so picking there goes back to this.
+    private int back;
+
+    private void Go(int to)
+    {
+        tab = to;
+        if (to != 1) back = to;
+    }
     private string? shown;
     private int sheetTab;
 
@@ -594,7 +603,7 @@
         shown = email;
         sheetTab = 0;
         editing = null;
-        tab = LetterFirst ? 0 : 2;
+        Go(back);
         await Showed.InvokeAsync(email);
     }
 
@@ -696,9 +705,9 @@
 
     private void TabKey(KeyboardEventArgs e)
     {
-        if (e.Key == "ArrowRight") tab = Math.Min(tab + 1, 2);
-        else if (e.Key == "ArrowLeft") tab = Math.Max(tab - 1, 0);
-        else if (e.Key == "Home") tab = 0;
-        else if (e.Key == "End") tab = 2;
+        if (e.Key == "ArrowRight") Go(Math.Min(tab + 1, 2));
+        else if (e.Key == "ArrowLeft") Go(Math.Max(tab - 1, 0));
+        else if (e.Key == "Home") Go(0);
+        else if (e.Key == "End") Go(2);
     }
 }

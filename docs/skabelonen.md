@@ -106,7 +106,17 @@ protected override void OnParametersSet()
 }
 ```
 
-**Hvilken rude et klik åbner, er trinnets sag, ikke klikkets.** På trin 1 vælger du modtagere, så et klik på en person viser deres prisliste. På trin 2 skriver du brevet, så det samme klik viser deres mail. Det er `LetterFirst`, som siden sætter ud fra `S.StepKey`.
+**Fanen er din.** Et klik i venstre side ændrer *hvem* vinduet viser, aldrig *hvilken fane* det står på. Læser du prislister og klikker det svenske kort, ser du en svenskers prisliste — ikke pludselig mailen.
+
+| Du står på | Du klikker | Vinduet |
+| --- | --- | --- |
+| Mail | et sprogkort, en række i trin 1, bladreren | bliver på Mail, ny person |
+| Prislister | det samme | bliver på Prislister, ny person |
+| Modtagere | en person | går tilbage til den fane, du kom fra (Mail eller Prislister) |
+
+Modtagere er den eneste undtagelse, fordi den ikke er noget at læse — den er en måde at vælge en person på. Hvem de andre faner viser, har en blå ring om ansigtet, den samme ring som på sprogkortene.
+
+Første udgave lod trinnet bestemme fanen (`LetterFirst`: prisliste på trin 1, mail på trin 2). Det lød logisk, men den, der sad og tjekkede prislister på trin 2, blev revet over på Mail ved hvert klik.
 
 ## Trinnet starter udfyldt
 

@@ -193,6 +193,7 @@ Hvert mønster er valgt mellem flere byggede alternativer. Foreslå ikke et af d
 - Så få trin som beslutninger. Felter, der hører til den samme beslutning, er ét trin.
 - Forhåndsvisningen viser resultatet for **én navngiven modtager** ("Som Cecilie Nord får den"), ikke et gennemsnit.
 - De to ruder følger hinanden begge veje. Et valg i formularen flytter visningen, og en bladring i visningen flytter formularen. De starter i takt.
+- **Fanen i forhåndsvisningen tilhører læseren.** Et klik i formularen ændrer *hvem* der vises, aldrig *hvilken fane*. Kun en fane, der selv er en vælger (Modtagere), må skifte fane ved et klik — og så tilbage til den fane, man kom fra. At lade trinnet bestemme fanen blev prøvet og forkastet: den, der tjekkede prislister, blev revet over på mailen.
 - Afsendelse er trinnet selv, ikke en ekstra knap i sidemenuen.
 
 **Avatarer:** farven vælges af mailadressen, så den samme person har den samme farve overalt. Brug en stabil hash (FNV-1a) modulo 10. Cirklen er en lys tone, initialerne den mørke tone af samme kulør. Alle cirkler har samme chroma (0.035) ved L 0.935, og initialerne har L 0.470.

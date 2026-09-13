@@ -85,9 +85,8 @@ public class MailDraft
     public HashSet<string> Picked => [.. lists.SelectMany(PicksFor)];
 
     /// The person the preview has been asked to show, with a nonce so asking
-    /// for the same one twice still counts as asking. Which pane opens is the
-    /// step's business, not the ask's: their sheet while you pick recipients,
-    /// their letter while you write it.
+    /// for the same one twice still counts as asking. It says who, never which
+    /// tab: that stays whatever the reader left the preview on.
     public (string Email, int Nonce)? Show { get; private set; }
 
     private int asks;
