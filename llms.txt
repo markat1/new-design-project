@@ -249,4 +249,5 @@ Hvis du har adgang til originalprojektet, står detaljerne her:
 - [Marketinglisten](docs/liste-vaelger.md): tre kort og et søgefelt, 1–2 lister
 - [Skabelonen og afsendelsen](docs/skabelonen.md): sprogkort, forhåndsvisning, de tre trin
 - [Sidemenuen](docs/sidemenu.md): knappen øverst, én kladde, dialogen før sletning
+- [Farver og detaljer](docs/farver-og-detaljer.md): tokens, fonten, sprogkortenes tilstande, de ti bobletoner, den blå ring, en slået fra knap, dialogen — med CSS til at kopiere
 - [Excel-arket](docs/excel-arket.md): rigtige .xlsx-filer med Open XML SDK

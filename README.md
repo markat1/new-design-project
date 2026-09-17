@@ -41,6 +41,7 @@ python3 docs/guide-to-markdown.py
 | [`docs/liste-vaelger.md`](docs/liste-vaelger.md) | Trin 1: tre kort og et søgefelt til de øvrige hundrede |
 | [`docs/skabelonen.md`](docs/skabelonen.md) | Trin 2 og 3: ét brev pr. sprog, værktøjslinjen i teksten, og hvor udsendelsen ender |
 | [`docs/sidemenu.md`](docs/sidemenu.md) | Sidemenuen: "Ny udsendelse" øverst, én kladde, og dialogen før den slettes |
+| [`docs/farver-og-detaljer.md`](docs/farver-og-detaljer.md) | Værdierne: sprogkortenes farver, bobler med initialer, den blå ring, den grå knap, dialogen |
 
 Guiden er en beslutningslog: den fortæller hvorfor hver ting ser ud som den gør,
 og hvilke fælder der ligger undervejs. Den gengiver **ikke** hele kildekoden —
