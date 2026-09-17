@@ -1,23 +1,48 @@
 # Marketinglisten
 
-Trin 1 spørger, hvem udsendelsen går til. Svaret er **én eller to** marketinglister ud af 103, og de tre, du bruger, står allerede på skærmen.
+Trin 1 spørger, hvem udsendelsen går til. Svaret er **én eller to** marketinglister ud af 103.
 
 Alt ligger i to filer: `OnboardingChecklist/Components/Fields.razor` (markup og tilstand) og `wwwroot/css/app.css` (udseende), med to små hjælpere i `wwwroot/js/app.js`. Ingen pakker.
 
 ---
 
-## Beslutningen
+## Beslutningen: ét felt med ansigter
 
-Afgjort ud fra fem retninger, bygget side om side på de rigtige 103 lister (prøvestanden er revet ned igen; se [Forkastet](#forkastet)).
+Afgjort 17. september 2026, ud fra fem retninger bygget på et aftryk af den rigtige side (prøvestanden er revet ned igen; se [Forkastet](#forkastet)). **Den afløser de tre kort**, som stod her før.
 
-**Valgt: kort.** Tre kort med de mest brugte lister, og et søgefelt til de øvrige hundrede.
+> **Status:** besluttet, ikke bygget ind endnu. Appen viser stadig de tre kort, som beskrevet under [Kortene, som de står i appen i dag](#kortene-som-de-står-i-appen-i-dag).
 
-- **De tre er på skærmen, ikke bag et klik.** Hver dag rammer valget en af dem, og så skal det ikke koste en åbning af noget.
-- **Tallet står på kortet** — `244,200 · brugt 2 gange`. Det er dét, der giver listen pladsen; uden det ligner rækkefølgen et tilfælde.
-- **De valgte lister er altid blandt de tre kort.** Vælger du en fra den lange hale, skubber den et kort ud og bliver selv det første. Ellers ville det, du lige valgte, forsvinde i samme øjeblik.
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ 🔍 Søg eller vælg marketingliste                                 │
+└──────────────────────────────────────────────────────────────────┘
+ (MB)(KR)(BH)  Fragtkunder  3 personer · 3 kunder            ✕
+ Hver kunde får sin egen prisliste vedhæftet, hentet fra regnskabssystemet.
+
+      ↓ klik i feltet
+┌──────────────────────────────────────────────────────────────────┐
+│ Mest brugte                                                      │
+│   Rammeaftale 2027        (BF)(AS)(BH) +5   8 personer · 244,200 │
+│   Norden                  (AS)(CN)(JV) +2   5 personer · 168,000 │
+│ ✓ Fragtkunder             (MB)(KR)(BH)      3 personer ·  37,400 │
+│ Skriv for at søge i de øvrige 100 lister                         │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+- **Feltet er kontrollen.** Ét sted at vælge, uanset om listen er en af de tre, du bruger hver dag, eller en af de hundrede andre. Før var det almindelige valg kort og det sjældne et felt, og de to stod i hver sit lag oven på hinanden.
+- **De mest brugte er de første forslag**, i samme rækkefølge som kortene havde: flest **sendte** udsendelser bag sig, uafgjort brydes af den, der blev sendt sidst.
+- **Valget bliver en chip under feltet** med listens navn og størrelse, og et ✕, der fjerner den. To chips er det højeste.
+- **Chippen bærer ansigterne** — de runde bobler med initialer, i personens egen farve, som på sprogkortene og i ruden til højre. Fire bobler og et `+4`, så en liste på hundrede ikke bliver en mur af cirkler. Forslagene viser tre og et `+N`.
+- **Boblerne er `aria-hidden`.** Navnet og antallet står der i forvejen; initialer læst højt er støj.
+- **Toppen bliver 117px lavere**, og de pixels går til tabellen med modtagerne, som er der, arbejdet foregår.
 - **Én liste er reglen, to er undtagelsen, tre er ingenting.** Forbi to kan ingen holde i hovedet, hvem der er ved at få en mail.
 - **Nul er tilladt, mens man vælger.** Første forsøg nægtede at slippe den sidste liste, og så var det ikke det andet valg, der føltes låst — det var det første: at bytte én liste ud med en anden blev *tilføj og fjern igen*, med et øjeblik i midten hvor udsendelsen gik til begge. En kontrol, der ikke vil give slip på sin egen standardværdi, er en kontrol, man skal slås med. Kravet om mindst én hører hjemme ved afsendelsen, ikke i klikket.
 - **De hundrede andre er undtagelsen**, og feltet under kortene er vejen til dem. Ikke en knap foran et felt: det klik, en knap ville koste, er alligevel det klik, du var på vej til at lave i feltet.
+
+## Prisen
+
+- **De tre mest brugte er ikke længere synlige uden et klik.** Det er den ene ting, kortene kunne, som feltet ikke kan. Det koster ét klik på den hyppigste vej gennem trinnet — og det klik var man alligevel på vej til at lave, den dag valget ikke var et af de tre.
+- Derfor skal forslagene åbne **på klik i feltet og på pil ned**, og markøren skal stå på første række med det samme. Et felt, der kun søger, når man skriver, gør det sjældne valg billigt og det almindelige dyrt.
 
 ## Sådan opfører den sig
 
@@ -52,9 +77,9 @@ Afgjort ud fra fem retninger, bygget side om side på de rigtige 103 lister (pr�
 - **Kolonnen *Liste* findes kun, når der er to lister.** Med én er svaret det samme i hver eneste række.
 - **Ingen liste valgt er en tilstand, ikke en fejl.** Personlisten bliver til en rolig kasse, der siger hvad der kommer til at stå der, og linjen over kortene bliver til spørgsmålet. Fejlen kommer først, når man prøver at gå videre: *"Vælg den liste, udsendelsen skal gå til."*
 
-## Markup
+## Kortene, som de står i appen i dag
 
-Kortene, med den valgte som den eneste, der kan tabbes til:
+Indtil feltet er bygget ind, står de tre kort her. Fluebenets plads er reserveret (`.grp-card-tick { width: 12px }`), så navnet ikke rykker sig, når valget flytter sig.
 
 ```razor
 <div class="grp-cards" role="radiogroup" aria-label="Mest brugte marketinglister">
@@ -152,18 +177,27 @@ private async Task ListKey(KeyboardEventArgs e)
 @media (pointer: coarse) { .grp-keys { display: none; } }
 ```
 
+Fluebenet i forslagene og på kortene er tegnet, ikke en checkboks — tallene og reglerne bag det står i [`farver-og-detaljer.md` §5](farver-og-detaljer.md#5--fluebenet). Checkbokse hører til personerne i tabellen, hvor de er en handling.
+
 **Markøren og valget er to ting.** Fluebenet siger, hvad listen er; den lodrette streg siger, hvor tastaturet står. De må ikke se ens ud, og ingen af dem må være fed skrift — vægt flytter teksten en pixel, hver gang man trykker på en pil.
 
 ## Forkastet
 
 | Retning | Hvorfor ikke |
 | --- | --- |
-| **Nu** — ét felt med et panel under, søg + 103 rækker | Ingen kendte de tre lister uden at åbne noget. Det almindelige valg kostede lige så meget som det sjældne. |
+| **Tre kort + felt** (det, der er i appen nu) | Kortene var rigtige, da spørgsmålet var "hvordan vælger man mellem 103". Men toppen blev fem lag over tabellen — overskrift, underoverskrift, tre kort, hjælpelinje, felt — og tabellen, som er arbejdet, begyndte 349px nede. |
+| **Kompakt** — kortene som 44px rækker | Sparede 99px, men lange listenavne blev skåret af, og "brugt 2 gange" måtte ud alligevel. |
+| **Sidestillet** — kort og felt på samme linje | Sparede 107px, men kortene blev så smalle, at teksten brækkede; de måtte undvære brugstallet for at passe. |
+| **Valgt først** — vælgeren folder sig sammen til én linje efter valget | Sparede mest (165px), men skal man skifte liste ofte, koster det et klik hver gang, og toppen skifter udseende midt i trinnet. |
+| **Ét felt uden ansigter** (første udgave) | Samme plads, men chippen sagde kun et tal. Med boblerne kan man genkende listen på personerne. |
+| **Nu** — ét felt med et panel under, søg + 103 rækker (første runde, før kortene) | Ingen kendte de tre lister uden at åbne noget, fordi de ikke lå som forslag. Det er dét, forslagslisten "Mest brugte" retter. |
 | **Skriv** — kommandopalet, kun søgning | Hurtigst hvis man kender navnet. Men at *lede* blev andenrangs, og det straffer den, der ikke kan navnet udenad. |
 | **Familier** — dialog med familier til venstre, lister til højre | Smuk til 103 navne med system i (10 temaer × 10 steder). Men en fuld dialog for et valg, der tager ét sekund — og den falder sammen den dag listerne ikke hedder noget systematisk. |
 | **Tabel** — listerne som en sorterbar tabel i selve trinnet | Gør listerne sammenlignelige (sortér på I alt). Men to tabeller over hinanden i samme trin, og modtagerne blev skubbet under folden. |
 
-Tastaturmodellen fra **Skriv** overlevede alligevel: det er den, arket bruger.
+Tastaturmodellen fra **Skriv** overlevede alligevel: det er den, arket bruger — og med ét felt er den nu hele kontrollen.
+
+Samme runde så også på, hvordan **tabellen** kunne fylde mere (højere rækker, personkort med bobler, kort i et gitter). Intet er afgjort der: toppen tog pladsen i stedet.
 
 ## Faldgruber, vi gik i
 

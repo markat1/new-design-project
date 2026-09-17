@@ -1,6 +1,6 @@
-# Farver og detaljer: kort, bobler, ring, grå knap, dialog
+# Farver og detaljer: kort, bobler, ring, flueben, grå knap, dialog
 
-Fem ting, som ikke kan læses ud af et skærmbillede: **sprogkortenes farver**, **de runde bobler med initialer**, **den blå ring om én af dem**, **knappen, der er slået fra**, og **dialogen med den røde knap**. Alle værdier her står i koden; filerne er nævnt under hvert afsnit.
+Seks ting, som ikke kan læses ud af et skærmbillede: **sprogkortenes farver**, **de runde bobler med initialer**, **den blå ring om én af dem**, **fluebenet**, **knappen, der er slået fra**, og **dialogen med den røde knap**. Alle værdier her står i koden; filerne er nævnt under hvert afsnit.
 
 Kopiér CSS-blokkene, som de er. De bruger kun tokens fra §1, så de virker, så snart tokens findes.
 
@@ -247,7 +247,69 @@ I markup:
 
 ---
 
-## 5 · "Tilbage", når den er slået fra
+## 5 · Fluebenet
+
+Der er **to slags flueben**, og de må aldrig bytte plads:
+
+| | Tegnet flueben | Rigtig checkboks |
+| --- | --- | --- |
+| Hvad det er | En **tilstand**: "den her er valgt" | En **kontrol**: "klik for at tage med eller fra" |
+| Hvor | Listekort, sprogkort, rækker i en menu, forslag i søgefeltet | Personerne i tabellen på trin 1, værdilisten i kolonnemenuen |
+| Element | `<svg>` inde i knappen | `<input type="checkbox">` |
+| Klikbart | Nej — hele kortet eller rækken er knappen | Ja, og rækken omkring den er også et mål |
+
+En tegnet flueben, man kan klikke på, og en checkboks, man ikke kan, er den samme fælde set fra hver sin side.
+
+### Det tegnede flueben
+
+```csharp
+public static readonly MarkupString TickSm = new(
+    """<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.4l3.2 3.2L13 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>""");
+```
+
+```css
+/* Pladsen er der altid — også når fluebenet ikke er. Derfor rykker navnet
+   sig ikke, når valget flytter sig. flex: none, så den ikke klemmes. */
+.grp-card-tick,
+.tpl-card-tick { display: flex; flex: none; width: 12px; color: var(--accent); }
+
+/* I en menu er sporet 16px og centreret, så etiketterne står på linje,
+   uanset hvilken række der er valgt. */
+.t-menu-ico { display: inline-flex; justify-content: center; width: 16px; color: var(--accent); }
+```
+
+- **12px på et kort, 16px i en menu.** Stregen er 1,8 i en 16-boks, altså ~1,35px tegnet — samme vægt som den 13px tekst, den står ved siden af. Runde hjørner og ender, som resten af ikonerne.
+- **`currentColor`, sat til `--accent`.** Fluebenet er aldrig grønt: grøn betyder "det gik godt", blå betyder "det her er valgt".
+- **Pladsen reserveres altid.** Uden `width: 12px` på den tomme plads hopper navnet, hver gang man vælger. Samme grund til, at valgt aldrig gøres med fed skrift.
+- **`aria-hidden="true"`**, og tilstanden siges i stedet med et attribut, en skærmlæser forstår: `aria-pressed` på en kontakt, `aria-selected` på en række i en liste, `aria-current` på det, der vises. Er der ingen af dem, skrives ordet som skjult tekst (`.sr-only`), fx *"Modtagere, udfyldt"*.
+
+### Den rigtige checkboks
+
+```css
+.pick-t-box input {
+  display: block;          /* på grundlinjen vokser rækken 2px */
+  width: 16px; height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+```
+
+- **Native `<input type="checkbox">`, ikke en tegnet.** `accent-color` gør den blå i både Windows og macOS, og så følger tastatur, skærmlæser og den halve tilstand (`indeterminate`) med gratis.
+- **`display: block`.** En checkboks på tekstens grundlinje trækker linjeboksen ned og gør rækken 2px højere end regnestykket siger.
+- **Hver checkboks har sit eget navn:** `aria-label="Med i udsendelsen: Mia Brandt"`. "Vælg" alene fortæller ikke, hvad man vælger, når der er otte af dem under hinanden.
+- **Rækken omkring er også et mål** — den viser prislisten — men et klik *på* checkboksen må ikke gøre begge dele. **Cellen** stopper klikket, ikke feltet:
+
+```razor
+<tr tabindex="0" @onclick="() => ShowSheet(person, on)">
+    <td class="pick-t-box" @onclick:stopPropagation="true">
+        <input type="checkbox" checked="@on" @onchange="() => Toggle(person.Email)"
+               aria-label="Med i udsendelsen: @person.Name" />
+    </td>
+    …
+```
+
+## 6 · "Tilbage", når den er slået fra
 
 Fil: `wwwroot/css/app.css` (`.btn:disabled`), `Pages/NewMail.razor` (footeren).
 
@@ -276,7 +338,7 @@ Fil: `wwwroot/css/app.css` (`.btn:disabled`), `Pages/NewMail.razor` (footeren).
 
 ---
 
-## 6 · Dialogen med den røde knap
+## 7 · Dialogen med den røde knap
 
 Fil: `Components/StartOverDialog.razor`, `wwwroot/css/app.css` (`.dlg*`, `.btn-danger`, `.btn-outline`).
 
@@ -361,7 +423,7 @@ Reglerne bag billedet:
 1. Et klik på dialogens egen **padding** er også et klik på `<dialog>`. Vil du lukke ved klik på bagtæppet, skal du måle: luk kun, hvis klikket ligger uden for `getBoundingClientRect()`.
 2. En menu inde i en `position: sticky` sidebjælke ligger **under** et bagtæppe uden for den, uanset z-index. `<dialog>` + `showModal()` har ikke problemet, fordi den ligger i browserens øverste lag.
 
-## 7 · Tjekliste, når det skal bygges et andet sted
+## 8 · Tjekliste, når det skal bygges et andet sted
 
 - [ ] Tokens fra §1 findes i `:root`, i oklch
 - [ ] `--font` sat på `body`, ingen webfont hentes
@@ -373,6 +435,7 @@ Reglerne bag billedet:
 - [ ] Farven vælges af en stabil hash (FNV-1a) af mailadressen, ikke `GetHashCode()`
 - [ ] Alle bobler i en stak har en ring i baggrundens farve; den blå erstatter kun farven
 - [ ] Ringen er `box-shadow`, 2px, aldrig `border`
+- [ ] Tegnet flueben = tilstand (12px, `--accent`, `aria-hidden`, plads reserveret); checkboks = handling (native, `accent-color`, `display: block`, eget navn)
 - [ ] Slået fra = dæmpet tokenfarve + `pointer-events: none` + `disabled`, aldrig `opacity` på hele knappen
 - [ ] Dialogen er en native `<dialog>` med `showModal()`, ikke en div i en overlay
 - [ ] Rød knap kun til det, der sletter; fokus starter på den sikre knap
