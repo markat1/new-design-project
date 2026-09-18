@@ -38,7 +38,7 @@ python3 docs/guide-to-markdown.py
 | `docs/blazor-checklist-guide.html` | Kilden — ret her, ikke i de to andre |
 | [`docs/kolonne-dropdown.md`](docs/kolonne-dropdown.md) | Listens kolonnemenu: sortering og filter i ét panel |
 | [`docs/excel-arket.md`](docs/excel-arket.md) | Prislisterne: rigtige .xlsx, læst og skrevet med Open XML SDK |
-| [`docs/liste-vaelger.md`](docs/liste-vaelger.md) | Trin 1: tre kort og et søgefelt til de øvrige hundrede |
+| [`docs/liste-vaelger.md`](docs/liste-vaelger.md) | Trin 1: ét felt med chips og runde bobler (besluttet, med byggevejledning); de tre kort, der står i appen indtil da |
 | [`docs/skabelonen.md`](docs/skabelonen.md) | Trin 2 og 3: ét brev pr. sprog, værktøjslinjen i teksten, og hvor udsendelsen ender |
 | [`docs/sidemenu.md`](docs/sidemenu.md) | Sidemenuen: "Ny udsendelse" øverst, én kladde, og dialogen før den slettes |
 | [`docs/farver-og-detaljer.md`](docs/farver-og-detaljer.md) | Værdierne: sprogkortenes farver, bobler med initialer, den blå ring, den grå knap, dialogen |

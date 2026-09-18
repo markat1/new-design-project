@@ -10,7 +10,9 @@ Alt ligger i to filer: `OnboardingChecklist/Components/Fields.razor` (markup og 
 
 Afgjort 17. september 2026, ud fra fem retninger bygget på et aftryk af den rigtige side (prøvestanden er revet ned igen; se [Forkastet](#forkastet)). **Den afløser de tre kort**, som stod her før.
 
-> **Status:** besluttet, ikke bygget ind endnu. Appen viser stadig de tre kort, som beskrevet under [Kortene, som de står i appen i dag](#kortene-som-de-står-i-appen-i-dag).
+> **Valget:** variant 3 af fem, **"Ét felt" med de runde bobler** — i chippen for den valgte liste og i forslagene.
+>
+> **Status:** besluttet, ikke bygget ind endnu. Appen viser stadig de tre kort, som beskrevet under [Kortene, som de står i appen i dag](#kortene-som-de-står-i-appen-i-dag). Prototypen er slettet; alt, hvad den indeholdt, står under [Sådan bygges det](#sådan-bygges-det).
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -43,6 +45,184 @@ Afgjort 17. september 2026, ud fra fem retninger bygget på et aftryk af den rig
 
 - **De tre mest brugte er ikke længere synlige uden et klik.** Det er den ene ting, kortene kunne, som feltet ikke kan. Det koster ét klik på den hyppigste vej gennem trinnet — og det klik var man alligevel på vej til at lave, den dag valget ikke var et af de tre.
 - Derfor skal forslagene åbne **på klik i feltet og på pil ned**, og markøren skal stå på første række med det samme. Et felt, der kun søger, når man skriver, gør det sjældne valg billigt og det almindelige dyrt.
+
+## Sådan bygges det
+
+Fire trin, i den rækkefølge. Klassenavnene følger resten af listevælgeren (`grp-*`), og alt genbruger det, der allerede findes: feltet, arket med de 103 rækker, tastaturet, `MostUsed`, `Pick` og `Blocked`.
+
+### 1 · Personen skal kunne tegne sin egen boble
+
+`Recipient` har `Initials` og `Tone` i forvejen; `Person` (i `Model/MarketingGroup.cs`) skal have de samme to, så en liste kan vise sine folk, før de er blevet modtagere:
+
+```csharp
+public string Initials =>
+    string.Concat(Name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                      .Take(2).Select(w => char.ToUpperInvariant(w[0])));
+
+/// Adressen, ikke navnet — samme regel som Recipient, så en person har
+/// samme farve her som på sprogkortene og i ruden til højre.
+public int Tone => Avatar.ToneOf(Email);
+```
+
+### 2 · Kortene ud, chips ind
+
+I `Components/Fields.razor`, trinnet `recipients`:
+
+- **Fjern** `.grp-cards` (de tre kort), linjen under dem, `Cards` og `CardKey`.
+- **Behold** `.grp-find` (feltet) og `.grp-menu` (arket). Feltets pladsholder bliver *"Søg eller vælg marketingliste"*.
+- **Tilføj** chips under feltet — én pr. valgt liste, højst to:
+
+```razor
+@if (S.Lists.Count > 0)
+{
+    <div class="grp-chips">
+        @foreach (var list in S.Lists)
+        {
+            var chosen = list;
+            <span class="grp-chip">
+                @Faces(chosen.People, 4)
+                <b>@chosen.Name</b>
+                <span class="grp-chip-s">@chosen.People.Length personer · @chosen.Customers kunder</span>
+                <button type="button" class="grp-chip-x" aria-label="Fjern @chosen.Name"
+                        @onclick="() => Pick(chosen)">@Icons.X</button>
+            </span>
+        }
+    </div>
+}
+```
+
+- ✕ kalder `Pick`, som allerede slår en valgt liste fra. **Fokus går tilbage til feltet** bagefter (`focusWanted = "grp-find"`), ellers står det på en knap, der lige er forsvundet.
+- Underoverskriften *"Hver kunde får sin egen prisliste vedhæftet …"* flytter ned under chipsene som en hjælpelinje (`.grp-rule`).
+
+Boblerne er én hjælper, som både chip og forslag bruger:
+
+```razor
+@code {
+    /// Fire ansigter og "+N", så en liste på hundrede ikke bliver en mur af
+    /// cirkler. Ansigterne og tallet er ét element: i forslagenes gitter tæller
+    /// de som én kolonne, ellers skubbes antallet ned på sin egen linje.
+    private static RenderFragment Faces(Person[] people, int max) =>
+        @<span class="grp-who">
+            <span class="grp-faces" aria-hidden="true">
+                @foreach (var p in people.Take(max))
+                {
+                    <span class="rcp-av" data-tone="@p.Tone" title="@p.Name">@p.Initials</span>
+                }
+            </span>
+            @if (people.Length > max)
+            {
+                <span class="grp-more">+@(people.Length - max)</span>
+            }
+        </span>;
+}
+```
+
+### 3 · Arket får en "Mest brugte"-sektion
+
+Før var kortene sektionen. Nu er det de første rækker i arket:
+
+```
+Mest brugte
+  Rammeaftale 2027        (BF)(AS)(BH) +5   8 personer · 244,200
+  Norden                  (AS)(CN)(JV) +2   5 personer · 168,000
+✓ Fragtkunder             (MB)(KR)(BH)      3 personer ·  37,400
+Alle lister · 100
+  Fragt Benelux                             2 personer ·  89,000
+  …
+```
+
+- Med **tomt felt**: `MostUsed` først under overskriften *Mest brugte*, derefter de øvrige under *Alle lister*. En liste står kun ét sted.
+- **Når man skriver**, forsvinder overskrifterne, og arket viser kun det, der passer (`MailDraft.Search` som i dag).
+- `Rows()` skal give rækkerne i den rækkefølge, de står, så piletasterne går fra *Mest brugte* direkte videre ned i *Alle lister*. Overskrifterne er ikke rækker og kan ikke få markøren.
+- Rækken får boblerne mellem navnet og tallene: `@Faces(group.People, 3)`.
+- Arket **åbner på klik og på pil ned**, og markøren står på første række med det samme. Det er det, der gør det almindelige valg lige så billigt som før: klik, Enter.
+
+### 4 · CSS
+
+```css
+/* Chipsene under feltet: én pr. valgt liste. */
+.grp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.grp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 6px 0 12px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink-1);
+}
+.grp-chip b { font-weight: 500; }
+.grp-chip-s { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+/* ✕: 22px at se, 40px at ramme. */
+.grp-chip-x {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.grp-chip-x::after { content: ""; position: absolute; inset: -9px; }
+.grp-chip-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (hover: hover) and (pointer: fine) {
+  .grp-chip-x:hover { background: var(--press); color: var(--ink-1); }
+}
+
+/* Boblerne: samme som på sprogkortene — 24px, 2px ind over hinanden, og en
+   ring i fladens egen farve, så naboen klippes fri. */
+.grp-who { display: inline-flex; align-items: center; flex: none; }
+.grp-faces { display: flex; flex: none; }
+.grp-faces .rcp-av { width: 24px; height: 24px; font-size: 10px; box-shadow: 0 0 0 2px var(--surface); }
+.grp-faces .rcp-av + .rcp-av { margin-left: -2px; }
+.grp-chip .grp-faces .rcp-av { box-shadow: 0 0 0 2px var(--accent-soft); }
+.grp-more { margin-left: 6px; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+/* Sektionsoverskrifterne i arket. */
+.grp-sec { display: block; padding: 6px 14px 4px; font-size: 12px; line-height: 16px; color: var(--ink-3); }
+```
+
+Rækkerne i arket skal have plads til boblerne som **én** kolonne, og tallene må ikke bryde:
+
+```css
+.grp-row { grid-template-columns: 16px minmax(0, 1fr) auto auto; min-height: 44px; }
+.grp-row-s, .grp-row-sum { white-space: nowrap; }
+```
+
+Og slet `.grp-cards`, `.grp-card*` og media-reglen for `.grp-cards`.
+
+### Det, der ikke længere passer i afsnittene nedenfor
+
+Når feltet er bygget, skal disse linjer i [Sådan opfører den sig](#sådan-opfører-den-sig) skrives om:
+
+| Står der nu | Bliver til |
+| --- | --- |
+| *Kortene er tre kontakter …* | Chipsene er de valgte; ✕ fjerner. Rækkerne i arket tænder og slukker som kortene gjorde. |
+| *Når to er valgt, kan de øvrige ikke tage imod* | Gælder rækkerne i arket (uændret: `aria-disabled`, dæmpet). |
+| *Arket har ikke sin egen "Mest brugt"-sektion. Kortene er den sektion.* | Arket har sektionen *Mest brugte* øverst. |
+| *Linjen under kortene tæller dem …* | Linjen under chipsene tæller dem. |
+
+Resten — tastaturet, søgningen i personer og kunder, Escape, Enter der ikke springer trinnet over, én mail til en person på begge lister, nul lister som en tilstand — gælder uændret.
+
+### Tjek, før det er færdigt
+
+- [ ] Klik i feltet og pil ned åbner arket med markøren på første række
+- [ ] Enter vælger, arket lukker, chippen står der, fokus er i feltet
+- [ ] ✕ fjerner, og fokus går tilbage til feltet
+- [ ] To chips → de øvrige rækker er dæmpede og siger hvorfor
+- [ ] Chippen viser fire bobler og `+N`; forslagene tre
+- [ ] Samme person har samme farve i chippen, på sprogkortet og i ruden til højre
+- [ ] Rækkerne i arket er 44px, og "8 personer · 244,200" bryder aldrig
+- [ ] Ved 400px bredde scroller intet sidelæns
 
 ## Sådan opfører den sig
 

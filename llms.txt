@@ -179,10 +179,12 @@ Hvert mønster er valgt mellem flere byggede alternativer. Foreslå ikke et af d
 - Menuen har rækkefølge i feltets egne ord ("Ældste øverst", "Mindst øverst", "A til Å"), derefter en værdiliste med flueben og et søgefelt, der kun gør *listen* kortere.
 - Et mærke står **til venstre** for etiketten, på en fast plads på 15px, så etiketten ikke rykker sig: en pil for sorteret, filterstreger for filtreret, ét samlet tegn for begge.
 
-**Vælg blandt mange (fx 100 marketinglister):**
-- De 3 mest brugte står som kort med det tal, der giver dem pladsen ("brugt 2 gange"). Mest brugt er antal *sendte*; kladder tæller ikke med.
-- Under kortene står et søgefelt, ikke en knap foran et felt. Et klik i feltet åbner listen, og piletaster plus Enter vælger.
-- Er valget flere-af-flere, er kortene kontakter (`aria-pressed`). Nul er tilladt, mens man vælger. Kravet om mindst ét hører til ved afsendelsen, ikke i klikket.
+**Vælg blandt mange (fx 100 marketinglister) — ét felt med ansigter (besluttet 17.09.2026, afløser tre kort):**
+- Ét søgefelt er hele kontrollen. Klik eller pil ned åbner arket med markøren på første række, så det almindelige valg er klik + Enter.
+- Arket starter med sektionen *Mest brugte* (flest *sendte*; kladder tæller ikke), derefter *Alle lister*. En liste står kun ét sted.
+- Valget bliver en chip under feltet med listens navn, størrelse og ✕. Højst to chips; nul er tilladt, mens man vælger — kravet om mindst én hører til ved afsendelsen.
+- Chippen bærer personernes runde bobler (fire + "+N"), rækkerne i arket tre. Samme farve pr. person som alle andre steder (FNV-1a af mailen). Boblerne er `aria-hidden`.
+- Byggevejledning, CSS og tjekliste: `docs/liste-vaelger.md` → "Sådan bygges det".
 
 **Flere varianter af det samme (fx skabeloner pr. sprog):**
 - Ét kort pr. variant, med variantens nøgleindhold (emnelinje) og hvem den rammer (ansigter).
@@ -246,7 +248,7 @@ Hvert mønster er valgt mellem flere byggede alternativer. Foreslå ikke et af d
 Hvis du har adgang til originalprojektet, står detaljerne her:
 
 - [Tabellens kolonnemenu](docs/kolonne-dropdown.md): sortering og filter i ét panel
-- [Marketinglisten](docs/liste-vaelger.md): tre kort og et søgefelt, 1–2 lister
+- [Marketinglisten](docs/liste-vaelger.md): ét felt med chips og runde bobler, 1–2 lister — med trin-for-trin byggevejledning
 - [Skabelonen og afsendelsen](docs/skabelonen.md): sprogkort, forhåndsvisning, de tre trin
 - [Sidemenuen](docs/sidemenu.md): knappen øverst, én kladde, dialogen før sletning
 - [Farver og detaljer](docs/farver-og-detaljer.md): tokens, fonten, sprogkortenes tilstande, de ti bobletoner, den blå ring, en slået fra knap, dialogen — med CSS til at kopiere
