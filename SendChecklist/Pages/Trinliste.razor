@@ -1,0 +1,63 @@
+@page "/"
+@page "/trinliste"
+@inherits CkBase
+
+@* Trinliste — the whole page. The steps stand in a fixed column on the
+   left, each with what it holds; the step fills the rest and scrolls on its
+   own, so Tilbage / Fortsæt stay at the bottom however long the table is. *@
+@{ var s = Checklist.Steps[C.Step]; var all = C.Recipients(); }
+<div class="ck-root v2">
+    <nav class="v2-rail" aria-label="Trin">
+        <a class="v2-back" href="lister">← Lister</a>
+        <p class="v2-brand">Ny udsendelse</p>
+        <ol class="v2-steps">
+            @for (var i = 0; i < Checklist.Steps.Length; i++)
+            {
+                var at = i;
+                var done = C.Done(at) && at != C.Step;
+                <li>
+                    <button type="button" class="v2-step" disabled="@(at > C.Furthest)"
+                            data-done="@(done ? "" : null)" aria-current="@(at == C.Step ? "step" : null)"
+                            @onclick="() => C.Go(at)">
+                        <span class="v2-n" aria-hidden="true">@if (done) { @Icons.Tick } else { @(at + 1) }</span>
+                        <span class="v2-l">@Checklist.Steps[at].Label</span>
+                        <span class="v2-s">@Summary(at)</span>
+                    </button>
+                </li>
+            }
+        </ol>
+        <p class="v2-tally" aria-live="polite">
+            <span class="v2-tally-n num">@all.Count</span>
+            <span>@(all.Count == 1 ? "modtager" : "modtagere") · @C.Sheets @(C.Sheets == 1 ? "prisliste" : "prislister")</span>
+        </p>
+    </nav>
+    <section class="v2-main" aria-labelledby="ck-h" data-fill="@(C.StepKey == "upload" ? "" : null)" data-full="@(C.StepKey == "upload" && C.FileName is not null ? "" : null)">
+        <div class="v2-scroll">
+            <div class="ck-step v2-inner" @key="C.Step">
+                @* With a file in, the table is the step: the heading stays for
+                   screen readers and focus, but takes no room. *@
+                <div class="v2-head">
+                    <p class="v2-pos">Trin @(C.Step + 1) af @Checklist.Steps.Length</p>
+                    <h2 class="ck-h" id="ck-h" tabindex="-1">@(C.Sent ? "Sendt" : s.Title)</h2>
+                    <p class="ck-sub">@(C.Sent ? "Prislisterne er på vej ud." : s.Sub)</p>
+                </div>
+                <div class="ck-body"><StepBody Index="C.Step" /></div>
+            </div>
+        </div>
+        <div class="v2-bar"><div class="v2-inner"><Actions Scope=".v2-main" /></div></div>
+    </section>
+</div>
+
+@code {
+    private string Summary(int i)
+    {
+        var reached = i <= C.Furthest;
+        return Checklist.Steps[i].Key switch
+        {
+            "upload" => C.FileName is not null ? $"{C.FileOk} fra {C.FileName}" : reached && C.Step != i ? "Ingen fil" : "Excel eller PDF",
+            "list" => C.List ?? (reached ? "Ingen liste" : "Valgfrit"),
+            "message" => !reached ? "Emne og tekst" : C.Subject.Trim().Length > 0 ? C.Subject : "Mangler emne",
+            _ => C.Sent ? "Sendt" : "Se det igennem og send",
+        };
+    }
+}

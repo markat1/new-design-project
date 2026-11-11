@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Send prislister</title>
+    <base href="/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+</head>
+<body>
+    <div id="app"><p class="boot">Indlæser …</p></div>
+    <div id="blazor-error-ui">Der skete en fejl. <a href="" class="reload">Genindlæs</a> <a class="dismiss">✕</a></div>
+    <script>
+      // Focus the step's first field after a step change. Fine pointers only:
+      // on touch it would throw the keyboard up unasked.
+      window.ck = {
+        focusStep(sel) {
+          requestAnimationFrame(() => {
+            const root = document.querySelector(sel); if (!root) return;
+            const fine = matchMedia('(pointer: fine)').matches;
+            const el = fine && root.querySelector('[data-autofocus]') || root.querySelector('h2');
+            el?.focus({ preventScroll: false });
+          });
+        },
+      };
+    </script>
+    <script src="js/dial.js"></script>
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+</html>

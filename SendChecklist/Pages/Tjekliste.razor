@@ -1,0 +1,71 @@
+@page "/tjekliste"
+@inherits CkBase
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* Tjekliste — the whole send-out on one page. The open step is the only
+   one unfolded; done steps fold to a line with what they hold and "Ret". *@
+@{
+    var doneCount = Enumerable.Range(0, Checklist.Steps.Length).Count(i => C.Done(i) && i != C.Step || (C.Sent && i == 3));
+}
+<div class="ck-root v3">
+    <div class="v3-page">
+        <h1 class="v3-title">Ny udsendelse</h1>
+        <p class="v3-lede">Fire ting, så er prislisterne på vej. Du kan gå tilbage og rette alt, indtil du trykker Send.</p>
+        <div class="v3-meter">
+            <span class="v3-meter-bar" aria-hidden="true"><span class="v3-meter-fill" style="transform:scaleX(@((doneCount / 4.0).ToString(System.Globalization.CultureInfo.InvariantCulture)))"></span></span>
+            <span>@doneCount af 4 klaret</span>
+        </div>
+        <ol class="v3-list">
+            @for (var i = 0; i < Checklist.Steps.Length; i++)
+            {
+                var at = i;
+                var s = Checklist.Steps[at];
+                var open = at == C.Step;
+                var done = (C.Done(at) && !open) || (C.Sent && at == 3);
+                <li class="v3-item" data-open="@(open ? "" : null)" data-done="@(done ? "" : null)">
+                    <div class="v3-head">
+                        <span class="v3-check" aria-hidden="true">@if (done) { @Icons.Tick }</span>
+                        <span class="v3-ht">
+                            @if (open)
+                            {
+                                <h2 class="ck-h" id="ck-h" tabindex="-1">@s.Title</h2>
+                            }
+                            else
+                            {
+                                <b>@s.Title<span class="ck-vh">, @(done ? "klaret" : "ikke nået endnu")</span></b>
+                                <span>@(done || at < C.Furthest ? Summary(at) : s.Label)</span>
+                            }
+                        </span>
+                        @if (!open && at <= C.Furthest && !C.Sent)
+                        {
+                            <button type="button" class="ck-btn ck-ghost ck-small" @onclick="() => C.Go(at)" aria-label="Ret @s.Label">Ret</button>
+                        }
+                    </div>
+                    @if (open)
+                    {
+                        <div class="v3-inner ck-step">
+                            <p class="ck-sub">@(C.Sent ? "Prislisterne er på vej ud." : s.Sub)</p>
+                            <div class="ck-body"><StepBody Index="at" /></div>
+                            <Actions Scope=".v3-item[data-open]" />
+                        </div>
+                    }
+                </li>
+            }
+        </ol>
+    </div>
+</div>
+
+@code {
+    // PROTO: the size sliders live outside Blazor's tree, mounted with the page.
+    protected override async Task OnAfterRenderAsync(bool first) { if (first) await JS.InvokeVoidAsync("ckDial.mount"); }
+    public async ValueTask DisposeAsync() { try { await JS.InvokeVoidAsync("ckDial.unmount"); } catch (JSDisconnectedException) { } }
+
+    private string Summary(int i) => Checklist.Steps[i].Key switch
+    {
+        "list" => C.List is null ? "Ingen liste" : $"{C.List} · {C.ListPeople.Length} personer",
+        "upload" => C.FileName is null ? "Ingen fil" : $"{C.FileName} · {C.FileOk} modtagere{(C.FileBad > 0 ? $", {C.FileBad} uden mail" : "")}",
+        "message" => C.Subject,
+        _ => C.Sent ? $"Sendt til {C.Recipients().Count}" : $"{C.Recipients().Count} modtagere",
+    };
+}

@@ -1,0 +1,68 @@
+@page "/upload"
+@inherits CkBase
+@inject NavigationManager Nav
+
+@* Upload — no steps. A file goes in and its rows show as a table across the
+   whole page. Two buttons at the bottom say what becomes of the rows:
+   release them to the storage system (the primary), or make a recipient
+   list, a draft, from them. *@
+@{
+    var hasFile = C.FileName is not null && C.Reading is null;
+    var skipped = C.Rows().Count - C.FileOk;
+    var upload = Checklist.IndexOf("upload");
+}
+<div class="ck-root v2 v2-solo">
+    <section class="v2-main" aria-labelledby="up-h" data-fill data-full="@(hasFile ? "" : null)">
+        @* The way back sits where people look for it: top left, in every
+           state of the page. *@
+        <nav class="crumbs" aria-label="Brødkrumme">
+            <a class="ck-btn ck-ghost" href="lister"><span aria-hidden="true">←</span> Lister</a>
+            <h1 class="crumbs-here" id="up-h" aria-current="page">Upload en liste</h1>
+        </nav>
+        <div class="v2-scroll">
+            <div class="ck-step v2-inner">
+                <div class="ck-body"><StepBody Index="upload" /></div>
+            </div>
+        </div>
+        <div class="v2-bar">
+            <div class="v2-send">
+                @if (C.Stored is int n)
+                {
+                    <p class="v2-send-t" role="status">@Icons.Tick Frigivet: @n @(n == 1 ? "række" : "rækker") fra @C.FileName ligger nu i lagersystemet.</p>
+                    <span class="v2-send-acts">
+                        <a class="ck-btn ck-ghost" href="lister">Se i Lister</a>
+                        <button type="button" class="ck-btn ck-primary" @onclick="C.RemoveFile">Upload en ny fil</button>
+                    </span>
+                }
+                else if (!hasFile)
+                {
+                    <span class="v2-send-acts">
+                        <button type="button" class="ck-btn ck-ghost" disabled>Lav modtagerliste</button>
+                        <button type="button" class="ck-btn ck-primary" disabled>Frigiv til lagersystemet</button>
+                    </span>
+                }
+                else
+                {
+                    <p class="v2-send-t"><b class="num">@C.FileOk</b> @(C.FileOk == 1 ? "række" : "rækker") klar@(skipped > 0 ? $" · {skipped} springes over" : "")</p>
+                    @* Two outcomes for the same rows. Releasing is what the page is
+                       for, so it is the primary; the draft is the other way out. *@
+                    <span class="v2-send-acts">
+                        <button type="button" class="ck-btn ck-ghost" disabled="@(C.Storing || C.FileOk == 0)" @onclick="Draft">Lav modtagerliste</button>
+                        <button type="button" class="ck-btn ck-primary" disabled="@(C.Storing || C.FileOk == 0)" @onclick="C.Store">
+                            @(C.Storing ? "Frigiver …" : $"Frigiv {C.FileOk} til lagersystemet")
+                        </button>
+                    </span>
+                }
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    // The page shares the one Checklist with the other pages; start clean.
+    // ReleaseOnly keeps the table plain ("Klar"); a draft turns it off.
+    protected override void OnInitialized() { base.OnInitialized(); C.Reset(); C.ReleaseOnly = true; }
+
+    /// The draft opens in Trinliste on the step after upload, file and all.
+    private void Draft() { C.MakeDraft(); Nav.NavigateTo(""); }
+}

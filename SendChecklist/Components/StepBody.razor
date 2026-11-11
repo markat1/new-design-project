@@ -1,0 +1,165 @@
+@inherits CkBase
+
+@* What each step asks, drawn once. The class names are neutral (ck-*); every
+   variant styles them under its own root class, so the five designs share the
+   behaviour and differ in everything you see. *@
+@switch (Checklist.Steps[Index].Key)
+{
+    case "list":
+        <div class="ck-options" role="radiogroup" aria-label="Marketingliste">
+            <button type="button" class="ck-option" role="radio" aria-checked="@(C.List is null ? "true" : "false")"
+                    data-autofocus="@(C.List is null ? "" : null)" @onclick="() => C.PickList(null)">
+                <span class="ck-radio" aria-hidden="true"></span>
+                <span class="ck-option-t">@(C.FileName is null ? "Ingen liste" : "Ingen liste, kun filen")</span>
+                <span class="ck-option-s">@(C.FileName is null ? "Uden en fil er der så ingen modtagere" : $"Prislisterne går til de {C.FileOk} fra {C.FileName}")</span>
+            </button>
+            @foreach (var l in Checklist.Lists)
+            {
+                var list = l;
+                var on = C.List == list.Name;
+                <button type="button" class="ck-option" role="radio" aria-checked="@(on ? "true" : "false")"
+                        data-autofocus="@(on ? "" : null)" @onclick="() => C.PickList(list.Name)">
+                    <span class="ck-radio" aria-hidden="true"></span>
+                    <span class="ck-option-t">@list.Name</span>
+                    <span class="ck-option-s">@list.Sub</span>
+                </button>
+            }
+        </div>
+        @if (C.List is not null && C.FileName is not null && C.Rows().Count(r => r.Status == "Står på listen") is var dup and > 0)
+        {
+            <p class="ck-hint">@dup fra filen står allerede på @C.List og får kun én mail.</p>
+        }
+        break;
+
+    case "upload":
+        @if (C.Reading is not null)
+        {
+            <p class="ck-reading" role="status">Læser @C.Reading …</p>
+        }
+        else if (C.FileName is null)
+        {
+            <div class="ck-drop" data-over="@(over ? "" : null)"
+                 @ondragenter="() => over = true" @ondragleave="() => over = false" @ondrop="() => over = false">
+                <InputFile class="ck-drop-input" accept=".xlsx,.xls,.csv,.pdf" OnChange="Picked" data-autofocus
+                           aria-label="Vælg en fil med modtagere, Excel eller PDF" />
+                <span class="ck-drop-ico">@Icons.Upload</span>
+                <span class="ck-drop-t">Træk filen hertil, eller klik for at vælge</span>
+                <span class="ck-drop-s">Excel (.xlsx) eller PDF · navn og mail i hver række</span>
+            </div>
+            <p class="ck-try">
+                Ingen fil ved hånden? Prøv med
+                <button type="button" @onclick="() => C.Load(Checklist.SampleXlsx)">@Checklist.SampleXlsx</button>
+                eller <button type="button" @onclick="() => C.Load(Checklist.SamplePdf)">@Checklist.SamplePdf</button>.
+            </p>
+        }
+        else
+        {
+            var rows = C.Rows();
+            <div class="ck-file">
+                <span class="ck-file-badge" aria-hidden="true">@(C.Pdf ? "PDF" : "XLSX")</span>
+                <span class="ck-file-txt">
+                    <span class="ck-file-n" title="@C.FileName">@C.FileName</span>
+                    <span class="ck-file-s">@rows.Count rækker · @C.FileOk @(C.ReleaseOnly ? "klar" : "bliver modtagere")@(C.FileBad > 0 ? $" · {C.FileBad} kan ikke komme med" : "")</span>
+                </span>
+                <label class="ck-btn ck-ghost ck-small ck-pick">
+                    <InputFile class="ck-vh" accept=".xlsx,.xls,.csv,.pdf" OnChange="Picked" aria-label="Udskift filen" />
+                    Udskift
+                </label>
+                <button type="button" class="ck-btn ck-ghost ck-small ck-icon" aria-label="Fjern @C.FileName" @onclick="C.RemoveFile">@Icons.X</button>
+            </div>
+
+            @* The uploaded list as a table: the recipient list is built from it,
+               so every row says what becomes of it. *@
+            <div class="ck-table-wrap" tabindex="0" role="region" aria-label="Rækkerne i @C.FileName">
+                <table class="ck-table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="ck-c-box"><span class="ck-vh">Med</span></th>
+                            <th scope="col" class="ck-c-row">#</th>
+                            <th scope="col">Navn</th>
+                            <th scope="col">Mail</th>
+                            <th scope="col">Firma</th>
+                            <th scope="col" class="ck-c-land">Land</th>
+                            <th scope="col" class="ck-c-st">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in rows)
+                        {
+                            var st = s;
+                            var r = st.Row;
+                            var can = st.Tone == Tone.Ok || st.Status == "Fravalgt";
+                            <tr data-tone="@st.Tone.ToString().ToLowerInvariant()" @key="r.Row">
+                                <td class="ck-c-box">
+                                    <input type="checkbox" checked="@(st.Tone != Tone.Bad && st.Status != "Fravalgt")" disabled="@(!can)"
+                                           aria-label="Med som modtager: @(r.Name.Length > 0 ? r.Name : $"række {r.Row}")"
+                                           @onchange="() => C.ToggleRow(r.Row)" />
+                                </td>
+                                <td class="ck-c-row num">@r.Row</td>
+                                <td class="ck-c-name" title="@r.Name">@r.Name</td>
+                                <td class="ck-c-mail" title="@r.Email">
+                                    @if (r.Email.Length > 0) { @r.Email } else { <span class="ck-empty">tom</span> }
+                                </td>
+                                <td class="ck-c-co" title="@r.Company">@r.Company</td>
+                                <td class="ck-c-land">@(r.Country.Length > 0 ? r.Country : "—")</td>
+                                <td class="ck-c-st"><span class="ck-pill" data-tone="@st.Tone.ToString().ToLowerInvariant()">@if (st.Tone == Tone.Bad) { @Icons.Warn }@st.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (C.FileBad > 0)
+            {
+                <p class="ck-note">@Icons.Warn <span>@C.FileBad rækker har ingen brugbar mail og kommer ikke med. Ret dem i filen, og upload den igen.</span></p>
+            }
+            @if (C.Pdf)
+            {
+                <p class="ck-note">Læst fra en PDF. Tjek at navne og firmaer står i de rigtige kolonner.</p>
+            }
+        }
+        break;
+
+    case "message":
+        <div class="ck-field">
+            <label class="ck-label" for="ck-subject">Emne</label>
+            <input class="ck-input" id="ck-subject" type="text" value="@C.Subject" data-autofocus
+                   aria-invalid="@(C.Error is not null && C.Subject.Trim().Length == 0 ? "true" : null)"
+                   aria-describedby="@(C.Error is not null ? "ck-err" : null)"
+                   @oninput="e => { C.Subject = e.Value?.ToString() ?? string.Empty; if (C.Subject.Trim().Length > 0) C.Error = null; C.Notify(); }" />
+        </div>
+        <div class="ck-field">
+            <label class="ck-label" for="ck-body">Besked</label>
+            <textarea class="ck-input ck-textarea" id="ck-body" rows="6" @onkeydown:stopPropagation="true"
+                      @oninput="e => { C.Body = e.Value?.ToString() ?? string.Empty; C.Notify(); }">@C.Body</textarea>
+        </div>
+        break;
+
+    default:
+        var all = C.Recipients();
+        var fromFile = C.FileOk;
+        @if (C.Sent)
+        {
+            <p class="ck-sent" role="status">@Icons.Tick Sendt til @all.Count modtagere hos @C.Customers kunder.</p>
+        }
+        <dl class="ck-summary">
+            <div><dt>Modtagere</dt><dd>@all.Count hos @C.Customers kunder</dd></div>
+            <div><dt>Fra liste</dt><dd>@(C.List is null ? "Ingen" : $"{C.List} · {C.ListPeople.Length}")</dd></div>
+            <div><dt>Fra fil</dt><dd>@(C.FileName is null ? "Ingen fil" : $"{fromFile} fra {C.FileName}")</dd></div>
+            <div><dt>Prislister</dt><dd>@C.Sheets vedhæftet</dd></div>
+            <div><dt>Emne</dt><dd>@C.Subject</dd></div>
+        </dl>
+        break;
+}
+
+@if (C.Error is not null && C.Step == Index)
+{
+    <p class="ck-err" id="ck-err" role="alert">@Icons.Warn @C.Error</p>
+}
+
+@code {
+    [Parameter] public int Index { get; set; }
+
+    private bool over;
+
+    private Task Picked(InputFileChangeEventArgs e) => C.Load(e.File.Name);
+}

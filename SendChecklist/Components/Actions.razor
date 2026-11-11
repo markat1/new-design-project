@@ -1,0 +1,33 @@
+@inherits CkBase
+@inject IJSRuntime JS
+
+@* Back and the one forward action. The last step's forward is the send; after
+   it, the only thing left is to start over. *@
+<div class="ck-actions">
+    <button type="button" class="ck-btn ck-ghost" disabled="@(C.Step == 0 || C.Sent)" @onclick="Back">Tilbage</button>
+    @if (C.Sent)
+    {
+        <button type="button" class="ck-btn ck-primary" @onclick="Again">Start forfra</button>
+    }
+    else if (C.Step == Checklist.Steps.Length - 1)
+    {
+        <button type="button" class="ck-btn ck-primary" @onclick="C.Send">Send @C.Recipients().Count prislister</button>
+    }
+    else
+    {
+        <button type="button" class="ck-btn ck-primary" disabled="@(C.Reading is not null)" @onclick="Next">
+            @(C.StepKey == "upload" && C.FileName is null ? "Fortsæt uden fil" : "Fortsæt")
+        </button>
+    }
+</div>
+
+@code {
+    /// Where the step's content lives, so focus can go to its first field.
+    [Parameter] public string Scope { get; set; } = ".ck-step";
+
+    private async Task Next() { if (C.Next()) await JS.InvokeVoidAsync("ck.focusStep", Scope); }
+
+    private async Task Back() { C.Back(); await JS.InvokeVoidAsync("ck.focusStep", Scope); }
+
+    private void Again() { C.Reset(); C.Notify(); }
+}

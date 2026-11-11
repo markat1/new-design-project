@@ -1,0 +1,6 @@
+@inherits LayoutComponentBase
+@inject Checklist C
+
+@* No picker: Trinliste is the page on /. Tjekliste still has its own page on
+   /tjekliste, reached by its address only. *@
+<div @key="C.MountCounter">@Body</div>

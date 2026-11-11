@@ -1,0 +1,121 @@
+@page "/lister"
+@inherits CkBase
+@inject NavigationManager Nav
+
+@* Lister — the overview, in the manner of a list of send-outs: every file
+   that was released to the storage system or made into a recipient list,
+   newest first. Tabs filter by what happened; a line can be picked up again. *@
+@{
+    var shown = C.History.Where(e => tab switch
+    {
+        "released" => e.Kind == Kind.Released,
+        "lists" => e.Kind != Kind.Released,
+        _ => true,
+    }).ToList();
+    int released = C.History.Count(e => e.Kind == Kind.Released), lists = C.History.Count - released;
+}
+<div class="ck-root v2 v2-solo">
+    <section class="v2-main ls" aria-labelledby="ls-h">
+        @* No title bar: the tabs are the top row. The heading stays for screen
+           readers. *@
+        <h1 class="ck-vh" id="ls-h">Lister</h1>
+        <div class="v2-tabs ls-bar">
+        <div class="ls-tablist" role="tablist" aria-label="Vis">
+            @foreach (var (key, label, n) in new[] { ("all", "Alle", C.History.Count), ("released", "Frigivet", released), ("lists", "Modtagerlister", lists) })
+            {
+                var k = key;
+                <button type="button" role="tab" class="v2-tab" id="ls-tab-@k" aria-controls="ls-panel" @ref="tabs[k]"
+                        aria-selected="@(tab == k ? "true" : "false")" tabindex="@(tab == k ? 0 : -1)"
+                        @onclick="() => tab = k" @onkeydown="Arrow">@label <span class="v2-tab-n num">@n</span></button>
+            }
+        </div>
+            <a class="ck-btn ck-primary ck-small v2-top-a" href="upload">@Icons.UploadSm Upload en liste</a>
+        </div>
+        <div class="ls-panel" role="tabpanel" id="ls-panel" aria-labelledby="ls-tab-@tab" tabindex="-1">
+            @if (shown.Count == 0)
+            {
+                <div class="ls-empty">
+                    <p class="ls-empty-t">@(tab == "released" ? "Du har ikke frigivet nogen lister endnu." : "Du har ikke lavet nogen modtagerlister endnu.")</p>
+                    <p class="ls-empty-s">Upload en Excel- eller PDF-fil, og vælg, om rækkerne skal frigives eller blive til modtagere.</p>
+                    <a class="ck-btn ck-primary" href="upload">Upload en liste</a>
+                </div>
+            }
+            else
+            {
+                <table class="ls-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Fil</th>
+                            <th scope="col" class="ls-c-kind">Hvad</th>
+                            <th scope="col" class="ls-c-rows">Rækker</th>
+                            <th scope="col" class="ls-c-list">Marketingliste</th>
+                            <th scope="col" class="ls-c-when">Hvornår</th>
+                            <th scope="col" class="ls-c-act"><span class="ck-vh">Handling</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in shown)
+                        {
+                            var entry = e;
+                            <tr @key="entry.Id">
+                                <td class="ls-c-file">
+                                    <span class="ls-badge" aria-hidden="true">@(entry.File.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ? "PDF" : "XLSX")</span>
+                                    <span class="ls-name" title="@entry.File">@entry.File</span>
+                                </td>
+                                <td class="ls-c-kind"><span class="ls-kind" data-kind="@entry.Kind.ToString().ToLowerInvariant()">@KindLabel(entry.Kind)</span></td>
+                                <td class="ls-c-rows num">
+                                    @entry.Rows
+                                    @if (entry.Skipped > 0) { <span class="ls-skip">+@entry.Skipped sprunget over</span> }
+                                </td>
+                                <td class="ls-c-list">@(entry.List ?? "—")</td>
+                                <td class="ls-c-when num">@Checklist.When(entry.When)</td>
+                                <td class="ls-c-act">
+                                    @if (entry.Kind == Kind.Draft)
+                                    {
+                                        <button type="button" class="ck-btn ck-ghost ck-small" @onclick="() => Open(entry)" aria-label="Åbn kladden fra @entry.File">Åbn kladde</button>
+                                    }
+                                    else if (entry.Kind == Kind.Released)
+                                    {
+                                        <button type="button" class="ck-btn ck-ghost ck-small" @onclick="() => Open(entry)" aria-label="Lav modtagerliste af @entry.File">Lav modtagerliste</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </section>
+</div>
+
+@code {
+    private string tab = "all";
+    private static readonly string[] Order = ["all", "released", "lists"];
+    private readonly Dictionary<string, ElementReference> tabs = new();
+
+    private static string KindLabel(Kind k) => k switch
+    {
+        Kind.Released => "Frigivet til lager",
+        Kind.Draft => "Kladde",
+        _ => "Sendt",
+    };
+
+    private async Task Arrow(KeyboardEventArgs e)
+    {
+        var i = Array.IndexOf(Order, tab);
+        var next = e.Key switch
+        {
+            "ArrowRight" => (i + 1) % Order.Length,
+            "ArrowLeft" => (i + Order.Length - 1) % Order.Length,
+            "Home" => 0,
+            "End" => Order.Length - 1,
+            _ => -1,
+        };
+        if (next < 0) return;
+        tab = Order[next];
+        StateHasChanged();
+        await tabs[tab].FocusAsync();
+    }
+
+    private void Open(Entry e) { C.OpenFrom(e); Nav.NavigateTo(""); }
+}
