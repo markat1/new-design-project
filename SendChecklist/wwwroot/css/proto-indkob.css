@@ -1,0 +1,248 @@
+/* PROTO indkøb: the supplier's lines against open orders, as Delt or Tabel.
+   Throwaway, loaded only by /proto/indkob. Uses the page's own tokens (.v2). */
+
+.ib {
+  --ease-out: cubic-bezier(0.19, 1, 0.22, 1);
+  --tick: oklch(0.52 0.13 155); --tick-soft: oklch(0.96 0.03 155);
+  --warn: oklch(0.5 0.12 65); --warn-soft: oklch(0.94 0.055 82); --warn-row: oklch(0.982 0.022 85); --off-row: oklch(0.984 0.012 25);
+}
+.ib button, .ib label, .ib input { touch-action: manipulation; }
+
+/* ------------------------------------------------ frame: title, switch, bar */
+.ib-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; padding: 18px 24px 16px; border-bottom: 1px solid var(--line); }
+.ib-top-t { display: grid; gap: 2px; min-width: 0; }
+.ib-h { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.ib-sub { margin: 0; font-size: 13px; line-height: 18px; color: var(--ink-3); }
+
+/* The view switch: one button. Pressed means the details stand beside the
+   table; let go, and the table takes the whole width with every column. */
+.ib-toggle {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface); font-weight: 500; color: var(--ink-2); cursor: pointer;
+  transition: 150ms ease; transition-property: background-color, border-color, color;
+}
+.ib-toggle[aria-pressed="true"] { background: var(--accent-soft); border-color: color-mix(in oklch, var(--accent) 35%, transparent); color: var(--accent); }
+.ib-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ib-toggle:active { transform: scale(0.97); }
+
+.ib-bar { display: flex; align-items: center; gap: 24px; padding: 14px 24px; padding-bottom: max(14px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--surface); }
+.ib-prog-t { margin: 0; color: var(--ink-2); }
+.ib-prog-t b, .ib-total b { font-weight: 600; color: var(--ink); }
+.ib-total { margin: 0 auto 0 0; padding-left: 24px; border-left: 1px solid var(--line); color: var(--ink-2); }
+.ib-total b { margin-left: 4px; }
+.ib-sent { display: flex; align-items: center; gap: 8px; margin: 0; min-height: 40px; font-weight: 500; color: var(--tick); }
+@media (max-width: 700px) {
+  .ib-bar { flex-wrap: wrap; gap: 8px 16px; padding-inline: 16px; }
+  .ib-total { padding-left: 0; border-left: 0; }
+  .ib-bar .ck-btn { width: 100%; }
+  .ib-top { padding-inline: 16px; }
+}
+
+/* ------------------------------------------------ the tick box */
+.ib-box {
+  position: relative; flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px;
+  border: 1.5px solid var(--line-2); background: var(--field); color: #fff;
+  transition: 120ms ease; transition-property: background-color, border-color;
+}
+.ib-box input { position: absolute; inset: -12px; width: 44px; height: 44px; margin: 0; opacity: 0; cursor: pointer; }
+.ib-box input:disabled { cursor: default; }
+.ib-box svg { pointer-events: none; }
+.ib-box path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 180ms var(--ease-out); }
+.ib-box:has(input:checked) { background: var(--accent); border-color: var(--accent); }
+.ib-box:has(input:checked) path { stroke-dashoffset: 0; transition-delay: 60ms; }
+.ib-box:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ------------------------------------------------ the table, both views */
+.ib-split { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); overflow: hidden; }
+/* Until the divider is dragged, the details are about 550px: wide enough for
+   the three price figures in one row. On a big screen they grow to 29% of
+   the page; on a small one they stop at 43.5%, so the table keeps the rest. */
+.ib-split { --detail-w: clamp(340px, max(29%, min(552px, 43.5%)), 720px); }
+.ib-split[data-view="delt"] { grid-template-columns: minmax(0, 1fr) 0 var(--detail-w); }
+/* An 11px grab zone whose 1px line sits on the pane's edge, as in the app. */
+.ib-splitter { position: relative; z-index: 2; width: 11px; margin-left: -5px; cursor: col-resize; touch-action: none; }
+.ib-splitter::before { content: ""; position: absolute; top: 0; bottom: 0; left: 5px; width: 1px; background: var(--line); transition: background-color 150ms ease, box-shadow 150ms ease; }
+.ib-splitter[data-dragging]::before { background: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.ib-splitter:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 2px; }
+@media (pointer: coarse) { .ib-splitter { width: 21px; margin-left: -10px; } .ib-splitter::before { left: 10px; } }
+.ib-scroll { min-height: 0; overflow: auto; }
+.ib-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 14px; line-height: 20px; }
+.ib-split[data-view="tabel"] .ib-table { min-width: 1360px; }
+.ib-split[data-view="delt"] .ib-table { min-width: 620px; }
+.ib-table th { position: sticky; top: 0; z-index: 1; padding: 9px 10px; text-align: left; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; color: var(--ink-3); background: var(--raised); border-bottom: 1px solid var(--line); }
+.ib-table td { height: 44px; padding: 0 10px; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ib-table td.ib-c-box, .ib-table td.ib-c-name { overflow: visible; }
+.ib-table .ib-r { text-align: right; }
+.ib-table th:last-child, .ib-table td:last-child { padding-right: 24px; }
+.ib-c-box { width: 56px; }
+.ib-table th.ib-c-box, .ib-table td.ib-c-box { padding-left: 24px; }
+/* The heading's dividing line: a short stroke at rest, the full height and
+   the accent while it is pointed at or dragged. It stays inside its own
+   heading: the next heading is painted over anything that sticks out. */
+.ib-grip { position: absolute; top: 0; bottom: 0; right: 0; z-index: 2; width: 9px; cursor: col-resize; touch-action: none; }
+.ib-grip::before { content: ""; position: absolute; top: 8px; bottom: 8px; right: 0; width: 1px; background: var(--line-2); transition: 150ms ease; transition-property: background-color, top, bottom; }
+.ib-grip[data-dragging]::before, .ib-grip:focus-visible::before { top: 0; bottom: 0; background: var(--accent); box-shadow: 0 0 0 0.5px var(--accent); }
+.ib-grip:focus-visible { outline: none; }
+.ib-table th.ib-r { padding-right: 14px; }
+@media (pointer: coarse) { .ib-grip { width: 20px; } }
+.ib-c-lp { width: 44px; }
+.ib-c-lev { width: 108px; }
+.ib-c-sku { width: 104px; }
+.ib-split[data-view="tabel"] .ib-c-sku { width: 168px; }
+.ib-c-qty { width: 96px; }
+.ib-c-out { width: 116px; }
+.ib-c-ord { width: 272px; }
+.ib-ords { display: flex; gap: 6px; min-width: 0; }
+.ib-ord { flex: none; display: inline-flex; align-items: stretch; height: 24px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--surface); font-size: 13px; line-height: 22px; overflow: hidden; }
+.ib-ord-no { padding: 0 8px; font-weight: 500; color: var(--ink); }
+.ib-ord-q { padding: 0 8px; border-left: 1px solid var(--line-2); background: var(--raised); color: var(--ink-2); }
+.ib-ord-none { color: var(--ink-3); }
+.ib-c-price, .ib-c-agr { width: 104px; }
+.ib-c-diff { width: 88px; }
+.ib-table td.ib-c-lp, .ib-table td.ib-c-lev { color: var(--ink-3); }
+.ib-table td.ib-c-sku, .ib-table td.ib-c-ord, .ib-table td.ib-c-out, .ib-table td.ib-c-agr { color: var(--ink-2); }
+.ib-table td.ib-c-diff { color: var(--ink-3); }
+.ib-table td.ib-c-diff[data-dev] { color: var(--warn); font-weight: 600; }
+/* The unit is said once, in the heading, in its own lower case. */
+.ib-th-u { margin-left: 2px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.ib-name-in { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ib-row-btn { min-width: 0; padding: 0; border: 0; background: none; font-weight: 500; color: var(--ink); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+button.ib-row-btn { cursor: pointer; }
+.ib-row-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.ib-tag { flex: none; padding: 1px 7px; border-radius: 999px; font-size: 12px; line-height: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.ib-tag[data-tone="warn"] { background: var(--warn-soft); color: var(--warn); }
+/* Delt: the status as its icon alone, in a slim column. Pointing at it
+   brings the words in a bubble, after a short wait so it does not flicker
+   when the mouse only passes. It opens to the left, into the table: above,
+   the first row's bubble would be cut by the heading. */
+.ib-c-sti { width: 84px; }
+.ib-table td.ib-c-sti { overflow: visible; }
+.ib-st-ico { position: relative; flex: none; justify-content: center; width: 24px; height: 24px; margin-left: 12px; border-radius: 6px; }
+.ib-st-ico .ib-dot { width: 9px; height: 9px; }
+.ib-st-ico::after {
+  content: attr(data-tip); position: absolute; z-index: 3; right: calc(100% + 6px); top: 50%; padding: 5px 9px; border-radius: 7px;
+  background: oklch(0.25 0.012 255); color: #fff; font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; pointer-events: none;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.2), 0 6px 16px -4px rgb(16 24 40 / 0.25);
+  opacity: 0; transform: translateY(-50%) scale(0.96); transform-origin: right center;
+  transition: opacity 80ms ease, transform 80ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ib-st-ico:hover::after { opacity: 1; transform: translateY(-50%) scale(1); transition: opacity 140ms var(--ease-out), transform 140ms var(--ease-out); transition-delay: 250ms; }
+}
+.ib-st { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; white-space: nowrap; }
+.ib-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.ib-st[data-tone="ok"] .ib-dot { background: var(--tick); }
+.ib-st[data-tone="off"] .ib-dot { box-shadow: inset 0 0 0 1.5px var(--bad); }
+/* A line with no open order steps back: quieter text, no flood of colour.
+   The status pill carries the reason. */
+.ib-row[data-off] .ib-row-btn { font-weight: 400; color: var(--ink-2); }
+.ib-row[data-off] td.ib-c-qty, .ib-row[data-off] td.ib-c-price { color: var(--ink-2); }
+.ib-split[data-view="delt"] .ib-row { cursor: pointer; }
+/* A line whose price is off the agreement, or has no agreement to be held
+   against, gets its own ground, so it is found without reading the tags. */
+.ib-row[data-dev] td { background: var(--warn-row); }
+.ib-row[data-dev] td:first-child { box-shadow: inset 2px 0 0 color-mix(in oklch, var(--warn) 55%, transparent); }
+/* No open order is the heavier fault, so it wins where a line has both. */
+.ib-row[data-off] td { background: var(--off-row); }
+.ib-row[data-off] td:first-child { box-shadow: inset 2px 0 0 color-mix(in oklch, var(--bad) 45%, transparent); }
+.ib-row[data-picked] td { background: var(--accent-soft); }
+.ib-row[data-picked] td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+@media (hover: hover) and (pointer: fine) {
+  .ib-row:not([data-picked]):hover td { background: var(--raised); }
+  .ib-row[data-dev]:not([data-picked]):hover td { background: oklch(0.965 0.035 85); }
+  .ib-row[data-off]:not([data-picked]):hover td { background: oklch(0.967 0.024 25); }
+  .ib-toggle:hover { border-color: var(--line-2); color: var(--ink); }
+  .ib-toggle[aria-pressed="true"]:hover { color: var(--accent-2); border-color: color-mix(in oklch, var(--accent) 55%, transparent); }
+  .ib-splitter:hover::before { background: var(--accent); }
+  .ib-grip:hover::before { top: 0; bottom: 0; background: var(--accent); }
+}
+
+/* ------------------------------------------------ the details (Delt)
+   The pane is a container: dragged wide, the two cards stand side by side
+   instead of leaving the right half empty. */
+.ib-pane { container-type: inline-size; min-height: 0; overflow-y: auto; padding: 24px 24px 40px; background: var(--raised); }
+.ib-pane-in { display: grid; gap: 16px; max-width: 1120px; }
+.ib-pane-head { display: grid; gap: 4px; min-width: 0; }
+.ib-pos { margin: 0; font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.ib-pane-h { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; text-wrap: balance; }
+.ib-ids { margin: 0; font-size: 13px; color: var(--ink-3); }
+.ib-ids b { font-weight: 500; color: var(--ink-2); }
+
+.ib-card, .ib-state { border-radius: 12px; background: var(--surface); box-shadow: 0 0 0 1px rgb(16 24 40 / 0.06), 0 1px 2px rgb(16 24 40 / 0.05); }
+
+/* Status: the verdict, its reason, and the switch that acts on it. */
+.ib-state { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; padding: 12px 16px 12px 18px; }
+.ib-state .ib-dot { width: 10px; height: 10px; }
+.ib-state[data-tone="ok"] .ib-dot { background: var(--tick); box-shadow: 0 0 0 4px var(--tick-soft); }
+.ib-state[data-tone="off"] .ib-dot { box-shadow: inset 0 0 0 2px var(--bad); }
+.ib-state-t { flex: 1 1 200px; min-width: 0; margin: 0 0 0 4px; display: grid; }
+.ib-state-t b { font-weight: 600; }
+.ib-state-t span { font-size: 13px; line-height: 18px; color: var(--ink-2); }
+.ib-state-in { font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.ib-switch { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 40px; font-size: 13px; font-weight: 500; color: var(--ink-2); cursor: pointer; }
+.ib-switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.ib-switch-t { flex: none; position: relative; width: 36px; height: 22px; border-radius: 999px; background: var(--line-2); transition: background-color 160ms ease; }
+.ib-switch-t::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(16 24 40 / 0.25); transition: transform 180ms var(--ease-out); }
+.ib-switch input:checked + .ib-switch-t { background: var(--accent); }
+.ib-switch input:checked + .ib-switch-t::after { transform: translateX(14px); }
+.ib-switch:has(input:checked) { color: var(--ink); }
+.ib-switch:has(input:focus-visible) .ib-switch-t { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.ib-cards { display: grid; gap: 16px; align-items: start; }
+@container (min-width: 760px) { .ib-cards { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+.ib-card { display: grid; gap: 14px; padding: 16px 18px; }
+.ib-card-h { margin: 0; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.ib-stats { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 14px 20px; }
+.ib-stats dt { margin-bottom: 2px; font-size: 13px; line-height: 18px; color: var(--ink-3); }
+.ib-stats dd { margin: 0; font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; }
+.ib-stats dd span { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--ink-3); }
+.ib-stats dd .ib-none { font-size: 22px; letter-spacing: -0.02em; }
+.ib-stats dd.ib-stat-s { margin-top: 2px; font-size: 13px; line-height: 18px; font-weight: 400; letter-spacing: 0; white-space: normal; color: var(--ink-3); }
+.ib-stats [data-tone="same"] dd:not(.ib-stat-s) { color: var(--ink-3); font-weight: 500; }
+.ib-stats [data-tone="warn"] dd, .ib-stats [data-tone="warn"] dd span { color: var(--warn); }
+.ib-stats [data-tone="warn"] dd.ib-stat-s { font-weight: 500; }
+.ib-line-sum, .ib-out { display: flex; justify-content: space-between; gap: 16px; margin: 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink-2); }
+.ib-line-sum b, .ib-out b { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.ib-orders { list-style: none; margin: 0; padding: 0; display: grid; }
+.ib-orders li { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-top: 1px solid var(--line); }
+.ib-orders li:first-child { border-top: 0; padding-top: 0; }
+.ib-orders b { font-weight: 500; }
+.ib-empty { margin: 0; color: var(--ink-2); }
+@media (max-width: 900px) {
+  .ib-split[data-view="delt"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 2fr) minmax(0, 3fr); }
+  .ib-splitter { display: none; }
+  .ib-pane { border-top: 1px solid var(--line); padding: 20px 16px 28px; }
+  .ib-table th.ib-c-box, .ib-table td.ib-c-box { padding-left: 16px; }
+  .ib-c-box { width: 48px; }
+  .ib-table th:last-child, .ib-table td:last-child { padding-right: 16px; }
+}
+
+/* ------------------------------------------------ a view coming in
+   Only after the button is pressed (data-anim), and only the part that is
+   new: the details slide in from their own side; in Tabel the extra columns
+   arrive left to right. Picking another line stays instant. */
+@keyframes ib-pane-in { from { opacity: 0; transform: translateX(24px); } }
+@keyframes ib-col-in { from { opacity: 0; transform: translateX(-8px); } }
+@keyframes ib-fade-in { from { opacity: 0; } }
+@keyframes ib-swap-down { from { opacity: 0; transform: translateY(8px); } }
+@keyframes ib-swap-up { from { opacity: 0; transform: translateY(-8px); } }
+.ib-pane-in[data-swap="down"] { animation: ib-swap-down 200ms var(--ease-out) backwards; }
+.ib-pane-in[data-swap="up"] { animation: ib-swap-up 200ms var(--ease-out) backwards; }
+.ib[data-anim] .ib-pane { animation: ib-pane-in 320ms var(--ease-out) backwards; }
+.ib[data-anim] .ib-splitter { animation: ib-fade-in 200ms ease backwards; }
+.ib[data-anim] .ib-split[data-view="tabel"] :is(.ib-c-lev, .ib-c-out, .ib-c-ord, .ib-c-price, .ib-c-agr, .ib-c-diff) { animation: ib-col-in 300ms var(--ease-out) backwards; }
+.ib[data-anim] .ib-split[data-view="tabel"] .ib-c-out { animation-delay: 20ms; }
+.ib[data-anim] .ib-split[data-view="tabel"] .ib-c-ord { animation-delay: 40ms; }
+.ib[data-anim] .ib-split[data-view="tabel"] .ib-c-price { animation-delay: 60ms; }
+.ib[data-anim] .ib-split[data-view="tabel"] .ib-c-agr { animation-delay: 80ms; }
+.ib[data-anim] .ib-split[data-view="tabel"] .ib-c-diff { animation-delay: 100ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ib-box path, .ib-switch-t::after, .ib-grip::before { transition: none; }
+  .ib-st-ico::after, .ib-st-ico:hover::after { transform: translateY(-50%); transition-property: opacity; }
+  /* Gentler, not gone: the new part fades, nothing travels. */
+  .ib-pane-in[data-swap] { animation: ib-fade-in 150ms ease backwards; }
+  .ib[data-anim] .ib-pane,
+  .ib[data-anim] .ib-split[data-view="tabel"] :is(.ib-c-lev, .ib-c-out, .ib-c-ord, .ib-c-price, .ib-c-agr, .ib-c-diff) { animation: ib-fade-in 200ms ease backwards; animation-delay: 0ms; }
+}
+

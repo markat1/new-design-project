@@ -1,0 +1,13 @@
+@* PROTO indkøb: the tick box. A real checkbox under a drawn one. Inside a
+   <label> the label names it; alone it takes Label. *@
+<span class="ib-box">
+    <input type="checkbox" checked="@On" disabled="@Locked" aria-label="@Label" @onchange="() => OnToggle.InvokeAsync()" @onclick:stopPropagation="true" />
+    <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.4l3.1 3.1L12.8 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" pathLength="1" /></svg>
+</span>
+
+@code {
+    [Parameter] public bool On { get; set; }
+    [Parameter] public bool Locked { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public EventCallback OnToggle { get; set; }
+}

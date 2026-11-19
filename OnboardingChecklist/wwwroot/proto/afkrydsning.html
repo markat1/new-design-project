@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototype · afkrydsning i Outlook-stil</title>
+<!-- PROTOTYPE: afkrydsning — throwaway, imported by nothing. Delete wwwroot/proto/ when decided. -->
+<link rel="stylesheet" href="../css/app.css">
+<style>
+  /* ---------- tabellen, som appens egen ---------- */
+  .bx-t { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+  .bx-t th { padding: 0 10px 11px; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 20px; font-weight: 500; color: var(--ink-3); text-align: left; }
+  .bx-t td { padding: 10px 10px 9px; line-height: 20px; border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bx-t .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .bx-t th:last-child, .bx-t td:last-child { width: 110px; }
+  .bx-box { width: 36px; }
+  /* Cellerne klipper som standard (ellipsis på navne), og det klipper også
+     kassens klikflade. Kun afkrydsningskolonnen får lov at lade den stå ud. */
+  /* z-index, fordi cellen ved siden af males ovenpå og ellers spiser den del
+     af klikfladen, der stikker ind under navnet. */
+  .bx-t td.bx-box, .bx-t th.bx-box { overflow: visible; position: relative; z-index: 1; }
+  .bx-name { font-weight: 500; }
+  .bx-co { color: var(--ink-2); }
+  .bx-t tbody tr { cursor: pointer; }
+  .bx-t tbody tr[data-shown] { background: var(--accent-soft); }
+  .bx-t tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .bx-t tbody tr:not([data-on]) td { color: var(--ink-3); }
+  .bx-t tbody tr:not([data-on]) .bx-name { font-weight: 400; }
+  @media (hover: hover) and (pointer: fine) {
+    .bx-t tbody tr:hover { background: var(--hover); }
+    .bx-t tbody tr[data-shown]:hover { background: var(--accent-soft); }
+  }
+  .bx-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 8px; padding-top: 11px; border-top: 1px solid var(--line); font-size: 13px; }
+  .bx-head-s { font-size: 12px; font-weight: 400; color: var(--ink-3); }
+
+  /* ---------- fælles for de fem kasser ---------- */
+  /* En knap med role="checkbox": så følger form, streg og flueben huset, og
+     Windows og macOS tegner ikke hver sin. Feltet er 16px at se på og 40px at
+     ramme — pseudo-elementet vokser kun lodret, så naboerne ikke overlappes. */
+  .bx {
+    position: relative;
+    display: grid; place-items: center;
+    padding: 0;
+    background: var(--surface);
+    color: transparent;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+  }
+  /* 40x40 at ramme om en 16px kasse. Lodret 11, så to rækkers flader mødes
+     uden at overlappe: der er 24px mellem kasserne. */
+  .bx::after { content: ""; position: absolute; left: -12px; right: -12px; top: -11px; bottom: -11px; }
+  /* Tæt har 19px mellem kasserne og kan kun nå 31px i højden uden at æde
+     naboens. Det er variantens pris, ikke en fejl. */
+  .bx-taet::after { top: -9px; bottom: -9px; }
+  .bx svg { display: block; }
+  .bx:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* 1 · Fluent 2 — Microsofts nuværende: 16px, 4px hjørner, fyldt accent. */
+  .bx-fluent { width: 16px; height: 16px; border: 1px solid var(--ink-3); border-radius: 4px; }
+  .bx-fluent[aria-checked="true"], .bx-fluent[aria-checked="mixed"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  @media (hover: hover) and (pointer: fine) {
+    .bx-fluent:hover { border-color: var(--ink-1); }
+    .bx-fluent[aria-checked="true"]:hover, .bx-fluent[aria-checked="mixed"]:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  }
+
+  /* 2 · Office klassisk — firkantet, hvid, og fluebenet er blåt i stedet for
+     en fyldt flade. Sådan tegner Excels filtermenu og de gamle Office-dialoger
+     den, og det er den letteste af dem alle. */
+  .bx-klassisk { width: 16px; height: 16px; border: 1px solid var(--ink-3); border-radius: 0; }
+  .bx-klassisk[aria-checked="true"], .bx-klassisk[aria-checked="mixed"] { color: var(--accent); border-color: var(--accent); }
+  @media (hover: hover) and (pointer: fine) {
+    .bx-klassisk:hover { border-color: var(--ink-1); background: var(--accent-soft); }
+  }
+
+  /* 3 · Windows 11 — 18px, 4px hjørner, fyldt; tom kasse får en grå flade ved
+     hover, og hele kassen trykker ved klik. */
+  .bx-win11 { width: 18px; height: 18px; border: 1px solid var(--line-2); border-radius: 4px; }
+  .bx-win11[aria-checked="true"], .bx-win11[aria-checked="mixed"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .bx-win11:active { transform: scale(0.94); }
+  @media (hover: hover) and (pointer: fine) {
+    .bx-win11[aria-checked="false"]:hover { background: var(--sunk); border-color: var(--ink-3); }
+    .bx-win11[aria-checked="true"]:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  }
+  @media (prefers-reduced-motion: reduce) { .bx-win11:active { transform: none; } }
+
+  /* 4 · Outlook-liste — som når man markerer beskeder i indbakken: cirklen er
+     der kun, når man er ved rækken, og den fyldes, når personen er med. */
+  /* 20px cirkel med kun 20px mellem rækkerne: fladen må være 38 høj, ikke 42,
+     ellers æder to rækkers flader hinanden. */
+  .bx-liste::after { top: -9px; bottom: -9px; }
+  .bx-liste { width: 20px; height: 20px; border: 1px solid var(--ink-3); border-radius: 50%; opacity: 0; }
+  .bx-liste[aria-checked="true"], .bx-liste[aria-checked="mixed"] { opacity: 1; background: var(--accent); border-color: var(--accent); color: #fff; }
+  tr:hover .bx-liste, .bx-liste:focus-visible, th .bx-liste { opacity: 1; }
+  @media (hover: none) { .bx-liste { opacity: 1; } }
+
+  /* 5 · Tæt — Excels tæthed: 13px kasse og 32px rækker, så otte personer fylder
+     som otte linjer i et ark. */
+  .bx-taet-rows .bx-t td { padding: 6px 10px 5px; }
+  .bx-taet { width: 13px; height: 13px; border: 1px solid var(--ink-3); border-radius: 2px; }
+  .bx-taet svg { width: 9px; height: 9px; }
+  .bx-taet[aria-checked="true"], .bx-taet[aria-checked="mixed"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  @media (hover: hover) and (pointer: fine) { .bx-taet:hover { border-color: var(--ink-1); } }
+
+.proto-picker {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.82);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 8px 24px rgba(0, 0, 0, 0.24),
+    0 2px 6px rgba(0, 0, 0, 0.12);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.proto-picker-highlight {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  will-change: transform;
+}
+
+/* The slide is enabled only after first paint (data-ready), so load doesn't animate. */
+.proto-picker[data-ready] .proto-picker-highlight {
+  transition:
+    transform 250ms cubic-bezier(0.23, 1, 0.32, 1),
+    width 250ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proto-picker[data-ready] .proto-picker-highlight { transition: none; }
+}
+
+.proto-picker-item {
+  position: relative; /* sits above the highlight */
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  cursor: pointer;
+  transition: color 150ms ease-out;
+}
+
+.proto-picker-item:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.proto-picker-item:active {
+  transform: scale(0.97);
+}
+
+.proto-picker-item:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+
+.proto-picker-item[data-active] {
+  color: #fff;
+}
+
+.proto-picker-divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.proto-picker-replay {
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.proto-picker[data-position="top"] {
+  bottom: auto;
+  top: 24px;
+}
+
+</style>
+</head>
+<body>
+
+<div id="pv-app"></div>
+
+<nav class="proto-picker" aria-label="Prototype variants">
+  <span class="proto-picker-highlight" aria-hidden="true"></span>
+  <button class="proto-picker-item" data-active aria-current="true">Fluent 2</button>
+  <button class="proto-picker-item">Office klassisk</button>
+  <button class="proto-picker-item">Windows 11</button>
+  <button class="proto-picker-item">Outlook-liste</button>
+  <button class="proto-picker-item">Tæt</button>
+</nav>
+
+<script>
+const F = {"app": "<div class=\"app\"><nav class=\"side\" aria-label=\"Sections\"><div class=\"side-new\"><button type=\"button\" class=\"btn btn-primary\" id=\"side-new\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"><\/path><\/svg> Ny udsendelse\n            <\/button><\/div>\n\n        <div class=\"side-nav\"><button type=\"button\" class=\"side-nav-item\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M22 12h-6l-2 3h-4l-2-3H2\"><\/path><path d=\"M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z\"><\/path><\/svg>\n                <span>Udsendelser<\/span>\n                <span class=\"side-nav-count\">4<\/span><\/button><div class=\"side-draft\"><button type=\"button\" class=\"side-draft-head\" data-active=\"\" aria-current=\"page\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 20h9\"><\/path><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z\"><\/path><\/svg>\n                        <span class=\"side-draft-txt\"><span class=\"side-draft-t\" title=\"Jeres priser for 2027\">Jeres priser for 2027<\/span><span class=\"side-draft-s\">Kladde · 8 mails · 7 kunder<\/span><\/span><\/button>\n\n                    <div class=\"side-steps\" role=\"group\" aria-label=\"Trin i udsendelsen\"><button type=\"button\" class=\"side-step\" data-task=\"recipients\" data-active=\"\" aria-current=\"step\"><span class=\"side-step-txt\"><span class=\"side-step-t\"><span class=\"side-step-label\">Modtagere<\/span><span class=\"sr-only\">, udfyldt<\/span><\/span>\n                <span class=\"side-step-s\" title=\"8 hos 7 kunder\">8 hos 7 kunder<\/span><\/span><\/button><button type=\"button\" class=\"side-step\" data-task=\"template\"><span class=\"side-step-txt\"><span class=\"side-step-t\"><span class=\"side-step-label\">Skabelon<\/span><span class=\"sr-only\">, udfyldt<\/span><\/span>\n                <span class=\"side-step-s\" title=\"Dansk · Svensk · Engelsk\">Dansk · Svensk · Engelsk<\/span><\/span><\/button><button type=\"button\" class=\"side-step\" data-task=\"send\"><span class=\"side-step-txt\"><span class=\"side-step-t\"><span class=\"side-step-label\">Afsendelse<\/span><span class=\"sr-only\">, udfyldt<\/span><\/span>\n                <span class=\"side-step-s\" title=\"CRM\">CRM<\/span><\/span><\/button><\/div><\/div><\/div><\/nav>\n\n    <main class=\"main\"><div class=\"split-page\"><h1 class=\"sr-only\">Kladde<\/h1>\n\n    <div class=\"split\" _bl_6=\"\"><div class=\"split-list split-form\"><nav class=\"steps-bar\" aria-label=\"Trin i udsendelsen\"><button type=\"button\" class=\"steps-bar-b\" data-done=\"\" aria-current=\"step\"><span class=\"steps-bar-bar\" aria-hidden=\"true\"><\/span>\n                        <span class=\"steps-bar-l\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M3 8.4l3.2 3.2L13 5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><\/path><\/svg>Modtagere<span class=\"sr-only\">, udfyldt<\/span><\/span><\/button><button type=\"button\" class=\"steps-bar-b\" data-done=\"\"><span class=\"steps-bar-bar\" aria-hidden=\"true\"><\/span>\n                        <span class=\"steps-bar-l\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M3 8.4l3.2 3.2L13 5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><\/path><\/svg>Skabelon<span class=\"sr-only\">, udfyldt<\/span><\/span><\/button><button type=\"button\" class=\"steps-bar-b\" data-done=\"\"><span class=\"steps-bar-bar\" aria-hidden=\"true\"><\/span>\n                        <span class=\"steps-bar-l\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M3 8.4l3.2 3.2L13 5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><\/path><\/svg>Afsendelse<span class=\"sr-only\">, udfyldt<\/span><\/span><\/button><\/nav>\n\n            <div class=\"v3-scroll\"><section class=\"v3-panel\" aria-labelledby=\"v3-panel-h\"><h2 class=\"v3-panel-h\" id=\"v3-panel-h\">Hvem skal have den?<\/h2>\n                    <p class=\"v3-panel-s\">Hver kunde får sin egen prisliste vedhæftet, hentet fra regnskabssystemet.<\/p>\n                    <div class=\"v3-panel-body\"><div class=\"f-fields\" _bl_8=\"\"><div class=\"grp\"><div class=\"grp-cards\" role=\"group\" aria-label=\"Mest brugte marketinglister\"><button type=\"button\" class=\"grp-card\" id=\"grp-card-0\" aria-pressed=\"true\"><span class=\"grp-card-n\"><span class=\"grp-card-tick\" aria-hidden=\"true\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M3 8.4l3.2 3.2L13 5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><\/path><\/svg><\/span>\n                            <span class=\"grp-card-name\">Rammeaftale 2027<\/span><\/span>\n                        <span class=\"grp-card-s\">8 personer · 7 kunder<\/span>\n                        <span class=\"grp-card-sum num\">244,200<span class=\"grp-card-u\"> · brugt 2 gange<\/span><\/span><\/button><button type=\"button\" class=\"grp-card\" id=\"grp-card-1\" aria-pressed=\"false\"><span class=\"grp-card-n\"><span class=\"grp-card-tick\" aria-hidden=\"true\"><\/span>\n                            <span class=\"grp-card-name\">Norden<\/span><\/span>\n                        <span class=\"grp-card-s\">5 personer · 4 kunder<\/span>\n                        <span class=\"grp-card-sum num\">168,000<span class=\"grp-card-u\"> · brugt 1 gang<\/span><\/span><\/button><button type=\"button\" class=\"grp-card\" id=\"grp-card-2\" aria-pressed=\"false\"><span class=\"grp-card-n\"><span class=\"grp-card-tick\" aria-hidden=\"true\"><\/span>\n                            <span class=\"grp-card-name\">Fragtkunder<\/span><\/span>\n                        <span class=\"grp-card-s\">3 personer · 3 kunder<\/span>\n                        <span class=\"grp-card-sum num\">37,400<span class=\"grp-card-u\"> · brugt 1 gang<\/span><\/span><\/button><\/div>\n\n            <p class=\"grp-rule\">Du kan vælge én liste mere, eller klikke den valgte fra igen.<\/p>\n\n            <div class=\"grp-find\"><span class=\"grp-find-ico\" aria-hidden=\"true\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 14 14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"5.6\" cy=\"5.6\" r=\"4.2\"><\/circle><path d=\"M9.1 9.1 12.9 12.9\"><\/path><\/svg><\/span>\n                <input class=\"grp-find-input\" id=\"grp-find\" type=\"search\" placeholder=\"Søg i alle 103 lister, personer og kunder\" aria-label=\"Søg i alle 103 marketinglister\" role=\"combobox\" aria-expanded=\"false\" aria-controls=\"grp-list\" aria-autocomplete=\"list\" autocomplete=\"off\" spellcheck=\"false\" data-1p-ignore=\"\" data-lpignore=\"true\"><\/div><\/div><p class=\"pick-count\"><span>8 af 8 personer med<\/span>\n            <span class=\"pick-count-s\">Klik en række for at se prislisten<\/span><\/p><table class=\"pick-t\"><thead><tr><th scope=\"col\" class=\"pick-t-box\"><input type=\"checkbox\" aria-label=\"Vælg alle\"><\/th>\n                    <th scope=\"col\">Person<\/th>\n                    <th scope=\"col\">Kunde<\/th><th scope=\"col\" class=\"num\">Prisliste<\/th><\/tr><\/thead>\n            <tbody><tr data-on=\"\" tabindex=\"0\"><td class=\"pick-t-box\"><input type=\"checkbox\" aria-label=\"Med i udsendelsen: Bartholomew Featherstonehaugh-Villanueva\"><\/td>\n                        <td class=\"pick-t-name\" title=\"Bartholomew Featherstonehaugh-Villanueva\">Bartholomew Featherstonehaugh-Villanueva<\/td>\n                        <td class=\"pick-t-co\" title=\"Featherstonehaugh-Villanueva International Systems\">Featherstonehaugh-Villanueva International Systems<\/td><td class=\"num\">48,200<\/td><\/tr><tr data-on=\"\" tabindex=\"0\"><td class=\"pick-t-box\"><input type=\"checkbox\" aria-label=\"Med i udsendelsen: Anna Sørensen\"><\/td>\n                        <td class=\"pick-t-name\" title=\"Anna Sørensen\">Anna Sørensen<\/td>\n                        <td class=\"pick-t-co\" title=\"Vela Robotics\">Vela Robotics<\/td><td class=\"num\">12,600<\/td><\/tr><tr data-on=\"\" tabindex=\"0\"><td class=\"pick-t-box\"><input type=\"checkbox\" aria-label=\"Med i udsendelsen: Bo Halden\"><\/td>\n                        <td class=\"pick-t-name\" title=\"Bo Halden\">Bo Halden<\/td>\n                        <td class=\"pick-t-co\" title=\"Halden &amp; Co.\">Halden &amp; Co.<\/td><td class=\"num\">9,400<\/td><\/tr><tr data-on=\"\" tabindex=\"0\"><td class=\"pick-t-box\"><input type=\"checkbox\" aria-label=\"Med i udsendelsen: Klaus Richter\"><\/td>\n                        <td class=\"pick-t-name\" title=\"Klaus Richter\">Klaus Richter<\/td>\n                        <td class=\"pick-t-co\" title=\"Ferrous Manufacturing Group\">Ferrous Manufacturing Group<\/td><td class=\"num\">12,000<\/td><\/tr><tr data-on=\"\" tabindex=\"0\"><td class=\"pick-t-box\"><input type=\"checkbox\" aria-label=\"Med i udsendelsen: Cecilie Nord\"><\/td>\n                        <td class=\"pick-t-name\" title=\"Cecilie Nord\">Cecilie Nord<\/td>\n                        <td class=\"pick-t-co\" title=\"Kestrel Analytics\">Kestrel Analytics<\/td><td class=\"num\">73,000<\/td><\/tr><tr data-on=\"\" tabindex=\"0\"><td class=\"pick-t-box\"><input type=\"checkbox\" aria-label=\"Med i udsendelsen: Jonas Vik\"><\/td>\n                        <td class=\"pick-t-name\" title=\"Jonas Vik\">Jonas Vik<\/td>\n                        <td class=\"pick-t-co\" title=\"Kestrel Analytics\">Kestrel Analytics<\/td><td class=\"num\">73,000<\/td><\/tr><tr data-on=\"\" tabindex=\"0\"><td class=\"pick-t-box\"><input type=\"checkbox\" aria-label=\"Med i udsendelsen: Mia Brandt\"><\/td>\n                        <td class=\"pick-t-name\" title=\"Mia Brandt\">Mia Brandt<\/td>\n                        <td class=\"pick-t-co\" title=\"Bright Harbour Logistics\">Bright Harbour Logistics<\/td><td class=\"num\">16,000<\/td><\/tr><tr data-on=\"\" tabindex=\"0\"><td class=\"pick-t-box\"><input type=\"checkbox\" aria-label=\"Med i udsendelsen: Ida Solberg\"><\/td>\n                        <td class=\"pick-t-name\" title=\"Ida Solberg\">Ida Solberg<\/td>\n                        <td class=\"pick-t-co\" title=\"Solberg Media\">Solberg Media<\/td><td class=\"num\"><span class=\"pick-none\">Ingen prisliste<\/span><\/td><\/tr><\/tbody><\/table><p class=\"f-help\">\n            Beløbene kommer fra regnskabssystemet. To personer hos samme kunde får den samme prisliste.\n        <\/p><\/div><\/div><\/section><\/div>\n\n            <div class=\"v3-panel-f\"><button type=\"button\" class=\"btn btn-ghost\" data-act=\"back\" disabled=\"\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M10 3 5 8l5 5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><\/path><\/svg> Tilbage<\/button>\n\n                <span class=\"v3-step-pos\">Trin 1 af 3<\/span>\n\n                <div class=\"v3-panel-f-end\"><button type=\"button\" class=\"btn btn-primary\" data-act=\"save\">Gem og fortsæt<\/button><\/div><\/div><\/div>\n\n        <div class=\"splitter\" role=\"separator\" aria-orientation=\"vertical\" tabindex=\"0\" aria-label=\"Juster forhåndsvisningen\" aria-valuemin=\"280\" aria-valuenow=\"400\" _bl_7=\"\"><\/div>\n\n        <aside class=\"split-detail\" aria-label=\"Sådan bliver mailen\"><div class=\"d\"><div class=\"d-bar\"><div class=\"d-tabs\" role=\"tablist\" aria-label=\"Mail, modtagere og prislister\" _bl_9=\"\" data-watched=\"1\" style=\"--tab-x: 0px; --tab-w: 48;\"><button type=\"button\" class=\"d-tab\" role=\"tab\" id=\"d-tab-mail\" aria-selected=\"true\" aria-controls=\"d-panel-mail\" tabindex=\"0\">Mail<\/button>\n        <button type=\"button\" class=\"d-tab\" role=\"tab\" id=\"d-tab-rcp\" aria-selected=\"false\" aria-controls=\"d-panel-rcp\" tabindex=\"-1\">\n            Modtagere\n<span class=\"d-tab-n\">8<\/span><\/button>\n            <button type=\"button\" class=\"d-tab\" role=\"tab\" id=\"d-tab-file\" aria-selected=\"false\" aria-controls=\"d-panel-file\" tabindex=\"-1\">\n                Prislister\n<span class=\"d-tab-n\">7<\/span><\/button><\/div><\/div><div class=\"d-panel\" role=\"tabpanel\" id=\"d-panel-mail\" aria-labelledby=\"d-tab-mail\"><div class=\"d-as\"><span class=\"d-as-t\">\n                        Som <b>Bartholomew Featherstonehaugh-Villanueva<\/b> får den · engelsk<\/span><span class=\"sheet-nav\"><button type=\"button\" class=\"sheet-step\" aria-label=\"Forrige modtager\" disabled=\"\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M10 3 5 8l5 5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><\/path><\/svg><\/button>\n                            <span class=\"sheet-count\">1 / 8<\/span>\n                            <button type=\"button\" class=\"sheet-step sheet-next\" aria-label=\"Næste modtager\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M10 3 5 8l5 5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><\/path><\/svg><\/button><\/span><\/div><h2 class=\"d-subject\">Your prices for 2027<\/h2>\n\n            <dl class=\"d-meta\"><div><dt>Til<\/dt>\n                    <dd>8 hos 7 kunder<\/dd><\/div>\n                <div><dt>Ark<\/dt>\n                    <dd>7 prislister · 244,200 i alt<\/dd><\/div>\n                <div><dt>Sendes<\/dt>\n                    <dd class=\"num\">2026-09-22<\/dd><\/div><\/dl>\n\n            <div class=\"d-body\">Hi Bartholomew Featherstonehaugh-Villanueva\n\nHere are your prices for 2027. The sheet is attached and applies to Featherstonehaugh-Villanueva International Systems alone.\n\nDo tell us if anything looks wrong.\n\nKind regards<\/div><\/div><\/div><\/aside><\/div><\/div><\/main><\/div>"};
+
+// Fluebenet er Fluents: to streger, runde ender, 2 i en 16-boks. Stregen
+// følger knappens color, så den er hvid på fyldt og blå på hvid.
+const TICK = '<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.6l3.1 3.1L12.8 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// Halv tilstand: en streg, som Outlook viser, når kun nogle er valgt.
+const DASH = '<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+const SHAPES = ['fluent', 'klassisk', 'win11', 'liste', 'taet'];
+
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+let people = [];
+function reset() {
+  const doc = new DOMParser().parseFromString(F.app, 'text/html');
+  people = [...doc.querySelectorAll('.pick-t tbody tr')].map((tr, i) => ({
+    id: i,
+    name: tr.querySelector('.pick-t-name').textContent.trim(),
+    company: tr.querySelector('.pick-t-co').textContent.trim(),
+    sum: tr.querySelector('.num').textContent.trim(),
+    on: true,
+    shown: i === 0,
+  }));
+}
+const on = () => people.filter(p => p.on);
+
+// "Vælg alle" har tre tilstande, ikke to: alle, ingen, og nogle.
+const allState = () => on().length === people.length ? 'true' : on().length === 0 ? 'false' : 'mixed';
+
+const box = (shape, state, extra, label) => `<button type="button" class="bx bx-${shape}" role="checkbox"
+    aria-checked="${state}" ${extra} aria-label="${esc(label)}">${state === 'mixed' ? DASH : TICK}</button>`;
+
+const variants = SHAPES.map(shape => ({
+  cls: shape === 'taet' ? 'bx-taet-rows' : '',
+  body: () => `<p class="bx-head"><span>${on().length} af ${people.length} personer med</span>
+      <span class="bx-head-s">Klik en række for at se prislisten</span></p>
+    <table class="bx-t"><thead><tr>
+      <th class="bx-box">${box(shape, allState(), 'data-all', 'Vælg alle')}</th>
+      <th>Person</th><th>Kunde</th><th class="num">Prisliste</th>
+    </tr></thead><tbody>
+    ${people.map(p => `<tr data-row="${p.id}" tabindex="0"${p.on ? ' data-on=""' : ''}${p.shown ? ' data-shown=""' : ''}>
+      <td class="bx-box">${box(shape, String(p.on), `data-box="${p.id}"`, 'Med i udsendelsen: ' + p.name)}</td>
+      <td class="bx-name" title="${esc(p.name)}">${esc(p.name)}</td>
+      <td class="bx-co" title="${esc(p.company)}">${esc(p.company)}</td>
+      <td class="num">${p.sum}</td>
+    </tr>`).join('')}
+    </tbody></table>`,
+}));
+const behaviours = variants;
+
+const app = document.getElementById('pv-app');
+
+function render() {
+  app.innerHTML = F.app;
+  app.className = variants[current].cls;
+  const fields = app.querySelector('.f-fields');
+  [...fields.querySelectorAll('.pick-count, .pick-t, .f-help')].forEach(el => el.remove());
+  fields.insertAdjacentHTML('beforeend', variants[current].body()
+    + '<p class="f-help">Beløbene kommer fra regnskabssystemet. To personer hos samme kunde får den samme prisliste.</p>');
+}
+
+app.addEventListener('click', e => {
+  const t = e.target.closest('[data-box], [data-all], [data-row]');
+  if (!t) return;
+  if (t.hasAttribute('data-all')) {
+    const allOn = on().length === people.length;
+    people.forEach(p => { p.on = !allOn; });
+    render();
+    return app.querySelector('[data-all]')?.focus({ preventScroll: true });
+  }
+  if (t.dataset.box !== undefined) {
+    const p = people.find(x => x.id === +t.dataset.box);
+    p.on = !p.on;
+    render();
+    return app.querySelector(`[data-box="${p.id}"]`)?.focus({ preventScroll: true });
+  }
+  // Klik på rækken viser prislisten — det er rækkens egen betydning i appen.
+  people.forEach(p => { p.shown = p.id === +t.dataset.row; });
+  render();
+  app.querySelector(`tr[data-row="${t.dataset.row}"]`)?.focus({ preventScroll: true });
+});
+
+app.addEventListener('keydown', e => {
+  // Kun når rækken selv har fokus: står fokus på kassen, er tasten kassens.
+  if (!e.target.matches?.('tr[data-row]') || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault();
+  e.target.click();
+});
+
+// Harness: varianterne tegner gennem render().
+const picker = document.querySelector('.proto-picker');
+const highlight = picker.querySelector('.proto-picker-highlight');
+const items = [...picker.querySelectorAll('.proto-picker-item:not(.proto-picker-replay)')];
+const replay = picker.querySelector('.proto-picker-replay');
+let current = 0;
+
+function moveHighlight() {
+  const el = items[current];
+  highlight.style.width = el.offsetWidth + 'px';
+  highlight.style.transform = `translateX(${el.offsetLeft}px)`;
+}
+
+function mount() {
+  reset();
+  render();
+}
+
+function setActive(i) {
+  if (i < 0 || i >= variants.length) return;
+  current = i;
+  items.forEach((el, j) => {
+    el.toggleAttribute('data-active', j === i);
+    if (j === i) el.setAttribute('aria-current', 'true');
+    else el.removeAttribute('aria-current');
+  });
+  moveHighlight();
+  const url = new URL(location);
+  url.searchParams.set('v', i + 1);
+  history.replaceState(null, '', url);
+  mount();
+}
+
+items.forEach((el, i) => el.addEventListener('click', () => setActive(i)));
+replay?.addEventListener('click', () => mount());
+window.addEventListener('resize', moveHighlight);
+
+document.addEventListener('keydown', (e) => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const num = parseInt(e.key, 10);
+  if (num >= 1 && num <= variants.length) setActive(num - 1);
+  else if (e.key === 'ArrowRight') setActive((current + 1) % variants.length);
+  else if (e.key === 'ArrowLeft') setActive((current - 1 + variants.length) % variants.length);
+  else if (e.key === 'r' || e.key === 'R') mount();
+});
+
+setActive((parseInt(new URLSearchParams(location.search).get('v'), 10) || 1) - 1);
+// Enable the slide only after first paint, so load doesn't animate.
+requestAnimationFrame(() => requestAnimationFrame(() => picker.setAttribute('data-ready', '')));
+
+</script>
+</body>
+</html>

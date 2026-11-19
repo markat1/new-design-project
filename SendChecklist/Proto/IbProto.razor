@@ -1,0 +1,302 @@
+@page "/proto/indkob"
+@implements IAsyncDisposable
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+@* PROTO indkøb: the supplier's lines held against open orders, ticked before
+   they are sent on. Two views of the same lines, switched at the top: Delt
+   (slim table, the chosen line's orders and prices beside it, a divider to
+   drag) and Tabel
+   (every column, as the present table). Throwaway: delete the Proto folder,
+   css/proto-indkob.css and js/proto-indkob.js when it is built in. Nothing
+   else refers to them. *@
+<link rel="stylesheet" href="css/proto-indkob.css" />
+@{
+    int total = Ib.Lines.Length, n = on.Count, noOrder = Ib.Lines.Count(l => !l.Ready);
+    var split = Vis != "tabel";
+    var sum = Ib.Lines.Where(l => on.Contains(l.Lp)).Sum(l => l.Amount);
+}
+<div class="ck-root v2 v2-solo ib" data-anim="@moved">
+    <section class="v2-main" aria-labelledby="ib-h">
+        <header class="ib-top">
+            <div class="ib-top-t">
+                <h1 class="ib-h" id="ib-h">@Ib.Title</h1>
+                <p class="ib-sub num">@total linjer · @(total - noOrder) klar · @noOrder uden åben ordre</p>
+            </div>
+            <button type="button" class="ib-toggle" aria-pressed="@(split ? "true" : "false")" @onclick="@(() => Show(split ? "tabel" : null))">@IcoSplit Delt visning</button>
+        </header>
+        <div class="ib-split" data-view="@(split ? "delt" : "tabel")" @ref="splitEl">
+            <div class="ib-scroll">
+                <table class="ib-table" @ref="tableEl">
+                    @* Each heading ends in a line that can be dragged, as in a mail
+                       list. Varenavn takes what is left, so the lines left of it
+                       size their own column and the ones right of it the next. *@
+                    <thead>
+                        <tr>
+                            <th scope="col" class="ib-c-box" @key='"box"'><span class="ck-vh">Med</span></th>
+                            <th scope="col" class="ib-c-lp" data-col="lp" @key='"lp"'>Lp @Grip("Lp", true)</th>
+                            @if (!split) { <th scope="col" class="ib-c-lev" data-col="lev" @key='"lev"'>Lev. varenr. @Grip("Lev. varenr.", true)</th> }
+                            <th scope="col" class="ib-c-sku" data-col="sku" @key='"sku"'>Varenr. @Grip("Varenr.", true)</th>
+                            <th scope="col" data-col="name" @key='"name"'>Varenavn @Grip("Antal", false)</th>
+                            <th scope="col" class="ib-c-qty ib-r" data-col="qty" @key='"qty"'>Antal <span class="ib-th-u">@Ib.Unit</span> @Grip(split ? "Status" : "Udestående", false)</th>
+                            @if (!split)
+                            {
+                                <th scope="col" class="ib-c-out ib-r" data-col="out" @key='"out"'>Udestående @Grip("Ordre", false)</th>
+                                <th scope="col" class="ib-c-ord" data-col="ord" @key='"ord"'>Ordre @Grip("Stykpris", false)</th>
+                                <th scope="col" class="ib-c-price ib-r" data-col="price" @key='"price"'>Stykpris @Grip("Aftalepris", false)</th>
+                                <th scope="col" class="ib-c-agr ib-r" data-col="agr" @key='"agr"'>Aftalepris @Grip("Forskel", false)</th>
+                                <th scope="col" class="ib-c-diff ib-r" data-col="diff" @key='"diff"'>Forskel @Grip("Status", false)</th>
+                            }
+                            @* The status is its icon alone: the row's colour says the same,
+                               and the words come in a bubble when it is pointed at. *@
+                            <th scope="col" class="ib-c-sti" data-col="sti" @key='"sti"'>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in Ib.Lines)
+                        {
+                            var line = l;
+                            var isOn = on.Contains(line.Lp);
+                            var isPicked = split && picked.Lp == line.Lp;
+                            <tr @key="line.Lp" class="ib-row" data-off="@(!line.Ready)" data-dev="@(line.Deviates || line.Agreed is null)" data-picked="@isPicked" @onclick="() => Pick(line)">
+                                <td class="ib-c-box"><IbBox On="isOn" Locked="sent" Label="@($"Tag linje {line.Lp} med: {line.Name}")" OnToggle="() => Toggle(line.Lp)" /></td>
+                                <td class="ib-c-lp num">@line.Lp</td>
+                                @if (!split) { <td class="ib-c-lev num">@line.LevSku</td> }
+                                <td class="ib-c-sku num" title="@line.Sku">@line.Sku</td>
+                                <td class="ib-c-name">
+                                    <span class="ib-name-in">
+                                        @if (split)
+                                        {
+                                            <button type="button" class="ib-row-btn" title="@line.Name" @ref="refs[line.Lp]" aria-current="@(isPicked ? "true" : null)"
+                                                    @onkeydown="k => Move(k, line)">@NameOf(line)</button>
+                                            @if (line.Deviates) { <span class="ib-tag" data-tone="warn">Pris @Ib.Signed(line.Diff!.Value)</span> }
+                                        }
+                                        else
+                                        {
+                                            <span class="ib-row-btn" title="@line.Name">@NameOf(line)</span>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="ib-c-qty ib-r num">@line.Qty</td>
+                                @if (!split)
+                                {
+                                    <td class="ib-c-out ib-r num">@(line.Outstanding?.ToString() ?? "–")</td>
+                                    <td class="ib-c-ord num" title="@Ib.OrdersText(line)">
+                                        @* One mark per order: its number, then how many of the
+                                           line's pieces go on it. *@
+                                        @if (line.Ready)
+                                        {
+                                            <span class="ib-ords">
+                                                @foreach (var o in line.Orders)
+                                                {
+                                                    <span class="ib-ord"><span class="ib-ord-no">@o.No</span><span class="ib-ord-q">@o.Qty @Ib.Unit</span></span>
+                                                }
+                                            </span>
+                                        }
+                                        else { <span class="ib-ord-none">–</span> }
+                                    </td>
+                                    <td class="ib-c-price ib-r num">@Ib.Kr(line.Price)</td>
+                                    <td class="ib-c-agr ib-r num">@(line.Agreed is { } a ? Ib.Kr(a) : "–")</td>
+                                    <td class="ib-c-diff ib-r num" data-dev="@line.Deviates">@(line.Diff is { } d ? (d == 0 ? "0,00" : Ib.Signed(d)) : "–")</td>
+                                }
+                                <td class="ib-c-sti">@Status(line)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (split)
+            {
+                var p = picked;
+                <div class="ib-splitter" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Juster bredden på detaljerne"
+                     aria-valuemin="340" @ref="handle"></div>
+                <aside class="ib-pane" aria-label="Detaljer for linjen">
+                    <div class="ib-pane-in" @key="p.Lp" data-swap="@swap">
+                        <header class="ib-pane-head">
+                            <p class="ib-pos num">Linje @p.Lp af @total</p>
+                            <h2 class="ib-pane-h">@NameOf(p)</h2>
+                            <p class="ib-ids num">Varenr. <b>@p.Sku</b> · Lev. varenr. <b>@p.LevSku</b></p>
+                        </header>
+
+                        @* Status is the line's verdict, so it stands under the name
+                           with its reason and the one thing to do about it. *@
+                        <div class="ib-state" data-tone="@(p.Ready ? "ok" : "off")">
+                            <span class="ib-dot" aria-hidden="true"></span>
+                            <p class="ib-state-t num">
+                                <b>@(p.Ready ? "Klar" : "Ingen åben ordre")</b>
+                                <span>@(p.Ready
+                                    ? (p.Orders.Length == 1 ? $"Føres på ordre {p.Orders[0].No}" : $"Fordeles på {p.Orders.Length} ordrer")
+                                    : $"Linjens {p.Qty} {Ib.Unit} har ikke noget at blive ført på")</span>
+                            </p>
+                            @if (sent)
+                            {
+                                <span class="ib-state-in">@(on.Contains(p.Lp) ? "Sendt videre" : "Ikke sendt")</span>
+                            }
+                            else
+                            {
+                                <label class="ib-switch">
+                                    <input type="checkbox" role="switch" checked="@on.Contains(p.Lp)" @onchange="() => Toggle(p.Lp)" />
+                                    <span class="ib-switch-t" aria-hidden="true"></span>
+                                    <span>Med i afsendelsen</span>
+                                </label>
+                            }
+                        </div>
+
+                        <div class="ib-cards">
+                            @* The price: what the supplier asks, what was agreed, and
+                               the gap as a third figure rather than a sentence. *@
+                            <section class="ib-card" aria-label="Pris">
+                                <h3 class="ib-card-h">Pris</h3>
+                                <dl class="ib-stats">
+                                    <div><dt>Stykpris</dt><dd class="num">@Ib.Kr(p.Price) <span>@Ib.Cur</span></dd></div>
+                                    <div><dt>Aftalepris</dt><dd class="num">@if (p.Agreed is { } a) { @Ib.Kr(a) <span>@Ib.Cur</span> } else { <span class="ib-none">Ingen</span> }</dd></div>
+                                    <div data-tone="@(p.Diff is null || p.Deviates ? "warn" : "same")">
+                                        <dt>Forskel</dt>
+                                        @if (p.Diff is { } d)
+                                        {
+                                            <dd class="num">@(d == 0 ? "0,00" : Ib.Signed(d)) <span>@Ib.Cur</span></dd>
+                                            <dd class="ib-stat-s num">@(d == 0 ? "Som aftalt" : $"{Ib.Signed(d * p.Qty)} {Ib.Cur} for {p.Qty} {Ib.Unit}")</dd>
+                                        }
+                                        else
+                                        {
+                                            <dd class="num">–</dd>
+                                            <dd class="ib-stat-s">Ingen aftale at holde op imod</dd>
+                                        }
+                                    </div>
+                                </dl>
+                                <p class="ib-line-sum num"><span>@p.Qty @Ib.Unit × @Ib.Kr(p.Price)</span><b>@Ib.Kr(p.Amount) @Ib.Cur</b></p>
+                            </section>
+
+                            <section class="ib-card" aria-label="Åbne ordrer">
+                                <h3 class="ib-card-h">Åbne ordrer</h3>
+                                @if (p.Ready)
+                                {
+                                    <ul class="ib-orders">
+                                        @foreach (var o in p.Orders)
+                                        {
+                                            <li><span class="num">Ordre @o.No</span><b class="num">@o.Qty @Ib.Unit</b></li>
+                                        }
+                                    </ul>
+                                    <p class="ib-out num"><span>Udestående på varen i alt</span><b>@p.Outstanding @Ib.Unit</b></p>
+                                }
+                                else
+                                {
+                                    <p class="ib-empty">Der er ingen åben ordre på varenummeret.</p>
+                                }
+                            </section>
+                        </div>
+                    </div>
+                </aside>
+            }
+        </div>
+        <footer class="ib-bar">
+            <p class="ib-prog-t num"><b>@n</b> af @total linjer valgt</p>
+            <p class="ib-total num">Valgt for <b>@Ib.Kr(sum) @Ib.Cur</b></p>
+            @if (sent)
+            {
+                <p class="ib-sent" role="status">@Icons.Tick Sendt videre med @n @(n == 1 ? "linje" : "linjer")</p>
+            }
+            else
+            {
+                <button type="button" class="ck-btn ck-primary" disabled="@(n == 0)" @onclick="() => sent = true">@(n == 0 ? "Vælg linjer for at sende" : $"Send {n} {(n == 1 ? "linje" : "linjer")} videre") @Icons.Arrow</button>
+            }
+        </footer>
+    </section>
+</div>
+
+@code {
+    /// The view lives in the address (?vis=tabel), so a reload keeps it.
+    [SupplyParameterFromQuery(Name = "vis")] public string? Vis { get; set; }
+
+    // Lines with an open order are ticked from the start, as in the present table.
+    private readonly HashSet<int> on = [.. Ib.Lines.Where(l => l.Ready).Select(l => l.Lp)];
+    private readonly Dictionary<int, ElementReference> refs = new();
+    private Line picked = Ib.Lines.First(l => l.Ready);
+    private bool sent;
+    private ElementReference splitEl, handle, tableEl;
+    private string? colsFor;
+    private IJSObjectReference? js;
+    private bool attached;
+
+    // The divider is new each time Delt comes back, so it is wired up again.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var view = Vis == "tabel" ? "tabel" : "delt";
+        js ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/proto-indkob.js");
+        // Each view remembers its own column widths.
+        if (view != colsFor) { colsFor = view; await js.InvokeVoidAsync("cols", tableEl, view); }
+        if (view == "tabel") { attached = false; return; }
+        if (attached) return;
+        attached = true;
+        await js.InvokeVoidAsync("attach", handle, splitEl);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { if (js is not null) { await js.InvokeVoidAsync("detach"); await js.DisposeAsync(); } }
+        catch (JSDisconnectedException) { }
+    }
+
+    private static readonly MarkupString IcoSplit = new("""<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="2"/><path d="M9.5 2.75v10.5"/></svg>""");
+
+    /// The draggable line at a heading's right edge. `self` sizes the heading
+    /// it sits in; otherwise the column after it.
+    private static RenderFragment Grip(string column, bool self) => __builder =>
+    {
+        <span class="ib-grip" data-size="@(self ? "self" : "next")" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Juster bredden på @column"></span>
+    };
+
+    private static string NameOf(Line l) => l.Name == "—" ? "Intet varenavn" : l.Name;
+
+    // The status is an icon. It carries the words as its name for a screen
+    // reader, and shows them in a bubble when pointed at.
+    private static RenderFragment Status(Line l) => __builder =>
+    {
+        var words = l.Ready ? "Klar" : "Ingen åben ordre";
+        <span class="ib-st ib-st-ico" data-tone="@(l.Ready ? "ok" : "off")" role="img" aria-label="@words" data-tip="@words"><span class="ib-dot" aria-hidden="true"></span></span>
+    };
+
+    // A view only animates in after the button was pressed, never on load.
+    private bool moved;
+
+    private void Show(string? view)
+    {
+        moved = true;
+        Nav.NavigateTo(Nav.GetUriWithQueryParameter("vis", view), replace: true);
+    }
+
+    // A clicked line brings its details in from the side it lies on: from
+    // below when it is further down the list, from above when further up.
+    // Arrow keys swap at once; paging through lines should not wait on motion.
+    private string? swap;
+
+    private void Pick(Line line)
+    {
+        if (line.Lp == picked.Lp) return;
+        swap = line.Lp > picked.Lp ? "down" : "up";
+        picked = line;
+    }
+
+    private void Toggle(int lp)
+    {
+        if (sent) return;
+        if (!on.Remove(lp)) on.Add(lp);
+    }
+
+    private async Task Move(KeyboardEventArgs k, Line from)
+    {
+        var i = Array.IndexOf(Ib.Lines, from);
+        var next = k.Key switch
+        {
+            "ArrowDown" => Math.Min(i + 1, Ib.Lines.Length - 1),
+            "ArrowUp" => Math.Max(i - 1, 0),
+            "Home" => 0,
+            "End" => Ib.Lines.Length - 1,
+            _ => -1,
+        };
+        if (next < 0 || next == i) return;
+        swap = null;
+        picked = Ib.Lines[next];
+        await refs[picked.Lp].FocusAsync();
+    }
+}
