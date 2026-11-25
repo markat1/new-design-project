@@ -1,0 +1,103 @@
+@inherits FrigivBase
+@* 5 Kombineret: 2 and 1 together. The question lists the orders; while the
+   release runs they are ticked off one by one (Forløb); when the last one is
+   through, the list gives way to the receipt with ring and tick
+   (Kvittering). Both lie in one cell, so the box keeps its size. *@
+@{
+    var count = Math.Max(1, B.Orders.Count);
+    var frac = Done || step >= count ? 1.0 : Busy ? (step + 0.6) / count : 0.0;
+}
+<dialog class="ib-dlg ib-fl ib-kb" @ref="dlgEl" data-stage="@stage" data-all="@(Busy && step >= count)" aria-labelledby="@(Done ? "ib-kb-h2" : "ib-kb-h")">
+    <div class="ib-dlg-stack">
+        <div class="ib-dlg-ask" inert="@Done">
+            <h2 class="ib-dlg-h" id="ib-kb-h" aria-live="polite">@(Busy ? "Frigiver til lagersystemet…" : $"Frigiv {B.N} {B.Linjer} til lagersystemet?")</h2>
+            <p class="ib-dlg-p">Linjerne sendes til lagersystemet og føres på de åbne ordrer.</p>
+            <div class="ib-fl-bar" aria-hidden="true"><span style="transform: scaleX(@frac.ToString("0.###"))"></span></div>
+
+            @* Every line, under the order it goes on. The list scrolls by
+               itself, so the total and the buttons never leave. *@
+            <div class="ib-kb-list" tabindex="0" role="group" aria-label="Linjer pr. ordre">
+                @for (var i = 0; i < B.Orders.Count; i++)
+                {
+                    var o = B.Orders[i];
+                    var s = Done || (Busy && i < step) ? "ok" : Busy && i == step ? "now" : "wait";
+                    <section class="ib-kb-ord" data-s="@s">
+                        <h3 class="ib-kb-oh num">
+                            <span class="ib-fl-mark" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" fill="none"><path d="M6 10.4l2.7 2.7L14 7.6" pathLength="1" /></svg></span>
+                            <span>Ordre @o.No</span>
+                            <span class="ib-kb-om">@o.Lines @(o.Lines == 1 ? "linje" : "linjer") · @o.Qty @Ib.Unit</span>
+                            <b>@Ib.Kr(o.Amount) @Ib.Cur</b>
+                        </h3>
+                        <ul class="ib-kb-rows num">
+                            @foreach (var r in o.Rows)
+                            {
+                                <li>
+                                    <span class="ib-kb-lp">@r.Lp</span>
+                                    <span class="ib-kb-n" title="@r.Name">@r.Name</span>
+                                    <span>@if (r.Diff is { } d) { <span class="ib-tag" data-tone="warn">Pris @Ib.Signed(d)</span> }</span>
+                                    <span class="ib-kb-r">@r.Qty @Ib.Unit</span>
+                                    <span class="ib-kb-r ib-kb-a">@Ib.Kr(r.Amount)</span>
+                                </li>
+                            }
+                        </ul>
+                    </section>
+                }
+            </div>
+
+            <div class="ib-kb-total num">
+                <p class="ib-kb-tl"><b>I alt</b><span>@B.N @B.Linjer · @B.Qty @Ib.Unit · @B.Orders.Count @B.Ordrer</span></p>
+                <p class="ib-kb-sum">@Ib.Kr(B.Sum) <span>@Ib.Cur</span></p>
+            </div>
+            <FrigivNotes B="B" Failed="failed" />
+            <div class="ib-dlg-acts">
+                <button type="button" class="ck-btn ck-ghost" autofocus data-esc aria-disabled="@(Busy ? "true" : null)" @onclick="Close">Annullér</button>
+                <button type="button" class="ck-btn ck-primary ib-go" aria-disabled="@(Busy ? "true" : null)" @onclick="e => Release(e.ShiftKey)">
+                    @if (Busy) { <span class="ib-spin" aria-hidden="true"></span> <span>Ordre @(Math.Min(step + 1, count)) af @count…</span> }
+                    else { <span>@(failed ? "Prøv igen" : $"Frigiv {B.N} {B.Linjer}")</span> }
+                </button>
+            </div>
+        </div>
+        <div class="ib-dlg-done" inert="@(!Done)">
+            <div class="ib-dlg-rec" role="status">
+                @if (Done)
+                {
+                    <span class="ib-seal" aria-hidden="true">
+                        <svg viewBox="0 0 64 64" width="64" height="64" fill="none">
+                            <circle class="ib-seal-bg" cx="32" cy="32" r="30" />
+                            <circle class="ib-seal-ring" cx="32" cy="32" r="30" pathLength="1" />
+                            <path class="ib-seal-tick" d="M21 33.5l7.5 7.5L43.5 25" pathLength="1" />
+                        </svg>
+                    </span>
+                    <h2 class="ib-dlg-h" id="ib-kb-h2">Frigivet til lagersystemet</h2>
+                    <p class="ib-kb-big num">@Ib.Kr(B.Sum) <span>@Ib.Cur</span></p>
+                    <p class="ib-dlg-p num">@B.N @B.Linjer · @B.Qty @Ib.Unit</p>
+                    <dl class="ib-kb-rec num">
+                        @foreach (var o in B.Orders)
+                        {
+                            <div><dt>@Icons.Tick Ordre @o.No</dt><dd><span>@o.Lines @(o.Lines == 1 ? "linje" : "linjer") · @o.Qty @Ib.Unit</span><b>@Ib.Kr(o.Amount) @Ib.Cur</b></dd></div>
+                        }
+                    </dl>
+                }
+            </div>
+            <button type="button" class="ck-btn ck-primary ib-dlg-close" data-esc @ref="doneBtn" @onclick="Close">Færdig</button>
+        </div>
+    </div>
+</dialog>
+
+@code {
+    private int step;
+
+    // PROTO: one wait per order, then a beat with every order ticked before
+    // the receipt takes over, so the last tick is seen landing.
+    protected override async Task Work()
+    {
+        var count = Math.Max(1, B.Orders.Count);
+        for (step = 0; step < count; step++)
+        {
+            StateHasChanged();
+            await Task.Delay(800);
+        }
+        StateHasChanged();
+        await Task.Delay(500);
+    }
+}

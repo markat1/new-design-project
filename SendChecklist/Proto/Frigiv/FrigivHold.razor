@@ -1,0 +1,57 @@
+@inherits FrigivBase
+@* 3 Hold: no second button to press by habit. The release is held down for
+   a second while the button fills, and the answer takes the whole box: green
+   spreads from the button, a white tick is drawn. *@
+<dialog class="ib-dlg ib-hd" @ref="dlgEl" data-stage="@stage" aria-labelledby="@(Done ? "ib-hd-h2" : "ib-hd-h")">
+    <div class="ib-hd-ask" inert="@Done">
+        <p class="ib-hd-big num">@B.N <span>@B.Linjer</span></p>
+        <h2 class="ib-dlg-h" id="ib-hd-h">Frigiv til lagersystemet?</h2>
+        <p class="ib-dlg-p num">@Ib.Kr(B.Sum) @Ib.Cur@(B.Orders.Count > 0 ? $" · {B.Ordrer} {string.Join(", ", B.Orders.Select(o => o.No))}" : "")</p>
+        <FrigivNotes B="B" Failed="failed" />
+        <button type="button" class="ib-hold" data-holding="@holding" aria-disabled="@(Busy ? "true" : null)" aria-describedby="ib-hd-hint"
+                @onpointerdown="e => Down(e.ShiftKey)" @onpointerup="Up" @onpointerleave="Up" @onpointercancel="Up"
+                @onkeydown="KeyDown" @onkeyup="Up" @onblur="Up" @oncontextmenu:preventDefault="true" @oncontextmenu="() => { }">
+            <span class="ib-hold-fill" aria-hidden="true"></span>
+            <span class="ib-hold-t">
+                @if (Busy) { <span class="ib-spin" aria-hidden="true"></span> <span>Frigiver…</span> }
+                else { <span>@(failed ? "Hold for at prøve igen" : "Hold for at frigive")</span> }
+            </span>
+        </button>
+        <p class="ib-hd-hint" id="ib-hd-hint">Hold knappen nede i ét sekund</p>
+        <button type="button" class="ck-btn ck-ghost ib-hd-no" data-esc aria-disabled="@(Busy ? "true" : null)" @onclick="Close">Annullér</button>
+    </div>
+    @if (Done)
+    {
+        <div class="ib-hd-win">
+            <div class="ib-hd-win-t" role="status">
+                <svg class="ib-hd-tick" viewBox="0 0 72 72" width="72" height="72" fill="none" aria-hidden="true"><path d="M18 37.5l12 12L54 24" pathLength="1" /></svg>
+                <h2 class="ib-dlg-h" id="ib-hd-h2">Frigivet</h2>
+                <p class="ib-dlg-p num">@B.N @B.Linjer på @B.Orders.Count @B.Ordrer · @Ib.Kr(B.Sum) @Ib.Cur</p>
+            </div>
+            <button type="button" class="ib-hd-ok" data-esc @ref="doneBtn" @onclick="Close">Færdig</button>
+        </div>
+    }
+</dialog>
+
+@code {
+    private const int HoldMs = 1000;
+    private bool holding;
+    private CancellationTokenSource? hold;
+
+    private async Task Down(bool fail)
+    {
+        if (stage != "ask" || holding) return;
+        holding = true;
+        hold = new();
+        try { await Task.Delay(HoldMs, hold.Token); }
+        catch (TaskCanceledException) { return; }
+        holding = false;
+        await Release(fail);
+    }
+
+    private void Up() { hold?.Cancel(); holding = false; }
+
+    // Space or Enter held down does the same as the pointer.
+    private Task KeyDown(KeyboardEventArgs e) =>
+        (e.Key is " " or "Enter") && !e.Repeat ? Down(e.ShiftKey) : Task.CompletedTask;
+}

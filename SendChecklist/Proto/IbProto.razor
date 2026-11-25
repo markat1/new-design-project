@@ -2,6 +2,7 @@
 @implements IAsyncDisposable
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@using SendChecklist.Proto.Frigiv
 
 @* PROTO indkøb: the supplier's lines held against open orders, ticked before
    they are sent on. Two views of the same lines, switched at the top: Delt
@@ -11,12 +12,24 @@
    css/proto-indkob.css and js/proto-indkob.js when it is built in. Nothing
    else refers to them. *@
 <link rel="stylesheet" href="css/proto-indkob.css" />
+<link rel="stylesheet" href="css/proto-picker.css" />
 @{
     int total = Ib.Lines.Length, n = on.Count, noOrder = Ib.Lines.Count(l => !l.Ready);
     var split = Vis != "tabel";
-    var sum = Ib.Lines.Where(l => on.Contains(l.Lp)).Sum(l => l.Amount);
+    var chosen = Ib.Lines.Where(l => on.Contains(l.Lp)).ToList();
+    var sum = chosen.Sum(l => l.Amount);
+    var linjer = n == 1 ? "linje" : "linjer";
+    // What the release touches: each order, and how much goes on it.
+    var batch = new Batch(n, total, sum,
+        chosen.SelectMany(l => l.Orders.Select(o => (l, o))).GroupBy(x => x.o.No).OrderBy(g => g.Key)
+            .Select(g => new OrderSum(g.Key, g.Count(), g.Sum(x => x.o.Qty), g.Sum(x => x.o.Qty * x.l.Price),
+                g.Select(x => new OrderRow(x.l.Lp, x.l.Sku, NameOf(x.l), x.o.Qty, x.o.Qty * x.l.Price, x.l.Deviates ? x.l.Diff : null)).ToList())).ToList(),
+        chosen.Count(l => l.Deviates || l.Agreed is null), chosen.Count(l => !l.Ready),
+        chosen.Sum(l => l.Qty), chosen.Sum(l => (l.Diff ?? 0) * l.Qty));
+    var v = Variant;
+    var nth = 0;
 }
-<div class="ck-root v2 v2-solo ib" data-anim="@moved">
+<div class="ck-root v2 v2-solo ib" data-anim="@moved" data-flash="@(v == 4 && sent)">
     <section class="v2-main" aria-labelledby="ib-h">
         <header class="ib-top">
             <div class="ib-top-t">
@@ -58,7 +71,7 @@
                             var line = l;
                             var isOn = on.Contains(line.Lp);
                             var isPicked = split && picked.Lp == line.Lp;
-                            <tr @key="line.Lp" class="ib-row" data-off="@(!line.Ready)" data-dev="@(line.Deviates || line.Agreed is null)" data-picked="@isPicked" @onclick="() => Pick(line)">
+                            <tr @key="line.Lp" class="ib-row" data-off="@(!line.Ready)" data-dev="@(line.Deviates || line.Agreed is null)" data-picked="@isPicked" data-on="@isOn" style="--i:@(isOn ? nth++ : 0)" @onclick="() => Pick(line)">
                                 <td class="ib-c-box"><IbBox On="isOn" Locked="sent" Label="@($"Tag linje {line.Lp} med: {line.Name}")" OnToggle="() => Toggle(line.Lp)" /></td>
                                 <td class="ib-c-lp num">@line.Lp</td>
                                 @if (!split) { <td class="ib-c-lev num">@line.LevSku</td> }
@@ -130,14 +143,14 @@
                             </p>
                             @if (sent)
                             {
-                                <span class="ib-state-in">@(on.Contains(p.Lp) ? "Sendt videre" : "Ikke sendt")</span>
+                                <span class="ib-state-in">@(on.Contains(p.Lp) ? "Frigivet" : "Ikke frigivet")</span>
                             }
                             else
                             {
                                 <label class="ib-switch">
                                     <input type="checkbox" role="switch" checked="@on.Contains(p.Lp)" @onchange="() => Toggle(p.Lp)" />
                                     <span class="ib-switch-t" aria-hidden="true"></span>
-                                    <span>Med i afsendelsen</span>
+                                    <span>Med i frigivelsen</span>
                                 </label>
                             }
                         </div>
@@ -192,16 +205,42 @@
         <footer class="ib-bar">
             <p class="ib-prog-t num"><b>@n</b> af @total linjer valgt</p>
             <p class="ib-total num">Valgt for <b>@Ib.Kr(sum) @Ib.Cur</b></p>
-            @if (sent)
+            @* PROTO frigiv: variant 4 has no modal and lives here in the bar. *@
+            @if (v == 4)
             {
-                <p class="ib-sent" role="status">@Icons.Tick Sendt videre med @n @(n == 1 ? "linje" : "linjer")</p>
+                <FrigivBund @key="mount" @ref="dlg" B="batch" OnDone="() => sent = true" AutoOpen="auto" />
+            }
+            else if (sent)
+            {
+                <p class="ib-sent">@Icons.Tick @n @linjer frigivet til lagersystemet</p>
             }
             else
             {
-                <button type="button" class="ck-btn ck-primary" disabled="@(n == 0)" @onclick="() => sent = true">@(n == 0 ? "Vælg linjer for at sende" : $"Send {n} {(n == 1 ? "linje" : "linjer")} videre") @Icons.Arrow</button>
+                <button type="button" class="ck-btn ck-primary" disabled="@(n == 0)" @onclick="() => dlg?.Show()">@(n == 0 ? "Vælg linjer for at frigive" : $"Frigiv {n} {linjer} til lagersystem") @Icons.Arrow</button>
             }
         </footer>
     </section>
+
+    @switch (v)
+    {
+        case 1: <FrigivKvittering @key="mount" @ref="dlg" B="batch" OnDone="() => sent = true" AutoOpen="auto" /> break;
+        case 2: <FrigivForlob @key="mount" @ref="dlg" B="batch" OnDone="() => sent = true" AutoOpen="auto" /> break;
+        case 5: <FrigivKombi @key="mount" @ref="dlg" B="batch" OnDone="() => sent = true" AutoOpen="auto" /> break;
+        case 3: <FrigivHold @key="mount" @ref="dlg" B="batch" OnDone="() => sent = true" AutoOpen="auto" /> break;
+    }
+
+    @* PROTO frigiv: the picker between the four. Harness chrome, not design. *@
+    <nav class="proto-picker" data-position="top" aria-label="Prototype variants" @ref="pickerEl">
+        <span class="proto-picker-highlight" aria-hidden="true"></span>
+        @for (var i = 1; i <= Names.Length; i++)
+        {
+            var k = i;
+            <button type="button" class="proto-picker-item" data-active="@(k == v)" aria-current="@(k == v ? "true" : null)" @onclick="() => Go(k)">@Names[k - 1]</button>
+        }
+        <span class="proto-picker-divider" aria-hidden="true"></span>
+        <button type="button" class="proto-picker-item proto-picker-replay" aria-label="Replay animation (R)" @onclick="Replay">↻</button>
+    </nav>
+
 </div>
 
 @code {
@@ -213,6 +252,30 @@
     private readonly Dictionary<int, ElementReference> refs = new();
     private Line picked = Ib.Lines.First(l => l.Ready);
     private bool sent;
+
+    // PROTO frigiv: which of the four ways to release is shown (?v=2). A
+    // switch mounts the variant afresh and undoes the release, so each can
+    // be tried again; if one was open, the next opens in its place.
+    [SupplyParameterFromQuery(Name = "v")] public int? V { get; set; }
+    private static readonly string[] Names = ["Kvittering", "Forløb", "Hold", "I bunden", "Kombineret"];
+    private int Variant => Math.Clamp(V ?? 1, 1, Names.Length);
+    private FrigivBase? dlg;
+    private ElementReference pickerEl;
+    private DotNetObjectReference<IbProto>? self;
+    private int mount, movedFor;
+    private bool auto;
+
+    [JSInvokable] public void Go(int i)
+    {
+        if (i < 1 || i > Names.Length || i == Variant) return;
+        auto = dlg?.IsOpen == true;
+        sent = false; mount++;
+        Nav.NavigateTo(Nav.GetUriWithQueryParameter("v", i), replace: true);
+    }
+
+    [JSInvokable] public void Step(int by) => Go((Variant - 1 + by + Names.Length) % Names.Length + 1);
+
+    [JSInvokable] public void Replay() { sent = false; auto = true; mount++; StateHasChanged(); }
     private ElementReference splitEl, handle, tableEl;
     private string? colsFor;
     private IJSObjectReference? js;
@@ -223,6 +286,8 @@
     {
         var view = Vis == "tabel" ? "tabel" : "delt";
         js ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/proto-indkob.js");
+        if (firstRender) { self = DotNetObjectReference.Create(this); await js.InvokeVoidAsync("picker", pickerEl, self); }
+        if (movedFor != Variant) { movedFor = Variant; await js.InvokeVoidAsync("pickerMove", pickerEl); }
         // Each view remembers its own column widths.
         if (view != colsFor) { colsFor = view; await js.InvokeVoidAsync("cols", tableEl, view); }
         if (view == "tabel") { attached = false; return; }
@@ -235,6 +300,7 @@
     {
         try { if (js is not null) { await js.InvokeVoidAsync("detach"); await js.DisposeAsync(); } }
         catch (JSDisconnectedException) { }
+        self?.Dispose();
     }
 
     private static readonly MarkupString IcoSplit = new("""<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="2"/><path d="M9.5 2.75v10.5"/></svg>""");

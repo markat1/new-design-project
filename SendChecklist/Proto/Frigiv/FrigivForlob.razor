@@ -1,0 +1,54 @@
+@inherits FrigivBase
+@* 2 Forløb: the list of orders is the progress. Each order is ticked off as
+   the warehouse system takes it; nothing is swapped for a receipt, the
+   question simply becomes the answer. *@
+@{
+    var count = Math.Max(1, B.Orders.Count);
+    var frac = Done ? 1.0 : Busy ? (step + 0.6) / count : 0.0;
+}
+<dialog class="ib-dlg ib-fl" @ref="dlgEl" data-stage="@stage" aria-labelledby="ib-fl-h">
+    <h2 class="ib-dlg-h" id="ib-fl-h" aria-live="polite">@(stage switch { "busy" => "Frigiver til lagersystemet…", "done" => "Frigivet til lagersystemet", _ => $"Frigiv {B.N} {B.Linjer} til lagersystemet?" })</h2>
+    <p class="ib-dlg-p num">@B.N af @B.Total linjer · @Ib.Kr(B.Sum) @Ib.Cur</p>
+    <div class="ib-fl-bar" aria-hidden="true"><span style="transform: scaleX(@frac.ToString("0.###"))"></span></div>
+    <ol class="ib-fl-steps num">
+        @for (var i = 0; i < B.Orders.Count; i++)
+        {
+            var o = B.Orders[i];
+            var s = Done || (Busy && i < step) ? "ok" : Busy && i == step ? "now" : "wait";
+            <li data-s="@s">
+                <span class="ib-fl-mark" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" fill="none"><path d="M6 10.4l2.7 2.7L14 7.6" pathLength="1" /></svg></span>
+                <span class="ib-fl-t">Ordre @o.No</span>
+                <span class="ib-fl-q">@o.Lines @(o.Lines == 1 ? "linje" : "linjer") · @o.Qty @Ib.Unit</span>
+            </li>
+        }
+    </ol>
+    <FrigivNotes B="B" Failed="failed" />
+    <div class="ib-dlg-acts">
+        @if (Done)
+        {
+            <button type="button" class="ck-btn ck-primary ib-go" data-esc @ref="doneBtn" @onclick="Close">Færdig</button>
+        }
+        else
+        {
+            <button type="button" class="ck-btn ck-ghost" data-esc aria-disabled="@(Busy ? "true" : null)" @onclick="Close">Annullér</button>
+            <button type="button" class="ck-btn ck-primary ib-go" aria-disabled="@(Busy ? "true" : null)" @onclick="e => Release(e.ShiftKey)">
+                @if (Busy) { <span class="ib-spin" aria-hidden="true"></span> <span>Ordre @(Math.Min(step + 1, count)) af @count…</span> }
+                else { <span>@(failed ? "Prøv igen" : $"Frigiv {B.N} {B.Linjer}")</span> }
+            </button>
+        }
+    </div>
+</dialog>
+
+@code {
+    private int step;
+
+    // PROTO: one wait per order, so the ticks come one at a time.
+    protected override async Task Work()
+    {
+        for (step = 0; step < Math.Max(1, B.Orders.Count); step++)
+        {
+            StateHasChanged();
+            await Task.Delay(800);
+        }
+    }
+}

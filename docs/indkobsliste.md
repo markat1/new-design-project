@@ -1,6 +1,6 @@
 # Indkøbslisten
 
-En leverandørs linjer holdt op mod de åbne indkøbsordrer. Man ser linjerne igennem, vælger dem, der skal med, og sender dem videre.
+En leverandørs linjer holdt op mod de åbne indkøbsordrer. Man ser linjerne igennem, vælger dem, der skal med, og frigiver dem til lagersystemet.
 
 Siden har to visninger af de samme linjer, og én knap skifter mellem dem:
 
@@ -13,7 +13,7 @@ Det står som prototype i `SendChecklist/` (Blazor WASM, port 5179) på `/proto/
 
 ## Filerne
 
-Fem filer, ingen pakker. De kan kopieres til et andet projekt, som de er:
+Otte filer, ingen pakker. De kan kopieres til et andet projekt, som de er:
 
 | Fil | Indhold |
 | --- | --- |
@@ -21,12 +21,17 @@ Fem filer, ingen pakker. De kan kopieres til et andet projekt, som de er:
 | `SendChecklist/Proto/IbBox.razor` | Fluebenet: en rigtig checkbox under en tegnet |
 | `SendChecklist/Proto/Ib.cs` | Modellen (`Line`, `Order`), eksempellinjerne og talformatering |
 | `SendChecklist/wwwroot/css/proto-indkob.css` | Alt udseende, præfiks `ib-` |
-| `SendChecklist/wwwroot/js/proto-indkob.js` | Skillelinjen og kolonnestregerne (ES-modul, hentes med `import`) |
+| `SendChecklist/wwwroot/js/proto-indkob.js` | Skillelinjen, kolonnestregerne og åbning af modalen (ES-modul, hentes med `import`) |
+| `SendChecklist/Proto/Frigiv/FrigivBase.cs` | Frigivelsens tal (`Batch`, `OrderSum`, `OrderRow`) og dens trin: spørg, frigiver, gennemført |
+| `SendChecklist/Proto/Frigiv/FrigivKombi.razor` | Modalen, se [Frigivelsen](#frigivelsen) |
+| `SendChecklist/Proto/Frigiv/FrigivNotes.razor` | Advarslerne og fejlen i modalen |
+
+I samme mappe ligger fire fravalgte varianter (`FrigivKvittering`, `FrigivForlob`, `FrigivHold`, `FrigivBund`), og på siden ligger en vælger mellem dem (`css/proto-picker.css`, `picker` i scriptet, `?v=` i adressen). De hører til prototypen og skal ikke med.
 
 Det, de låner udefra, skal findes i det nye projekt:
 
-- **Farver og mål** fra `.v2` i `wwwroot/css/app.css`: `--surface`, `--raised`, `--field`, `--line`, `--line-2`, `--ink`, `--ink-2`, `--ink-3`, `--accent`, `--accent-2`, `--accent-soft`, `--bad`.
-- **Knappen** `.ck-btn` med `.ck-primary`, og `.ck-vh` (skjult for øjet, læst af skærmlæsere) og `.num` (`font-variant-numeric: tabular-nums`).
+- **Farver og mål** fra `.v2` i `wwwroot/css/app.css`: `--surface`, `--raised`, `--field`, `--line`, `--line-2`, `--ink`, `--ink-2`, `--ink-3`, `--accent`, `--accent-2`, `--accent-soft`, `--bad`, `--bad-soft`.
+- **Knappen** `.ck-btn` med `.ck-primary` og `.ck-ghost`, og `.ck-vh` (skjult for øjet, læst af skærmlæsere) og `.num` (`font-variant-numeric: tabular-nums`).
 - **Ikonerne** `Icons.Tick` og `Icons.Arrow` fra `Components/Icons.cs`.
 - **Sidens ramme**: `.ck-root.v2.v2-solo` giver en side på `100dvh`, hvor kun tabellen og detaljerne ruller.
 
@@ -67,12 +72,12 @@ Siden sætter selv fem farver oven i:
 │                                                  │ │ Udestående i alt   90 stk. │ │
 │                                                  │ └────────────────────────────┘ │
 ├──────────────────────────────────────────────┴────────────────────────────────┤
-│ 8 af 25 linjer valgt │ Valgt for 7.606,60 EUR              [Send 8 linjer videre →] │
+│ 8 af 25 linjer valgt │ Valgt for 7.606,60 EUR              [Frigiv 8 linjer →]   │
 └───────────────────────────────────────────────────────────────────────────────┘
 ```
 
 - **Top**: titel, og under den en linje med tal: "25 linjer · 8 klar · 17 uden åben ordre". Knappen **Delt visning** står til højre.
-- **Bund**: "N af M linjer valgt", "Valgt for X EUR" og den ene primære knap, **Send N linjer videre**. Uden valgte linjer er den slået fra og hedder "Vælg linjer for at sende". Efter afsendelse står der "Sendt videre med N linjer", og fluebenene låses.
+- **Bund**: "N af M linjer valgt", "Valgt for X EUR" og den ene primære knap, **Frigiv N linjer til lagersystem**, som åbner modalen i [Frigivelsen](#frigivelsen). Uden valgte linjer er den slået fra og hedder "Vælg linjer for at frigive". Efter frigivelsen står der "N linjer frigivet til lagersystemet", og fluebenene låses.
 
 ## Modellen
 
@@ -145,7 +150,7 @@ I Delt får en linje med prisafvigelse et lille gult mærke efter navnet: "Pris 
 Fra oven:
 
 1. **Hoved**: "LINJE 5 AF 25" (12px versaler), varenavnet (20/28, 600, må brydes over flere linjer) og "Varenr. … · Lev. varenr. …".
-2. **Status-bjælke**: prikken, "Klar" eller "Ingen åben ordre" i fed, og grunden under: "Føres på ordre 61388", "Fordeles på 2 ordrer" eller "Linjens 20 stk. har ikke noget at blive ført på". Til højre en kontakt, **Med i afsendelsen**, som er det samme valg som fluebenet i tabellen.
+2. **Status-bjælke**: prikken, "Klar" eller "Ingen åben ordre" i fed, og grunden under: "Føres på ordre 61388", "Fordeles på 2 ordrer" eller "Linjens 20 stk. har ikke noget at blive ført på". Til højre en kontakt, **Med i frigivelsen**, som er det samme valg som fluebenet i tabellen.
 3. **Pris**: tre tal på række, Stykpris, Aftalepris og Forskel (22/28, 600). Forskel er grå med "Som aftalt" under, eller gul med beløbet for hele linjen: "−39,00 EUR for 60 stk.". Uden aftalepris: "Ingen" og "Ingen aftale at holde op imod". Nederst regnestykket: "60 stk. × 31,75" og linjens beløb.
 4. **Åbne ordrer**: én linje pr. ordre med antal, og "Udestående på varen i alt". Uden ordre: "Der er ingen åben ordre på varenummeret."
 
@@ -183,6 +188,58 @@ Hver overskrift slutter med en lodret streg, der kan trækkes: kort (8px fra top
 - En kolonne kan være mellem 44px og 520px. Tabellens `min-width` sættes til summen af de faste kolonner plus 200px til navnet, så den ruller vandret i stedet for at klemme navnet væk.
 - Dobbeltklik giver kolonnen sin oprindelige bredde tilbage. `←`/`→` flytter stregen 16px.
 
+## Frigivelsen
+
+En modal, der spørger, viser forløbet og kvitterer i samme boks. Den er 720px bred (`min(720px, 100vw − 32px)`), har 28px luft, 16px hjørner og ingen kant; dybden er tre skygger oven på hinanden. Baggrunden dæmpes med `rgb(18 22 30 / 0.38)`.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ Frigiv 8 linjer til lagersystemet?                           │
+│ Linjerne sendes til lagersystemet og føres på de åbne ordrer.│
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ (fremdrift)  │
+│ ○ Ordre 61207  2 linjer · 73 stk.              2.317,75 EUR  │
+│     5  Lejehus, 2/3-delt …   [Pris −0,65]  45 stk.  1.428,75 │
+│     6  Lejehus, 2/3-delt …   [Pris −0,65]  28 stk.    889,00 │
+│ ○ Ordre 61388  8 linjer · 447 stk.             5.288,85 EUR  │
+│     …                                            (ruller)    │
+│ ┌──────────────────────────────────────────────────────────┐ │
+│ │ I alt                                     7.606,60 EUR   │ │
+│ │ 8 linjer · 520 stk. · 2 ordrer                           │ │
+│ └──────────────────────────────────────────────────────────┘ │
+│ ⚠ 3 linjer afviger fra aftaleprisen: −27,60 EUR i alt.       │
+│                                  [Annullér] [Frigiv 8 linjer]│
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Tre trin i samme boks**
+
+1. **Spørg.** Overskrift, én linje forklaring, linjerne grupperet pr. ordre, totalen, advarsler og to knapper. Fokus starter på Annullér (`autofocus`), så Enter ikke frigiver ved et uheld.
+2. **Frigiver.** Overskriften bliver "Frigiver til lagersystemet…". Hver ordre får en spinner i sin cirkel og hakkes af en ad gangen; bjælken under overskriften følger med, og knappen viser "Ordre 1 af 2…" uden at ændre bredde (`min-width: 148px`). Esc, klik udenfor og begge knapper er døde imens. Når sidste ordre er hakket af, bliver bjælken grøn, og listen står 500 ms, så det sidste flueben ses lande.
+3. **Gennemført.** Spørgsmålet toner ud på 150 ms, og kvitteringen står i dets sted: ring og flueben, "Frigivet til lagersystemet", beløbet i 34px, "8 linjer · 520 stk.", og hver ordre med flueben, linjer og delbeløb. Én knap, **Færdig**, som får fokus.
+
+Spørgsmål og kvittering ligger i samme gittercelle (`grid-area: 1 / 1`), så boksen har spørgsmålets størrelse hele vejen og aldrig hopper. Kvitteringen er `visibility: hidden` og `inert`, indtil den skal vises.
+
+**Linjerne pr. ordre**
+
+- Ordrens overskrift: cirkel, "Ordre 61207", "2 linjer · 73 stk." i grå, delbeløbet til højre i fed. Den er `position: sticky`, så den bliver stående, mens dens linjer ruller.
+- Hver linje: linjenummer, varenavn (klippes med …), mærket "Pris −0,65" hvis prisen afviger, antal og beløb. Gitter: `20px minmax(0, 1fr) auto 60px 76px`, 13px tekst, 30px høje.
+- En linje fordelt på to ordrer står under begge med sin andel.
+- Listen ruller selv over `min(42dvh, 348px)`, så totalen og knapperne altid er synlige. Den kan nås med tastaturet (`tabindex="0"`).
+
+**Totalen** står i en grå boks (`--raised`, 12px hjørner) lige over knapperne: "I alt" og "8 linjer · 520 stk. · 2 ordrer" til venstre, beløbet til højre i 28px, halvfed, med "EUR" i 14px grå. Det er det største i boksen, fordi det er tallet, man siger ja til.
+
+**Advarsler og fejl**
+
+- Gul linje med trekant: "3 linjer afviger fra aftaleprisen: −27,60 EUR i alt." og, hvis valgt, "N linjer har ingen åben ordre at blive ført på."
+- Fejl: rød boks over knapperne, "Lagersystemet svarede ikke. Ingen linjer er frigivet.", og knappen hedder "Prøv igen". Fejlen står i modalen (`role="alert"`), ikke i en toast.
+
+**Teknik**
+
+- Et rigtigt `<dialog>` åbnet med `showModal()`: det holder fokus inde og gør resten af siden utilgængelig. Blazor kan ikke kalde `showModal()`, så scriptet har `dialog(el, open)`.
+- Esc og klik på baggrunden lukker ikke selv. Scriptet standser `cancel` og trykker i stedet på modalens egen udgang (`[data-esc]`), så Blazor bestemmer, og intet lukker under frigivelsen.
+- Under frigivelsen har knapperne `aria-disabled="true"` og ikke `disabled`, så fokus ikke falder ud af modalen.
+- Ind og ud er `transition` med `@starting-style` og `allow-discrete` på `display` og `overlay`. Ældre browsere åbner og lukker uden bevægelse.
+
 ## Bevægelse
 
 | Hvad | Hvordan | Hvornår |
@@ -194,8 +251,13 @@ Hver overskrift slutter med en lodret streg, der kan trækkes: kort (8px fra top
 | Ny linje valgt med piletaster | Ingen bevægelse | – |
 | Kontakten | Knoppen glider 14px, 180 ms | Hver gang |
 | Statusboblen | Toner frem og vokser fra 0,96 på 140 ms efter 250 ms; forsvinder på 80 ms | Mus over ikonet |
+| Modalen ind og ud | Vokser fra 0,96 og toner frem på 220 ms; ud på 150 ms. Baggrunden toner med | Åbn og luk |
+| Ordre hakkes af | Cirklen fyldes grøn og popper fra 0,8 på 300 ms; hakket tegnes på 260 ms. Bjælken vokser med `scaleX` over 800 ms | Under frigivelsen, én ordre ad gangen |
+| Kvitteringen | Grøn skive vokser fra 0,8 (400 ms), ringen tegnes rundt (550 ms), hakket tegnes (320 ms efter 380 ms), én ring breder sig ud (700 ms efter 520 ms), og overskrift, beløb, linje og ordreliste kommer 8px nedefra, forskudt 60 ms | Én gang, når frigivelsen er gået igennem |
 
-Alt bruger `cubic-bezier(0.19, 1, 0.22, 1)` og flytter kun `transform` og `opacity`. Intet bevæger sig ved indlæsning. Med reduceret bevægelse slået til i systemet toner tingene kun frem uden at flytte sig.
+Kvitteringen er sidens eneste pynt. Den er sjælden og fortjent, så den må fylde; alt andet er kort.
+
+Alt bruger `cubic-bezier(0.19, 1, 0.22, 1)` og flytter kun `transform` og `opacity` (ring og hak tegnes med `stroke-dashoffset`). Intet bevæger sig ved indlæsning. Med reduceret bevægelse slået til i systemet toner tingene kun frem uden at flytte sig.
 
 ## Tastatur og skærmlæsere
 
@@ -223,11 +285,19 @@ Alt bruger `cubic-bezier(0.19, 1, 0.22, 1)` og flytter kun `transform` og `opaci
 - **Ordrer som `61207 (45), 61388 (15)`**: parentesen krævede, at man vidste, hvad den betød.
 - **Enheden gentaget i hver celle**: flyttet til overskriften.
 - **Fast bredde på detaljerne (440px, senere 29 %)**: erstattet af reglen ovenfor, så små skærme også får plads til pristallene.
+- **Frigivelse uden modal** (spørgsmålet åbner over knappen, rækkerne lyser grønt op): hurtigst, men for let at overse, at noget stort lige skete.
+- **Hold knappen nede i ét sekund**, med grøn, der breder sig over hele boksen: forhindrer vaneklik, men er langsommere hver gang, og et almindeligt klik gør ingenting.
+- **Kvittering alene** (tabel med tal, så ring og flueben): viste ikke, hvad der skete, mens man ventede.
+- **Forløb alene** (ordrerne hakkes af, overskriften skifter): manglede et tydeligt øjeblik, hvor det er slut.
+- **Modal på 440px med ordrerne som to linjer**: for lidt at sige ja til. Den blev 620px og så 720px, med linjerne under hver ordre.
+- **Totalen som sidste række i en tabel**: den druknede. Nu har den sin egen boks og den største skrift.
 
 ## Antagelser, der ikke er bekræftet
 
 - Fluebenet betyder "linjen sendes med", og linjer uden åben ordre må gerne vælges.
 - Stykprisen er i samme valuta som aftaleprisen.
 - "Udestående" er det samlede åbne antal på varen på tværs af ordrer.
-- Hvad "Send videre" gør, er ikke bestemt; knappen låser kun siden i prototypen.
+- Frigivelsen er en ventetid i prototypen (0,8 sekunder pr. ordre), ikke et kald. At lagersystemet svarer pr. ordre, er et gæt; svarer det kun én gang for det hele, er trinene pynt og bør erstattes af én spinner.
+- "Føres på de åbne ordrer" er et gæt på, hvad frigivelsen gør. Modalen siger intet om, hvorvidt den kan fortrydes.
+- Linjer uden åben ordre vises kun som en advarsel i modalen, ikke i listen, og deres beløb tæller med i totalen, men ikke i noget delbeløb.
 - Sortering på kolonnerne er ikke lavet.

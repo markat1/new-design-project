@@ -237,7 +237,208 @@ button.ib-row-btn { cursor: pointer; }
 .ib[data-anim] .ib-split[data-view="tabel"] .ib-c-agr { animation-delay: 80ms; }
 .ib[data-anim] .ib-split[data-view="tabel"] .ib-c-diff { animation-delay: 100ms; }
 
+/* ------------------------------------------------------------- dialog
+   The release: asked about, sent, shown through. It rises from just under
+   full size and leaves faster than it came. Depth is a stack of shadows, no
+   border. */
+.ib-dlg {
+  width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 24px; border: 0; border-radius: 16px; overflow: auto;
+  background: var(--surface); color: var(--ink);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.06), 0 2px 6px rgb(0 0 0 / 0.06), 0 24px 48px -12px rgb(0 0 0 / 0.24);
+  opacity: 0; transform: scale(0.96);
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out), overlay 150ms allow-discrete, display 150ms allow-discrete;
+}
+.ib-dlg[open] { opacity: 1; transform: none; transition-duration: 220ms; }
+.ib-dlg::backdrop { background-color: rgb(18 22 30 / 0); transition: background-color 150ms ease, overlay 150ms allow-discrete, display 150ms allow-discrete; }
+.ib-dlg[open]::backdrop { background-color: rgb(18 22 30 / 0.38); transition-duration: 220ms; }
+@starting-style {
+  .ib-dlg[open] { opacity: 0; transform: scale(0.96); }
+  .ib-dlg[open]::backdrop { background-color: rgb(18 22 30 / 0); }
+}
+.ib-dlg-stack { display: grid; }
+.ib-dlg-stack > * { grid-area: 1 / 1; min-width: 0; }
+.ib-dlg-h { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; text-wrap: balance; }
+.ib-dlg-p { margin: 6px 0 0; font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+
+.ib-dlg-ask { display: flex; flex-direction: column; transition: opacity 150ms ease; }
+.ib-dlg[data-stage="done"] .ib-dlg-ask { opacity: 0; visibility: hidden; transition: opacity 150ms ease, visibility 0s 150ms; }
+.ib-dlg-sum { margin: 20px 0 0; padding: 4px 14px; border-radius: 10px; background: var(--raised); font-size: 14px; }
+.ib-dlg-sum > div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; }
+.ib-dlg-sum > div + div { border-top: 1px solid var(--line); }
+.ib-dlg-sum dt { color: var(--ink-2); }
+.ib-dlg-sum dd { margin: 0; font-weight: 500; text-align: right; }
+.ib-dlg-tot dd { font-weight: 600; }
+.ib-dlg-note { display: flex; gap: 8px; margin: 12px 0 0; font-size: 13px; line-height: 1.4; color: var(--warn); }
+.ib-dlg-note + .ib-dlg-note { margin-top: 6px; }
+.ib-dlg-note svg { flex: none; margin-top: 1px; }
+.ib-dlg-err { margin: 0; font-size: 13px; line-height: 1.4; font-weight: 500; color: var(--bad); }
+.ib-dlg-err span { display: block; margin-top: 14px; padding: 9px 12px; border-radius: 8px; background: var(--bad-soft); animation: ib-fade-in 200ms ease backwards; }
+.ib-dlg-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+.ib-dlg .ck-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; touch-action: manipulation; }
+.ib-dlg .ck-btn[aria-disabled="true"] { cursor: default; }
+.ib-dlg .ck-btn[aria-disabled="true"]:active { transform: none; }
+.ib-dlg .ck-ghost[aria-disabled="true"] { color: var(--ink-3); }
+.ib-dlg .ck-primary[aria-disabled="true"] { background: var(--accent); }
+/* The button keeps its width when its words change to "Frigiver…". */
+.ib-go { min-width: 148px; }
+.ib-spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 0.35); border-top-color: #fff; animation: ib-spin 700ms linear infinite; }
+@keyframes ib-spin { to { transform: rotate(360deg); } }
+@media (max-width: 480px) {
+  .ib-dlg-acts { flex-direction: column-reverse; }
+}
+
+/* The receipt. Rare and earned, so it gets the one flourish on the page: a
+   ring drawn round, the tick drawn in it, one ripple, then the words. */
+.ib-dlg-done { display: flex; flex-direction: column; }
+/* Until then the receipt only holds its place under the question. */
+.ib-dlg:not([data-stage="done"]) .ib-dlg-done { visibility: hidden; }
+.ib-dlg-rec { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 0 24px; text-align: center; }
+.ib-seal { position: relative; display: block; width: 64px; height: 64px; margin-bottom: 18px; }
+.ib-seal svg { display: block; }
+.ib-seal::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--tick); opacity: 0; pointer-events: none; animation: ib-ripple 700ms var(--ease-out) 520ms; }
+.ib-seal-bg { fill: var(--tick-soft); transform-box: fill-box; transform-origin: center; animation: ib-seal-in 400ms var(--ease-out) backwards; }
+.ib-seal-ring { stroke: var(--tick); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 1; transform-box: fill-box; transform-origin: center; transform: rotate(-90deg); animation: ib-draw 550ms cubic-bezier(0.645, 0.045, 0.355, 1) backwards; }
+.ib-seal-tick { stroke: var(--tick); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; animation: ib-draw 320ms var(--ease-out) 380ms backwards; }
+.ib-dlg-rec .ib-dlg-h { animation: ib-rise 360ms var(--ease-out) 480ms backwards; }
+.ib-dlg-rec .ib-dlg-p { animation: ib-rise 360ms var(--ease-out) 540ms backwards; }
+.ib-dlg-close { width: 100%; }
+.ib-dlg[data-stage="done"] .ib-dlg-close { animation: ib-fade-in 300ms ease 600ms backwards; }
+@keyframes ib-seal-in { from { opacity: 0; transform: scale(0.8); } }
+@keyframes ib-draw { from { stroke-dashoffset: 1; } }
+@keyframes ib-ripple { from { opacity: 0.45; transform: scale(1); } to { opacity: 0; transform: scale(1.5); } }
+@keyframes ib-rise { from { opacity: 0; transform: translateY(8px); } }
+
+/* ---- 2 Forløb: the orders are ticked off one by one. */
+.ib-fl-bar { height: 3px; margin-top: 18px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.ib-fl-bar span { display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(0); transition: transform 800ms cubic-bezier(0.645, 0.045, 0.355, 1), background-color 300ms ease; }
+.ib-fl:is([data-stage="done"], [data-all]) .ib-fl-bar span { background: var(--tick); transition-duration: 300ms; }
+.ib-fl-steps { list-style: none; margin: 8px 0 0; padding: 0; font-size: 14px; }
+.ib-fl-steps li { display: flex; align-items: center; gap: 12px; padding: 11px 0; color: var(--ink-2); transition: color 200ms ease; }
+.ib-fl-steps li + li { border-top: 1px solid var(--line); }
+.ib-fl-steps li:is([data-s="now"], [data-s="ok"]) { color: var(--ink); }
+.ib-fl-t { font-weight: 500; }
+.ib-fl-q { margin-left: auto; }
+.ib-fl-mark { position: relative; flex: none; width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-2); transition: background-color 200ms ease, box-shadow 200ms ease, transform 300ms var(--ease-out); }
+.ib-fl-mark svg { display: block; }
+.ib-fl-mark path { stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 260ms var(--ease-out) 80ms; }
+.ib-fl-mark::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--accent); opacity: 0; animation: ib-spin 700ms linear infinite; }
+[data-s="now"] .ib-fl-mark { box-shadow: inset 0 0 0 2px var(--accent-soft); }
+[data-s="now"] .ib-fl-mark::after { opacity: 1; }
+[data-s="ok"] .ib-fl-mark { background: var(--tick); box-shadow: inset 0 0 0 1.5px var(--tick); animation: ib-pop 300ms var(--ease-out); }
+[data-s="ok"] .ib-fl-mark path { stroke-dashoffset: 0; }
+@keyframes ib-pop { from { transform: scale(0.8); } }
+
+/* ---- 5 Kombineret: wider, every line under its order, the total given weight. */
+.ib-kb { width: min(720px, calc(100vw - 32px)); padding: 28px; }
+.ib-kb .ib-dlg-h { font-size: 20px; }
+.ib-kb .ib-fl-bar { margin-top: 20px; }
+.ib-kb-list { max-height: min(42dvh, 348px); margin: 6px -10px 0; padding: 0 10px; overflow-y: auto; overscroll-behavior: contain; border-radius: 8px; }
+.ib-kb-list:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ib-kb-ord + .ib-kb-ord { border-top: 1px solid var(--line); }
+/* The order's heading stays at the top of the list while its lines pass. */
+.ib-kb-oh { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 12px; margin: 0; padding: 12px 0 8px; background: var(--surface); font-size: 14px; font-weight: 600; color: var(--ink); }
+.ib-kb-om { font-size: 13px; font-weight: 400; color: var(--ink-2); }
+.ib-kb-oh b { margin-left: auto; font-weight: 600; }
+.ib-kb-rows { list-style: none; margin: 0; padding: 0 0 8px 32px; font-size: 13px; color: var(--ink-2); }
+.ib-kb-rows li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto 60px 76px; align-items: center; gap: 10px; min-height: 30px; }
+.ib-kb-lp { color: var(--ink-3); }
+.ib-kb-n { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--ink); }
+.ib-kb-r { text-align: right; }
+.ib-kb-a { color: var(--ink); }
+.ib-kb-rows .ib-tag { display: inline-block; }
+/* The total is the figure being agreed to, so it is the largest thing in the box. */
+.ib-kb-total { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 12px; padding: 16px 18px; border-radius: 12px; background: var(--raised); }
+.ib-kb-tl { margin: 0; font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+.ib-kb-tl b { display: block; font-size: 14px; font-weight: 600; color: var(--ink); }
+.ib-kb-sum, .ib-kb-big { margin: 0; font-weight: 600; line-height: 1; letter-spacing: -0.02em; white-space: nowrap; color: var(--ink); }
+.ib-kb-sum { font-size: 28px; }
+.ib-kb-sum span, .ib-kb-big span { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--ink-2); }
+.ib-kb .ib-dlg-note { margin-top: 14px; }
+.ib-kb-big { margin-top: 14px; font-size: 34px; animation: ib-rise 360ms var(--ease-out) 540ms backwards; }
+.ib-kb .ib-dlg-rec .ib-dlg-p { animation-delay: 600ms; }
+.ib-kb-rec { width: min(100%, 400px); margin: 22px 0 0; padding: 2px 16px; border-radius: 12px; background: var(--raised); font-size: 13px; text-align: left; animation: ib-rise 360ms var(--ease-out) 680ms backwards; }
+.ib-kb-rec > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; }
+.ib-kb-rec > div + div { border-top: 1px solid var(--line); }
+.ib-kb-rec dt { display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--ink); }
+.ib-kb-rec dt svg { color: var(--tick); }
+.ib-kb-rec dd { display: flex; gap: 14px; margin: 0; color: var(--ink-2); }
+.ib-kb-rec dd b { font-weight: 600; color: var(--ink); }
+@media (max-width: 560px) {
+  .ib-kb { padding: 20px; }
+  .ib-kb-rows { padding-left: 0; }
+  .ib-kb-rows li { grid-template-columns: minmax(0, 1fr) auto 56px 72px; gap: 8px; }
+  .ib-kb-lp, .ib-kb-om, .ib-kb-rec dd span { display: none; }
+  .ib-kb-sum { font-size: 24px; }
+}
+
+/* ---- 3 Hold: held down to release; the answer takes the whole box. */
+.ib-hd { width: min(380px, calc(100vw - 32px)); text-align: center; }
+.ib-hd-ask { display: flex; flex-direction: column; }
+.ib-hd-big { margin: 4px 0 10px; font-size: 44px; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
+.ib-hd-big span { font-size: 15px; font-weight: 500; letter-spacing: 0; color: var(--ink-2); }
+.ib-hd .ib-dlg-note { justify-content: center; text-align: left; }
+.ib-hold { position: relative; display: block; width: 100%; height: 48px; margin-top: 24px; padding: 0; border: 0; border-radius: var(--r-btn); overflow: hidden; background: var(--accent); color: #fff; font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; transition: transform 150ms var(--ease-out); }
+.ib-hold:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ib-hold[data-holding] { transform: scale(0.98); }
+.ib-hold[aria-disabled="true"] { cursor: default; }
+/* Lets go: the fill falls back fast. Held: it runs for the whole second, at
+   an even pace, because it is showing time. */
+.ib-hold-fill { position: absolute; inset: 0; background: rgb(0 0 0 / 0.3); clip-path: inset(0 100% 0 0); transition: clip-path 200ms var(--ease-out); }
+.ib-hold[data-holding] .ib-hold-fill { clip-path: inset(0 0 0 0); transition: clip-path 1000ms linear; }
+.ib-hold-t { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 100%; }
+.ib-hd-hint { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); }
+.ib-hd-no { align-self: center; margin-top: 10px; border-color: transparent; }
+.ib-hd-win { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 24px; background: var(--tick); color: #fff; clip-path: circle(150% at 50% 62%); animation: ib-wipe 650ms var(--ease-out) backwards; }
+.ib-hd-win-t { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ib-hd-win .ib-dlg-h { font-size: 22px; animation: ib-rise 360ms var(--ease-out) 380ms backwards; }
+.ib-hd-win .ib-dlg-p { color: rgb(255 255 255 / 0.86); animation: ib-rise 360ms var(--ease-out) 440ms backwards; }
+.ib-hd-tick { margin-bottom: 8px; }
+.ib-hd-tick path { stroke: #fff; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; animation: ib-draw 380ms var(--ease-out) 260ms backwards; }
+.ib-hd-ok { height: 44px; border: 0; border-radius: var(--r-btn); background: #fff; color: var(--tick); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; touch-action: manipulation; transition: transform 150ms var(--ease-out); animation: ib-fade-in 300ms ease 520ms backwards; }
+.ib-hd-ok:active { transform: scale(0.97); }
+.ib-hd-ok:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+@keyframes ib-wipe { from { clip-path: circle(0% at 50% 62%); } }
+
+/* ---- 4 I bunden: no modal. The question opens above its button. */
+.ib-bn { position: relative; }
+.ib-bn-veil { position: fixed; inset: 0; z-index: 20; }
+.ib-bn-pop { position: absolute; z-index: 21; right: 0; bottom: calc(100% + 12px); width: min(340px, calc(100vw - 32px)); padding: 18px; border-radius: 14px; overflow: hidden; background: var(--surface); color: var(--ink);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.07), 0 2px 6px rgb(0 0 0 / 0.06), 0 16px 32px -8px rgb(0 0 0 / 0.2);
+  transform-origin: bottom right; animation: ib-pop-in 180ms var(--ease-out) backwards; }
+.ib-bn-h { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.35; }
+.ib-bn-sum { margin: 10px 0 0; font-size: 13px; }
+.ib-bn-sum > div { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; }
+.ib-bn-sum > div + div { border-top: 1px solid var(--line); }
+.ib-bn-sum dt { color: var(--ink-2); }
+.ib-bn-sum dd { margin: 0; font-weight: 500; }
+.ib-bn-pop .ib-dlg-acts { margin-top: 16px; }
+.ib-bn-pop .ck-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.ib-bn-pop .ck-primary[aria-disabled="true"] { background: var(--accent); cursor: default; }
+.ib-bn-pop .ck-ghost[aria-disabled="true"] { color: var(--ink-3); cursor: default; }
+.ib-bn-pop .ib-go { min-width: 116px; }
+.ib-bn-prog { position: absolute; inset: 0 0 auto; height: 3px; }
+.ib-bn-prog span { display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(0); }
+.ib-bn[data-stage="busy"] .ib-bn-prog span { transform: scaleX(0.92); transition: transform 1400ms cubic-bezier(0.2, 0.6, 0.3, 1); }
+.ib-bn-seal circle { fill: var(--tick); transform-box: fill-box; transform-origin: center; animation: ib-seal-in 350ms var(--ease-out) backwards; }
+.ib-bn-seal path { stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; animation: ib-draw 300ms var(--ease-out) 200ms backwards; }
+.ib-bn .ib-sent { animation: ib-rise 300ms var(--ease-out) backwards; }
+@keyframes ib-pop-in { from { opacity: 0; transform: scale(0.96) translateY(4px); } }
+/* The released rows light up from the top down, then settle. */
+.ib[data-flash] .ib-row[data-on] td { animation: ib-row-ok 1100ms ease-out backwards; animation-delay: calc(var(--i) * 45ms); }
+@keyframes ib-row-ok { 0%, 25% { background-color: oklch(0.9 0.08 155); } }
+
 @media (prefers-reduced-motion: reduce) {
+  .ib-fl-mark::after { animation-duration: 1400ms; }
+  [data-s="ok"] .ib-fl-mark { animation: none; }
+  .ib-hold[data-holding] { transform: none; }
+  .ib-hd-win { animation: ib-fade-in 200ms ease backwards; }
+  .ib-hd-win .ib-dlg-h, .ib-hd-win .ib-dlg-p, .ib-hd-tick path, .ib-bn-seal circle, .ib-bn-seal path, .ib-bn .ib-sent, .ib-bn-pop { animation: ib-fade-in 200ms ease backwards; }
+  .ib[data-flash] .ib-row[data-on] td { animation-delay: 0ms; }
+  .ib-dlg, .ib-dlg[open] { transform: none; }
+  .ib-kb-big, .ib-kb-rec { animation: ib-fade-in 200ms ease backwards; }
+  @starting-style { .ib-dlg[open] { transform: none; } }
+  .ib-seal::after { animation: none; }
+  .ib-seal-bg, .ib-seal-ring, .ib-seal-tick, .ib-dlg-rec .ib-dlg-h, .ib-dlg-rec .ib-dlg-p, .ib-dlg[data-stage="done"] .ib-dlg-close { animation: ib-fade-in 200ms ease backwards; }
   .ib-box path, .ib-switch-t::after, .ib-grip::before { transition: none; }
   .ib-st-ico::after, .ib-st-ico:hover::after { transform: translateY(-50%); transition-property: opacity; }
   /* Gentler, not gone: the new part fades, nothing travels. */

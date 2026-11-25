@@ -1,0 +1,52 @@
+@inherits FrigivBase
+@* 4 I bunden: no modal. The question opens above the button it belongs to,
+   the list stays in view behind it, and the answer lands where the work is:
+   the released rows light up, and the bar says so. *@
+<div class="ib-bn" data-stage="@stage" @onkeydown="Key">
+    @if (Done)
+    {
+        <p class="ib-sent" role="status">
+            <svg class="ib-bn-seal" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" /><path d="M7.5 12.4l3 3 6-6.6" pathLength="1" /></svg>
+            @B.N @B.Linjer frigivet til lagersystemet
+        </p>
+    }
+    else
+    {
+        <button type="button" class="ck-btn ck-primary" disabled="@(B.N == 0)" aria-haspopup="dialog" aria-expanded="@(open ? "true" : "false")" @ref="trig" @onclick="() => { if (open) Close(); else Show(); }">@(B.N == 0 ? "Vælg linjer for at frigive" : $"Frigiv {B.N} {B.Linjer} til lagersystem") @Icons.Arrow</button>
+        @if (open)
+        {
+            <div class="ib-bn-veil" @onclick="Close"></div>
+            <div class="ib-bn-pop" role="dialog" aria-labelledby="ib-bn-h">
+                <div class="ib-bn-prog" aria-hidden="true"><span></span></div>
+                <h2 class="ib-bn-h" id="ib-bn-h">Frigiv @B.N @B.Linjer til lagersystemet?</h2>
+                <dl class="ib-bn-sum num">
+                    @foreach (var o in B.Orders)
+                    {
+                        <div><dt>Ordre @o.No</dt><dd>@o.Lines @(o.Lines == 1 ? "linje" : "linjer") · @o.Qty @Ib.Unit</dd></div>
+                    }
+                    <div class="ib-dlg-tot"><dt>I alt</dt><dd>@Ib.Kr(B.Sum) @Ib.Cur</dd></div>
+                </dl>
+                <FrigivNotes B="B" Failed="failed" />
+                <div class="ib-dlg-acts">
+                    <button type="button" class="ck-btn ck-ghost" aria-disabled="@(Busy ? "true" : null)" @ref="firstBtn" @onclick="Close">Annullér</button>
+                    <button type="button" class="ck-btn ck-primary ib-go" aria-disabled="@(Busy ? "true" : null)" @onclick="e => Release(e.ShiftKey)">
+                        @if (Busy) { <span class="ib-spin" aria-hidden="true"></span> <span>Frigiver…</span> }
+                        else { <span>@(failed ? "Prøv igen" : "Frigiv")</span> }
+                    </button>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private ElementReference trig;
+    protected override bool Modal => false;
+
+    private async Task Key(KeyboardEventArgs e)
+    {
+        if (e.Key != "Escape" || !open || Busy) return;
+        Close();
+        await trig.FocusAsync();
+    }
+}

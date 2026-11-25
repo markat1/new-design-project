@@ -1,0 +1,45 @@
+@inherits FrigivBase
+@* 1 Kvittering: the classic. A centred question with the figures, then a
+   receipt in the same box: a ring drawn round, the tick drawn in it. Both
+   stages lie in one cell, so the box keeps its size. *@
+<dialog class="ib-dlg" @ref="dlgEl" data-stage="@stage" aria-labelledby="@(Done ? "ib-dlg-h2" : "ib-dlg-h")">
+    <div class="ib-dlg-stack">
+        <div class="ib-dlg-ask" inert="@Done">
+            <h2 class="ib-dlg-h" id="ib-dlg-h">Frigiv @B.N @B.Linjer til lagersystemet?</h2>
+            <p class="ib-dlg-p">Linjerne sendes til lagersystemet og føres på de åbne ordrer.</p>
+            <dl class="ib-dlg-sum num">
+                <div><dt>Linjer</dt><dd>@B.N af @B.Total</dd></div>
+                @foreach (var o in B.Orders)
+                {
+                    <div><dt>Ordre @o.No</dt><dd>@o.Lines @(o.Lines == 1 ? "linje" : "linjer") · @o.Qty @Ib.Unit</dd></div>
+                }
+                <div class="ib-dlg-tot"><dt>I alt</dt><dd>@Ib.Kr(B.Sum) @Ib.Cur</dd></div>
+            </dl>
+            <FrigivNotes B="B" Failed="failed" />
+            <div class="ib-dlg-acts">
+                <button type="button" class="ck-btn ck-ghost" data-esc aria-disabled="@(Busy ? "true" : null)" @onclick="Close">Annullér</button>
+                <button type="button" class="ck-btn ck-primary ib-go" aria-disabled="@(Busy ? "true" : null)" @onclick="e => Release(e.ShiftKey)">
+                    @if (Busy) { <span class="ib-spin" aria-hidden="true"></span> <span>Frigiver…</span> }
+                    else { <span>@(failed ? "Prøv igen" : $"Frigiv {B.N} {B.Linjer}")</span> }
+                </button>
+            </div>
+        </div>
+        <div class="ib-dlg-done" inert="@(!Done)">
+            <div class="ib-dlg-rec" role="status">
+                @if (Done)
+                {
+                    <span class="ib-seal" aria-hidden="true">
+                        <svg viewBox="0 0 64 64" width="64" height="64" fill="none">
+                            <circle class="ib-seal-bg" cx="32" cy="32" r="30" />
+                            <circle class="ib-seal-ring" cx="32" cy="32" r="30" pathLength="1" />
+                            <path class="ib-seal-tick" d="M21 33.5l7.5 7.5L43.5 25" pathLength="1" />
+                        </svg>
+                    </span>
+                    <h2 class="ib-dlg-h" id="ib-dlg-h2">Frigivet til lagersystemet</h2>
+                    <p class="ib-dlg-p num">@B.N @B.Linjer på @B.Orders.Count @B.Ordrer · @Ib.Kr(B.Sum) @Ib.Cur</p>
+                }
+            </div>
+            <button type="button" class="ck-btn ck-primary ib-dlg-close" data-esc @ref="doneBtn" @onclick="Close">Færdig</button>
+        </div>
+    </div>
+</dialog>

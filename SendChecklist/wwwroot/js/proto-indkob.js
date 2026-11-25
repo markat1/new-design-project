@@ -79,7 +79,7 @@ export function attach(handle, split) {
   window.addEventListener('resize', () => { if (custom) write(read(), false); else tell(); }, { signal });
 }
 
-export function detach() { off?.abort(); off = undefined; colsOff?.abort(); colsOff = undefined; }
+export function detach() { off?.abort(); off = undefined; colsOff?.abort(); colsOff = undefined; pickOff?.abort(); pickOff = undefined; }
 
 // ---------------------------------------------------------------- columns
 // The headings' dividing lines. One set of listeners on the table; widths are
@@ -161,4 +161,57 @@ export function cols(table, view) {
     set(th, th.getBoundingClientRect().width + sign * (e.key === 'ArrowRight' ? STEP : -STEP));
     e.preventDefault();
   }, { signal });
+}
+
+// ----------------------------------------------------------------- dialog
+// A release dialog is a native <dialog>: showModal() holds the focus inside
+// it and puts the rest of the page out of reach. Escape and a click on the
+// backdrop do not close it themselves; they press the dialog's own way out
+// ([data-esc]), so Blazor stays the one that decides, and nothing closes
+// while the release is under way.
+const wired = new WeakSet();
+export function dialog(el, open) {
+  if (!el) return;
+  if (!wired.has(el)) {
+    wired.add(el);
+    const leave = () => [...el.querySelectorAll('[data-esc]')].find(b => !b.closest('[inert]') && b.getAttribute('aria-disabled') !== 'true')?.click();
+    el.addEventListener('cancel', e => { e.preventDefault(); leave(); });
+    el.addEventListener('click', e => { if (e.target === el) leave(); });
+  }
+  if (open && !el.open) el.showModal();
+  else if (!open && el.open) el.close();
+}
+
+// ----------------------------------------------------------------- picker
+// PROTO frigiv: the variant picker's keys and its sliding highlight. 1-4 and
+// the arrows switch, R replays. A modal dialog covers the pill, so the keys
+// are how to switch while one is open.
+let pickOff;
+export function pickerMove(nav) {
+  const el = nav?.querySelector('[data-active]'), hl = nav?.querySelector('.proto-picker-highlight');
+  if (!el || !hl) return;
+  hl.style.width = el.offsetWidth + 'px';
+  hl.style.transform = `translateX(${el.offsetLeft}px)`;
+}
+export function picker(nav, ref) {
+  pickOff?.abort();
+  if (!nav) return;
+  pickOff = new AbortController();
+  const signal = pickOff.signal;
+  const count = nav.querySelectorAll('.proto-picker-item:not(.proto-picker-replay)').length;
+  window.addEventListener('resize', () => pickerMove(nav), { signal });
+  document.addEventListener('keydown', e => {
+    const t = e.target;
+    if ((t.tagName === 'INPUT' && t.type !== 'checkbox') || /^(TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const arrow = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    // The dividers use the arrows themselves.
+    if (arrow && t.closest?.('[role="separator"]')) return;
+    const num = parseInt(e.key, 10);
+    if (num >= 1 && num <= count) ref.invokeMethodAsync('Go', num);
+    else if (arrow) ref.invokeMethodAsync('Step', arrow);
+    else if (e.key === 'r' || e.key === 'R') ref.invokeMethodAsync('Replay');
+  }, { signal });
+  pickerMove(nav);
+  requestAnimationFrame(() => requestAnimationFrame(() => nav.setAttribute('data-ready', '')));
 }

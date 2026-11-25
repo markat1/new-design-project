@@ -1,0 +1,10 @@
+@* What the user should know before releasing, and the failure if it came. *@
+@if (B.Unplaced > 0) { <p class="ib-dlg-note num">@Warn <span>@B.Unplaced @(B.Unplaced == 1 ? "linje har" : "linjer har") ingen åben ordre at blive ført på.</span></p> }
+@if (B.OffPrice > 0) { <p class="ib-dlg-note num">@Warn <span>@B.OffPrice @(B.OffPrice == 1 ? "linje afviger" : "linjer afviger") fra aftaleprisen@(B.DiffSum != 0 ? $": {Ib.Signed(B.DiffSum)} {Ib.Cur} i alt" : "").</span></p> }
+<p class="ib-dlg-err" role="alert">@if (Failed) { <span>Lagersystemet svarede ikke. Ingen linjer er frigivet.</span> }</p>
+
+@code {
+    [Parameter] public Batch B { get; set; } = default!;
+    [Parameter] public bool Failed { get; set; }
+    private static readonly MarkupString Warn = new("""<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5 14 13H2L8 2.5Z"/><path d="M8 6.75v3"/><path d="M8 11.4v.1"/></svg>""");
+}
